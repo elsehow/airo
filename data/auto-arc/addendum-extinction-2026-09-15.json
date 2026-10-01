@@ -1,0 +1,78 @@
+{
+  "title": "Extinction questions — an addendum to the Auto-ARC cross-cutting set",
+  "provenance": {
+    "requested_by": "The project team, 2026-09-15: add extinction probabilities, so the models' numbers can be set beside the extinction estimates in public discussion.",
+    "wording": "The Existential Risk Persuasion Tournament (XPT, FRI, 2022), question sets \"10. Total Extinction Risk\" and \"4. AI Extinction Risk\", verbatim: XPT report Appendix 6 (https://forecastingresearch.org/s/XPT.pdf), as carried in archive/legacy-questions/starter_questions.json. XPT's wording is used rather than a new one because comparability is the point of the request: XPT's superforecasters and domain experts answered exactly this question at 2030, 2050 and 2100, and the 2023 Expert Survey on Progress in AI (Grace et al. 2024) asked AI researchers a close cousin of the AI question.",
+    "author": "Drafted 2026-09-15 by the AIRO pipeline agent. The question texts and the AI-attribution criteria are XPT's; the population-date and resolution sentences in the criteria are ours (bracketed and attributed to XPT by name until 2026-10-01, when the names came out of the rendered text; see docs/extinction-questions-2026-09-15.md).",
+    "status": "PENDING REVIEW by the question-set author and the AIRO team. These two questions are not in the question-set workbook or definitions file; they are generated from this file by code/make_autoarc_questions.py exactly as hers are from hers. First asked in the scheduled run after 2026-09-15. If the wording later moves, the forecasts made under this wording are retained under their protocol tag, never reinterpreted.",
+    "not_in_scope": "The AI-researcher survey's question bundles extinction with \"similarly permanent and severe disempowerment\" and sets no date (one variant says \"within the next 100 years\"). It is NOT asked here verbatim: it has no resolution criteria, and AIRO already asks human disempowerment as its own question. Its published median is carried as a human baseline against the AI-extinction 2100 cell, with the wording difference stated, not reconciled."
+  },
+  "since": "2026-09-15",
+  "severity": {
+    "kind": "extinction",
+    "floor_population": 5000,
+    "label": "human extinction (global population below 5,000)",
+    "short": "Extinction",
+    "source_text": "human extinction or reduce the global population below 5,000"
+  },
+  "questions": [
+    {
+      "id": "extinction:general",
+      "name": "Human extinction",
+      "short": "Human extinction",
+      "prior": "xpt-total-extinction-below-5000",
+      "text": "What is the overall probability of human extinction or a reduction in the global population below 5,000",
+      "criteria": "* Extinction here means that the global human population falls below 5,000, from any cause, natural or anthropogenic.\n* The population must have fallen below 5,000 on or before the resolution date of the horizon you are answering, which for a rolling horizon is that many months after today's date. For population data we rely on broadly recognized sources (e.g., Our World in Data, the United Nations); if reasonable people disagree about whether the event occurred, the question resolves by the majority opinion of a panel of experts, as the catastrophe questions do.",
+      "human_wanted": [],
+      "human_comparisons": {"2030": ["XPT"], "2050": ["XPT"], "2100": ["XPT"]}
+    },
+    {
+      "id": "extinction:ai",
+      "name": "AI extinction",
+      "short": "AI extinction",
+      "prior": "xpt-ai-extinction-below-5000",
+      "text": "What is the probability that artificial intelligence will cause human extinction or reduce the global population below 5,000",
+      "criteria": "* Artificial intelligence is defined here as ‘the development of machines capable of sophisticated (intelligent) information processing (Dafoe 2018, AI Governance: A Research Agenda; See pg 5 footnote 2 for more.)\n* AI would be considered to have \"caused\" extinction if it is the direct or proximate cause of the deaths. For example, if a terminator-style robot powered by AI kills all humans, that will count for this question. Alternatively, if AI, operating without direct human intervention, causes the launch of nuclear weapons that kill all humans, that will also count for the purposes of this question. And if that same incident does not kill all humans, but the subsequent nuclear winter does, that will also count for the purposes of this question.\n* If an extinction event (global population is reduced below 5,000) is caused by multiple sources including AI, it will count as an extinction event caused by AI.\n* The population must have fallen below 5,000 on or before the resolution date of the horizon you are answering, which for a rolling horizon is that many months after today's date. Population data and disagreements resolve as for the \"Human extinction\" question.",
+      "human_wanted": [],
+      "human_comparisons": {"2030": ["XPT"], "2050": ["XPT"], "2100": ["XPT", "ESPAI"]}
+    }
+  ],
+  "relations": {
+    "subset": [
+      {"narrower": "extinction:ai", "broader": "extinction:general",
+       "why": "an extinction caused by AI is an extinction (the check agreed on 2026-09-03: an AI-caused extinction event should never be more likely than an extinction event of any cause)"}
+    ]
+  },
+  "prior_work": [
+    {
+      "id": "xpt-total-extinction-below-5000",
+      "project": "XPT",
+      "category": "Total Extinction Risk",
+      "elicited": "2022-10-01",
+      "resolution_dates": ["2030", "2050", "2100"],
+      "severity": "human extinction or global population below 5,000",
+      "text": "What is the overall probability of human extinction or a reduction in the global population below 5,000 by the end of 2030/2050/2100?",
+      "criteria": "XPT question set \"10. Total Extinction Risk\" (XPT report Appendix 6). No further resolution criteria beyond the question text are recorded in archive/legacy-questions/starter_questions.json."
+    },
+    {
+      "id": "xpt-ai-extinction-below-5000",
+      "project": "XPT",
+      "category": "AI Extinction Risk",
+      "elicited": "2022-10-01",
+      "resolution_dates": ["2030", "2050", "2100"],
+      "severity": "human extinction or global population below 5,000",
+      "text": "What is the probability that artificial intelligence will cause human extinction or reduce the global population below 5,000 by the end of 2030/2050/2100?",
+      "criteria": "Artificial intelligence is defined here as ‘the development of machines capable of sophisticated (intelligent) information processing (Dafoe 2018, AI Governance: A Research Agenda; See pg 5 footnote 2 for more.)\nAI would be considered to have \"caused\" extinction if it is the direct or proximate cause of the deaths. For example, if a terminator-style robot powered by AI kills all humans, that will count for this question. Alternatively, if AI, operating without direct human intervention, causes the launch of nuclear weapons that kill all humans, that will also count for the purposes of this question. And if that same incident does not kill all humans, but the subsequent nuclear winter does, that will also count for the purposes of this question.\nIf an extinction event (global population is reduced below 5,000) is caused by multiple sources including AI, it will count as an extinction event caused by AI."
+    },
+    {
+      "id": "espai-2023-ai-extinction-or-disempowerment-100y",
+      "project": "ESPAI",
+      "category": "AI extinction or similarly permanent and severe disempowerment, within 100 years",
+      "elicited": "2023-10-11",
+      "resolution_dates": [],
+      "severity": "human extinction or similarly permanent and severe disempowerment of the human species",
+      "text": "What probability do you put on future AI advances causing human extinction or similarly permanent and severe disempowerment of the human species within the next 100 years?",
+      "criteria": "The 2023 Expert Survey on Progress in AI (AI Impacts; Grace et al. 2024, \"Thousands of AI Authors on the Future of AI\", arXiv:2401.02843, Table 2), fielded 2023-10-11 to 2023-10-24 to authors who had recently published at six top-tier AI venues. No resolution criteria were given; \"similarly permanent and severe disempowerment\" is undefined and no population floor is stated. Each respondent saw ONE of three wordings: this one, with the 100-year limit (n=655; median 5%, mean 14.4%, SD 22.2%, IQR 19.9%); the same without a time limit (n=1,321; median 5%, mean 16.2%, SD 23%, IQR 19%); and \"human inability to control future advanced AI systems causing ...\" (n=661; median 10%, mean 19.4%). The 100-year wording, asked in late 2023, reaches roughly 2123; it is carried against AIRO's 2100 cell as the nearest horizon, not the same one."
+    }
+  ]
+}

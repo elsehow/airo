@@ -7,10 +7,36 @@
     "source_definitions": "data/auto-arc/definitions-2026-09-10.md",
     "sheet": "Auto-ARC questions - long",
     "generated_by": "code/make_autoarc_questions.py",
-    "status": "September 10 counting clarification accepted by Nick Merrill: all incident windows start at elicitation; cyber campaign onset is the first malicious action against a target. Older forecasts answer an earlier instrument. August 31 thresholds, attribution and accounting remain unchanged."
+    "status": "September 10 counting clarification accepted by Nick Merrill: all incident windows start at elicitation; cyber campaign onset is the first malicious action against a target. Older forecasts answer an earlier instrument. August 31 thresholds, attribution and accounting remain unchanged.",
+    "addenda": [
+      {
+        "file": "data/auto-arc/addendum-extinction-2026-09-15.json",
+        "since": "2026-09-15",
+        "questions": [
+          "extinction:general",
+          "extinction:ai"
+        ],
+        "requested_by": "The project team, 2026-09-15: add extinction probabilities, so the models' numbers can be set beside the extinction estimates in public discussion.",
+        "wording": "The Existential Risk Persuasion Tournament (XPT, FRI, 2022), question sets \"10. Total Extinction Risk\" and \"4. AI Extinction Risk\", verbatim: XPT report Appendix 6 (https://forecastingresearch.org/s/XPT.pdf), as carried in archive/legacy-questions/starter_questions.json. XPT's wording is used rather than a new one because comparability is the point of the request: XPT's superforecasters and domain experts answered exactly this question at 2030, 2050 and 2100, and the 2023 Expert Survey on Progress in AI (Grace et al. 2024) asked AI researchers a close cousin of the AI question.",
+        "author": "Drafted 2026-09-15 by the AIRO pipeline agent. The question texts and the AI-attribution criteria are XPT's; the population-date and resolution sentences in the criteria are ours (bracketed and attributed to XPT by name until 2026-10-01, when the names came out of the rendered text; see docs/extinction-questions-2026-09-15.md).",
+        "status": "PENDING REVIEW by the question-set author and the AIRO team. These two questions are not in the question-set workbook or definitions file; they are generated from this file by code/make_autoarc_questions.py exactly as hers are from hers. First asked in the scheduled run after 2026-09-15. If the wording later moves, the forecasts made under this wording are retained under their protocol tag, never reinterpreted.",
+        "not_in_scope": "The AI-researcher survey's question bundles extinction with \"similarly permanent and severe disempowerment\" and sets no date (one variant says \"within the next 100 years\"). It is NOT asked here verbatim: it has no resolution criteria, and AIRO already asks human disempowerment as its own question. Its published median is carried as a human baseline against the AI-extinction 2100 cell, with the wording difference stated, not reconciled."
+      },
+      {
+        "file": "data/auto-arc/addendum-extinction-rung-2026-09-16.json",
+        "since": "2026-09-16",
+        "questions": [],
+        "requested_by": "The project lead, 2026-09-16: fill out the far right of the severity axis -- the four incident curves should reach extinction, not stop at 1 billion deaths. The project team's 2026-09-15 request for extinction probabilities is met for the cross-cutting set by addendum-extinction-2026-09-15.json; this addendum extends the ladder itself.",
+        "wording": "the question set's own ladder template, with the severity slot filled by 'human extinction (a reduction of the global population below 5,000)': the same 5,000 floor the XPT-worded pair uses, so the rung and the pair are the same event, and the rung inherits every ladder rule -- the cause's incident definition, substantial AI involvement, the elicitation-relative onset window and the three-year harm window. It has no dollar leg: no sum of direct losses is an extinction.",
+        "author": "Drafted 2026-09-16 by the AIRO pipeline agent.",
+        "status": "PENDING REVIEW by the question-set author. Project lead, 2026-09-16: if the author judges it wrong, the rung's forecasts are removed and re-elicited under the author's wording; forecasts made under this wording are retained under their protocol tag, never reinterpreted. First asked in the run of 2026-09-16 (17:00 UTC, by hand).",
+        "not_in_scope": "No human anchor per cause: XPT asked extinction by engineered pathogen and by AI, not by cyber or by misalignment as this set defines them; those comparisons, if wanted, belong in data/human_baselines.json against the specific rung."
+      }
+    ]
   },
   "notes": {
-    "no_ladder": "Severity does not vary here (Nick, 2026-08-18): a catastrophe IS 10% of population. These are three questions, not a ladder.",
+    "no_ladder": "Severity does not vary here (Nick, 2026-08-18): a catastrophe IS 10% of population. These are single questions, not a ladder.",
+    "addenda": "Questions with a `since` field entered the set after the workbook, from the addendum file their `source` names (the extinction pair, 2026-09-15, in XPT's wording). A run made before a question's `since` is complete without it.",
     "axis": "The two catastrophe questions are ANCHORS on the incident ladder's severity axis at ~820M deaths, not rungs of it — a population share floats where the rungs are absolute, and it has no damages leg.",
     "human": "No human anchor is plotted. Bridget's comparison column names XPT 2022 and LEAP 2026 for the two catastrophe questions, and code/fetch_human_baselines.py holds their medians in data/human_baselines.json — unplotted, because the wordings differ: XPT counts deaths where she counts attributable excess mortality, and both prior panels time-limit the AI's involvement to a year before the event where she sets no limit. The September superforecaster round is being asked this wording and will need no reconciliation at all."
   },
@@ -135,6 +161,87 @@
         "2100"
       ],
       "human_comparisons": {}
+    },
+    {
+      "id": "extinction:general",
+      "name": "Human extinction",
+      "short": "Human extinction",
+      "category": "crosscutting",
+      "value_kind": "probability",
+      "severity": {
+        "kind": "extinction",
+        "floor_population": 5000,
+        "label": "human extinction (global population below 5,000)",
+        "short": "Extinction",
+        "source_text": "human extinction or reduce the global population below 5,000",
+        "deaths_equiv": 8200000000.0
+      },
+      "horizons": [
+        "6mo",
+        "12mo",
+        "2028",
+        "2030",
+        "2050",
+        "2100"
+      ],
+      "text": "What is the overall probability of human extinction or a reduction in the global population below 5,000 within 6 months / within 12 months / by the end of 2028 / by the end of 2030 / by the end of 2050 / by the end of 2100?",
+      "criteria": "* Extinction here means that the global human population falls below 5,000, from any cause, natural or anthropogenic.\n* The population must have fallen below 5,000 on or before the resolution date of the horizon you are answering, which for a rolling horizon is that many months after today's date. For population data we rely on broadly recognized sources (e.g., Our World in Data, the United Nations); if reasonable people disagree about whether the event occurred, the question resolves by the majority opinion of a panel of experts, as the catastrophe questions do.",
+      "human": {},
+      "human_wanted": [],
+      "human_comparisons": {
+        "2030": [
+          "XPT"
+        ],
+        "2050": [
+          "XPT"
+        ],
+        "2100": [
+          "XPT"
+        ]
+      },
+      "since": "2026-09-15",
+      "source": "data/auto-arc/addendum-extinction-2026-09-15.json"
+    },
+    {
+      "id": "extinction:ai",
+      "name": "AI extinction",
+      "short": "AI extinction",
+      "category": "crosscutting",
+      "value_kind": "probability",
+      "severity": {
+        "kind": "extinction",
+        "floor_population": 5000,
+        "label": "human extinction (global population below 5,000)",
+        "short": "Extinction",
+        "source_text": "human extinction or reduce the global population below 5,000",
+        "deaths_equiv": 8200000000.0
+      },
+      "horizons": [
+        "6mo",
+        "12mo",
+        "2028",
+        "2030",
+        "2050",
+        "2100"
+      ],
+      "text": "What is the probability that artificial intelligence will cause human extinction or reduce the global population below 5,000 within 6 months / within 12 months / by the end of 2028 / by the end of 2030 / by the end of 2050 / by the end of 2100?",
+      "criteria": "* Artificial intelligence is defined here as ‘the development of machines capable of sophisticated (intelligent) information processing (Dafoe 2018, AI Governance: A Research Agenda; See pg 5 footnote 2 for more.)\n* AI would be considered to have \"caused\" extinction if it is the direct or proximate cause of the deaths. For example, if a terminator-style robot powered by AI kills all humans, that will count for this question. Alternatively, if AI, operating without direct human intervention, causes the launch of nuclear weapons that kill all humans, that will also count for the purposes of this question. And if that same incident does not kill all humans, but the subsequent nuclear winter does, that will also count for the purposes of this question.\n* If an extinction event (global population is reduced below 5,000) is caused by multiple sources including AI, it will count as an extinction event caused by AI.\n* The population must have fallen below 5,000 on or before the resolution date of the horizon you are answering, which for a rolling horizon is that many months after today's date. Population data and disagreements resolve as for the \"Human extinction\" question.",
+      "human": {},
+      "human_wanted": [],
+      "human_comparisons": {
+        "2030": [
+          "XPT"
+        ],
+        "2050": [
+          "XPT"
+        ],
+        "2100": [
+          "XPT",
+          "ESPAI"
+        ]
+      },
+      "since": "2026-09-15",
+      "source": "data/auto-arc/addendum-extinction-2026-09-15.json"
     }
   ]
 }

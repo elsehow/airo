@@ -32,6 +32,7 @@ from datetime import date
 from .conditional import AGENTIC_SINCE, COMBINED_PROTOCOL, protocol_line
 from .config import REPO_ROOT
 from .instrument import CURRENT_INSTRUMENT, instrument_rows
+from .superseded import is_superseded
 
 # The live log, written by code/run_unified.py under the unified-batch protocol:
 # one call per model covering every question, so the panels are mutually
@@ -56,7 +57,8 @@ GROUNDING_AGENTIC = "agentic web search (Tavily): iterative search + page reads"
 # the joint pilots, then the combined instrument's lineage
 # (redlines.conditional.PROTOCOL_LINEAGE, the one registry of those tags).
 LEGACY_PROTOCOLS = ("unified-batch-v1", "unified-batch-v2",
-                    "unified-joint-v1", "unified-joint-v2", "unified-joint-v3")
+                    "unified-joint-v1", "unified-joint-v2", "unified-joint-v3",
+                    "unified-joint-v4", "unified-joint-v5", "unified-joint-v6")
 COMBINED_PROTOCOLS = tuple(reversed(protocol_line(COMBINED_PROTOCOL)))
 KNOWN_PROTOCOLS = LEGACY_PROTOCOLS + COMBINED_PROTOCOLS
 AGENTIC_PROTOCOLS = set(COMBINED_PROTOCOLS[COMBINED_PROTOCOLS.index(AGENTIC_SINCE):])
@@ -104,15 +106,17 @@ def complete_panel_rows(rows, labels=None):
     horizon cell. A partially completed run cannot redefine the ensemble or
     borrow missing answers from another date. Raw downloads remain unfiltered.
     """
-    from .registry import PANEL_K, panel
-    from .questions import all_questions
-    questions = all_questions()
-    labels = set(labels) if labels is not None else {m["label"] for m, _ in panel()}
+    from .registry import PANEL_K, published_panel
+    from .questions import questions_asked_on
     rows = instrument_rows(rows)
+    labels = set(labels) if labels is not None else {m["label"] for m, _ in published_panel(rows=rows)}
     if len(labels) != PANEL_K or not rows or any(not r.get("run_date") for r in rows):
         return []
     if len({r["run_date"] for r in rows}) != 1:
         return []
+    # The set AS OF this run: a question added later (an addendum's `since`)
+    # is not owed by an earlier run (redlines.questions.questions_asked_on).
+    questions = questions_asked_on(rows[0]["run_date"])
     rows = [r for r in rows if r["label"] in labels]
     if {r["label"] for r in rows} != labels or {r["question_id"] for r in rows} != set(questions):
         return []
@@ -259,6 +263,8 @@ def load_runlog(runlog=RUNLOG, runs_dir=RUNS_DIR, panel_only=True):
                 if not line.strip():
                     continue
                 row = json.loads(line)
+                if is_superseded(row):     # redlines.superseded: replaced the same day
+                    continue
                 row["forecasts"] = _clean_forecasts(row.get("forecasts"))
                 rows.append(row)
     return panel_rows(rows) if panel_only else rows

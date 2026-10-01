@@ -5,13 +5,13 @@ function App() {
   const [sevKey, setSevKey] = useState("10M");
   const [active, setActive] = useState({ model: true, super: true, hybrid: true });
   const [modal, setModal] = useState(false);
-  // ?tab=capability / ?tab=faq deep-link a tab (?tab=trust, the FAQ tab's
-  // name until 2026-09-08, still lands there). "conditional" (the Policy
-  // levers tab) is commented out for launch, below; its ?tab= falls back to
-  // the forecasts.
+  // ?tab=capability / ?tab=conditional / ?tab=faq deep-link a tab (?tab=trust,
+  // the FAQ tab's name until 2026-09-08, still lands there). "conditional"
+  // (the Policy levers tab) was commented out for launch and is back since
+  // 2026-09-16 (team meeting: the policy forecasts on their own tab).
   const tabRaw = new URLSearchParams(typeof location !== "undefined" ? location.search : "").get("tab");
   const tabParam = tabRaw === "trust" ? "faq" : tabRaw;
-  const [mainTab, setMainTab] = useState(["forecasts", "capability", "faq"].includes(tabParam) ? tabParam : "forecasts");
+  const [mainTab, setMainTab] = useState(["forecasts", "capability", "conditional", "faq"].includes(tabParam) ? tabParam : "forecasts");
 
   const category = CATEGORIES.find(c => c.key === catKey);
   const panel = useMemo(() => buildPanel(category, horizonKey, 1), [catKey, horizonKey]);
@@ -97,12 +97,12 @@ function App() {
         <span>This dashboard is under active development.</span>
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 20 }}>
-        <Toggle options={[{ key: "forecasts", label: "Forecasts" }, { key: "capability", label: "Capability" }, /* { key: "conditional", label: "Policy levers" }, */ { key: "faq", label: "FAQ" }]}
+        <Toggle options={[{ key: "forecasts", label: "Forecasts" }, { key: "capability", label: "Capability" }, { key: "conditional", label: "Policy levers" }, { key: "faq", label: "FAQ" }]}
           value={mainTab} onChange={setMainTab} />
         <a href="https://forecastingresearch.org/pdf/airo-working-paper.pdf" target="_blank" rel="noopener" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", minHeight: 44, padding: "0 16px", border: "1px solid var(--line)", borderRadius: 12, color: "var(--ink)", textDecoration: "none", fontWeight: 600 }}>Whitepaper</a>
       </div>
 
-      {/* {mainTab === "conditional" && <ConditionalPanel />} */}
+      {mainTab === "conditional" && <ConditionalPanel />}
       {/* The Capability tab is CapabilityPanel alone for launch. AxesPanel
           (78-axes.jsx: forecasts conditional on lab revenue, the ECI and the
           AGI year, from LEAP's axes) is COMMENTED OUT (Nick, 2026-09-08);

@@ -54,7 +54,9 @@ class TestNumbersGolden(unittest.TestCase):
         g1 = json.loads((REPO_ROOT / "results/graph1_data.json").read_text())
         g2 = json.loads((REPO_ROOT / "results/graph2_data.json").read_text())
         q = next(q for q in g1["questions"] if q["id"] == "catastrophe:ai")
-        top = g2["rungs"][-1]["rung"]
+        # The top of the deaths-OR-damages ladder: the extinction rung above it
+        # (2026-09-16) has no dollar leg and is answered only from that date.
+        top = [r for r in g2["rungs"] if r.get("damages") is not None][-1]["rung"]
         distinct = False
         for h, median in q["median"].items():
             cause = next(c for c in g2["byHorizon"][h]["causes"] if c["key"] == "ai")

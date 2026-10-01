@@ -427,6 +427,9 @@ function TimelinePanelCurrent({ qid = TL_HEADLINE, title = "Probability of an AI
           </div>
         </div>
 
+        {!loss && <ForecastRationales qid={q.id} context={q.short || title}
+          date={li >= 0 ? snapshots[li].date : null}
+          forecasts={q.horizons.map(h => ({ key: h, values: Object.fromEntries(q.series.map(s => [s.label, (s.ps[h] || [])[li]])) }))} />}
         {showTable && (
           <div style={{ marginTop: 14, paddingTop: 14, borderTop: "1px solid var(--line-soft)" }}>
             <TimelineTable q={q} horizon={hz} snapshots={snapshots} />

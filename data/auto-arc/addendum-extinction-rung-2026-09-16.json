@@ -1,0 +1,20 @@
+{
+  "title": "Extinction rung — an addendum to the Auto-ARC incident ladder",
+  "provenance": {
+    "requested_by": "The project lead, 2026-09-16: fill out the far right of the severity axis -- the four incident curves should reach extinction, not stop at 1 billion deaths. The project team's 2026-09-15 request for extinction probabilities is met for the cross-cutting set by addendum-extinction-2026-09-15.json; this addendum extends the ladder itself.",
+    "wording": "the question set's own ladder template, with the severity slot filled by 'human extinction (a reduction of the global population below 5,000)': the same 5,000 floor the XPT-worded pair uses, so the rung and the pair are the same event, and the rung inherits every ladder rule -- the cause's incident definition, substantial AI involvement, the elicitation-relative onset window and the three-year harm window. It has no dollar leg: no sum of direct losses is an extinction.",
+    "author": "Drafted 2026-09-16 by the AIRO pipeline agent.",
+    "status": "PENDING REVIEW by the question-set author. Project lead, 2026-09-16: if the author judges it wrong, the rung's forecasts are removed and re-elicited under the author's wording; forecasts made under this wording are retained under their protocol tag, never reinterpreted. First asked in the run of 2026-09-16 (17:00 UTC, by hand).",
+    "not_in_scope": "No human anchor per cause: XPT asked extinction by engineered pathogen and by AI, not by cyber or by misalignment as this set defines them; those comparisons, if wanted, belong in data/human_baselines.json against the specific rung."
+  },
+  "since": "2026-09-16",
+  "severity": {
+    "kind": "extinction",
+    "floor_population": 5000,
+    "label": "human extinction (global population below 5,000)",
+    "short": "extinction",
+    "source_text": "human extinction (a reduction of the global population below 5,000)"
+  },
+  "ladder_rung": true,
+  "questions": []
+}

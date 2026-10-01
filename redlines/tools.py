@@ -77,18 +77,24 @@ def search_body(query, max_results=5, recent_days=None, today=None):
     return body
 
 
-def web_search(query, max_results=5, recent_days=None):
+def web_search(query, max_results=5, recent_days=None, cause=None):
     """Search the web via Tavily. Returns {query, answer?, results:[{title,url,
     content, published?}]}. `recent_days` bounds the search to news published in
     the last N days (see search_body); the date each result was published comes
     back with it.
 
+    `cause` (2026-09-11) is the question group the search is for. It is echoed
+    on the result and never sent to Tavily: the forecasting loop's coverage
+    rule (redlines.llm.call_tools `coverage`) reads it, with `recent_days`,
+    off the recorded evidence to decide whether every group has been checked.
+
     Needs TAVILY_API_KEY; without it (or on any network error) returns a result
     carrying an `error` string and no results, so the loop keeps going ungrounded.
     """
+    tag = {"cause": cause} if cause is not None else {}
     key = os.environ.get("TAVILY_API_KEY")
     if not key:
-        return {"query": query, "results": [],
+        return {"query": query, **tag, "results": [],
                 "error": "web search unavailable (no TAVILY_API_KEY set)"}
     spec = search_body(query, max_results, recent_days)
     body = json.dumps(dict(spec, api_key=key)).encode()
@@ -98,8 +104,8 @@ def web_search(query, max_results=5, recent_days=None):
         with urllib.request.urlopen(req, timeout=30) as resp:
             data = json.load(resp)
     except (urllib.error.URLError, ValueError, TimeoutError) as e:
-        return {"query": query, "results": [], "error": f"web search failed: {e}"}
-    out = {"query": query, "answer": data.get("answer"), "results": []}
+        return {"query": query, **tag, "results": [], "error": f"web search failed: {e}"}
+    out = {"query": query, **tag, "answer": data.get("answer"), "results": []}
     if recent_days:
         out["window"] = {"start": spec["start_date"], "end": spec["end_date"]}
     for r in data.get("results", []):
@@ -173,6 +179,11 @@ WEB_SEARCH_TOOL = {
             "recent_days": {"type": "integer",
                             "description": "only news published within this many days "
                                            "before today; omit to search the whole web"},
+            # A forecasting run narrows this to its question groups (an enum)
+            # and requires it: code/run_unified.py research_tools().
+            "cause": {"type": "string",
+                      "description": "the question group this search is for, by the key "
+                                     "the prompt uses for it"},
         },
         "required": ["query"],
     },

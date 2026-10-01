@@ -72,11 +72,17 @@ class TestSetShape(unittest.TestCase):
         cls.ladder = json.loads(LADDER.read_text(encoding="utf-8"))
 
     def test_counts(self):
-        """35 questions: 3 cross-cutting, and 4 causes x 8 rungs."""
-        self.assertEqual(len(self.cross["questions"]), 3)
+        """41 questions: 5 cross-cutting (3 from the workbook, the extinction
+        pair from the 2026-09-15 addendum), and 4 causes x 9 rungs (the
+        workbook's eight plus the extinction rung, the 2026-09-16 addendum)."""
+        self.assertEqual(len(self.cross["questions"]), 5)
+        self.assertEqual([q["id"] for q in self.cross["questions"] if q.get("since")],
+                         ["extinction:general", "extinction:ai"])
         self.assertEqual(len(self.ladder["causes"]), 4)
-        self.assertEqual(len(self.ladder["rungs"]), 8)
-        self.assertEqual(len(self.ladder["questions"]), 32)
+        self.assertEqual(len(self.ladder["rungs"]), 9)
+        self.assertEqual(len(self.ladder["questions"]), 36)
+        self.assertEqual([q["id"] for q in self.ladder["questions"] if q.get("since")],
+                         [f"ladder:{c}:extinction" for c in ("ai", "bio", "cyber", "misalign")])
 
     def test_every_cause_spans_every_rung(self):
         """The ladder's whole point: causes comparable at equal severity.
@@ -101,12 +107,17 @@ class TestSetShape(unittest.TestCase):
         for q in self.ladder["questions"]:
             with self.subTest(q=q["id"]):
                 s = q["severity"]
+                if q.get("since"):   # the extinction rung: a population floor, no dollar leg
+                    self.assertEqual(s["kind"], "extinction")
+                    self.assertIsInstance(s["deaths"], (int, float))
+                    self.assertIsNone(s["damages_usd"])
+                    continue
                 self.assertEqual(s["kind"], "deaths_or_damages")
                 self.assertIsInstance(s["deaths"], (int, float))
                 self.assertIsInstance(s["damages_usd"], (int, float))
         for q in self.cross["questions"]:
             with self.subTest(q=q["id"]):
-                self.assertIn(q["severity"]["kind"], ("population_share", "none"))
+                self.assertIn(q["severity"]["kind"], ("population_share", "none", "extinction"))
 
     def test_the_two_severity_legs_agree_with_the_stated_vsl(self):
         """Deaths and dollars must stay one ladder, not two.
@@ -127,6 +138,8 @@ class TestSetShape(unittest.TestCase):
         self.assertEqual(vsl, 2.2e6)
         self.assertEqual(self.ladder["notes"]["vsl_usd"], vsl)
         for r in self.ladder["rungs"]:
+            if r.get("damages_usd") is None:    # the extinction rung has no dollar leg
+                continue
             with self.subTest(rung=r["short"]):
                 self.assertAlmostEqual(r["damages_usd"] / r["deaths"], vsl, delta=1.0)
         from redlines.conditional import USD_PER_DEATH
@@ -449,20 +462,46 @@ class TestNothingIsHandWritten(unittest.TestCase):
             with self.subTest(cause=c["key"]):
                 self.assertIn(c["label"], hers)
 
+    def _addenda(self):
+        """{question id: (its addendum doc, its entry)} for every addendum question.
+        An addendum is an input of the same standing as the workbook (the
+        extinction pair, 2026-09-15): its names and severities are checked
+        against ITS file, exactly as hers are checked against hers."""
+        out = {}
+        for doc in self.gen.read_addenda():
+            for q in doc["questions"]:
+                out[q["id"]] = (doc, q)
+        return out
+
     def test_cross_cutting_names_are_her_category_values(self):
         cats = {r["Category"] for r in self.rows}
+        addenda = self._addenda()
         for q in self.cross["questions"]:
             with self.subTest(q=q["id"]):
-                self.assertIn(q["name"], cats)
+                if q["id"] in addenda:
+                    self.assertEqual(q["name"], addenda[q["id"]][1]["name"])
+                    self.assertEqual(q["since"], addenda[q["id"]][0]["since"])
+                else:
+                    self.assertNotIn("since", q)
+                    self.assertIn(q["name"], cats)
 
     def test_every_severity_quotes_the_workbook_verbatim(self):
-        """source_text must appear in the Severity column, character for character."""
+        """source_text must appear in the Severity column, character for character
+        (or, for an addendum question, in its addendum's severity block)."""
         sevs = {r["Severity"].strip() for r in self.rows}
+        addenda = self._addenda()
         for q in self.ladder["questions"] + self.cross["questions"]:
             src = q["severity"].get("source_text")
             if q["severity"]["kind"] == "none":
                 continue
             with self.subTest(q=q["id"]):
+                if q["id"] in addenda:
+                    self.assertEqual(src, addenda[q["id"]][0]["severity"]["source_text"])
+                    continue
+                if q.get("source"):   # an addendum RUNG: its own file's severity text
+                    doc = json.loads((REPO / q["source"]).read_text())
+                    self.assertEqual(src, doc["severity"]["source_text"])
+                    continue
                 self.assertIn(src, sevs,
                               f"{q['id']} severity {src!r} is not a value in "
                               "her Severity column — it was composed here")
@@ -580,7 +619,8 @@ class TestEmittedWorkbook(unittest.TestCase):
 
     def test_every_ladder_question_appears(self):
         ladder = json.loads((REPO / "data" / "autoarc_ladder.json").read_text())
-        want = {q["id"] for q in ladder["questions"]}
+        # An addendum rung is generated from its own file, not from her sheet.
+        want = {q["id"] for q in ladder["questions"] if not q.get("since")}
         got = {r[self.col("Question ID")] for r in self.rows}
         self.assertEqual(want - got, set(),
                          "ladder question(s) missing from the workbook")

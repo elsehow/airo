@@ -58,7 +58,7 @@ from datetime import date
 from ..questions import (horizon_sort_key, is_future, load_ladder,
                          severity_label)
 from ..rail import grouping as rail_grouping, panel_questions as rail_questions
-from ..registry import model_colors, panel
+from ..registry import model_colors, published_panel
 from ..runlog import (answered_horizons, grounding, load_runlog, pool,
                       rows_by_day, series_rows)
 from ..runlog import instrument_info, complete_panel_rows, current_panel, elicitation_date, SERIES_START
@@ -316,7 +316,7 @@ def build():
     # registry's panel (the ensemble of record, what the next run asks), the
     # same rule that colors it -- so the flag and the gray never disagree.
     present = {label for _, _, label in by_day}
-    current = {m["label"] for m, _ in panel()}
+    current = {m["label"] for m, _ in published_panel()}
 
     snapshots = []
     for d in days:
@@ -359,6 +359,10 @@ def build():
         for (qid, label), reps in groups.items():
             current_by_day[(d, qid, label)] = pool(reps)
     for q in qs:
+        # As on Graph 1: a question added to the set after the last answered
+        # run (an addendum's `since`) is not drawn until a run answers it.
+        if not q.get("cause") and q["id"] not in answered:
+            continue
         horizons = sorted([h for h in q["horizons"]
                            if h and is_future(h, spec)
                            and h in answered.get(q["id"], set())],

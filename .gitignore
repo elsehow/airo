@@ -30,6 +30,7 @@ uv.lock
 # Derived: the download behind the page button, rebuilt by `redlines build --views csv`
 results/forecasts.csv
 results/rationales.csv
+results/debriefs.csv
 results/redlines-data.zip
 
 # paper figure previews (PNG); the PDFs are tracked
@@ -48,3 +49,4 @@ data/leap/
 # its own sites, not for redistribution. The live site self-hosts the files;
 # a clone renders with the fallback stack in web/demo/00-head.html.
 web/fonts/
+

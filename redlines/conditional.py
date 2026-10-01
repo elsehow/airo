@@ -58,6 +58,7 @@ import statistics as st
 from collections import defaultdict
 
 from .config import REPO_ROOT
+from .superseded import is_superseded
 
 CONDITIONAL_LOG = REPO_ROOT / "results" / "conditional_runs.jsonl"
 POLICIES = REPO_ROOT / "data" / "leap_policies.json"
@@ -82,6 +83,34 @@ def _logit(p):
 # falls back down the line, so the tab keeps its rows on the day of a bump and
 # switches the day the first run under the new tag lands.
 PROTOCOL_LINEAGE = {
+    # 2026-10-01, v8: the extinction pair's criteria stop naming their source.
+    # The AI question had said its criteria were XPT's, "kept verbatim so the
+    # forecasts compare with that panel's", and the total-extinction question
+    # that it was XPT's own; both notes opened "Added ... for AIRO". The rules
+    # are unchanged, the attribution is gone from the rendered text
+    # (docs/extinction-questions-2026-09-15.md). Not additive: the same two
+    # questions, asked without being told whose number to match.
+    "unified-joint-combined-v8": ("unified-joint-combined-v7", "unified-joint-combined-v6",
+                                  "unified-joint-combined-v5", "unified-joint-combined-v4",
+                                  "unified-joint-combined-v3", "unified-joint-combined-v2",
+                                  "unified-joint-combined-v1"),
+    # 2026-09-16, v7: the extinction RUNG joins every incident ladder
+    # (data/auto-arc/addendum-extinction-rung-2026-09-16.json): 37 -> 41
+    # questions, 222 -> 246 cells. Additive, like v6, and tagged for the
+    # same reason: a grid answered beside four more questions is a different
+    # elicitation. The same day, the debrief turn went per question
+    # (a harness change, which does not bump the tag).
+    "unified-joint-combined-v7": ("unified-joint-combined-v6", "unified-joint-combined-v5",
+                                  "unified-joint-combined-v4", "unified-joint-combined-v3",
+                                  "unified-joint-combined-v2", "unified-joint-combined-v1"),
+    # 2026-09-15, v6: the extinction pair joins the cross-cutting group
+    # (data/auto-arc/addendum-extinction-2026-09-15.json): 35 -> 37 questions,
+    # 210 -> 222 cells. Additive -- every earlier block renders unchanged --
+    # but a grid answered beside two more questions is a different elicitation
+    # (docs/coherence-experiment.md), and the tag is how a reader tells.
+    "unified-joint-combined-v6": ("unified-joint-combined-v5", "unified-joint-combined-v4",
+                                  "unified-joint-combined-v3", "unified-joint-combined-v2",
+                                  "unified-joint-combined-v1"),
     # 2026-09-10, v5: the prospective incident-counting definitions
     # (redlines.instrument.CURRENT_INSTRUMENT); the questions were re-versioned
     # under the same call shape.
@@ -116,7 +145,7 @@ PROTOCOL_LINEAGE = {
 # the same string (tests pin the two together); the views, the run log's
 # grounding line and the coherence test all read it from here, so a bump is
 # one edit plus the lineage entry above.
-COMBINED_PROTOCOL = "unified-joint-combined-v5"
+COMBINED_PROTOCOL = "unified-joint-combined-v8"
 # The first combined tag elicited by the agentic harness (iterative search +
 # page reads, 2026-09-02); v1 (2026-08-28) still ran the legacy grounding.
 AGENTIC_SINCE = "unified-joint-combined-v2"
@@ -156,6 +185,8 @@ def load_conditional(path=CONDITIONAL_LOG, experiment=None, protocol=None):
                 if protocol and r.get("protocol") != protocol:
                     continue
                 if not isinstance(r.get("forecasts"), list):
+                    continue
+                if is_superseded(r):       # redlines.superseded: replaced the same day
                     continue
                 rows.append(r)
     return rows
@@ -437,11 +468,16 @@ def outside_noise(cond_values, uncond_values):
 # ── expected loss from a ladder ─────────────────────────────────────────────
 
 def ladder_rungs(spec=None):
-    """[(rung short, deaths)] ascending, from the ladder spec."""
+    """[(rung short, deaths)] ascending, from the ladder spec: the LOSS rungs,
+    i.e. those with a dollar leg. The extinction rung (2026-09-16, an
+    addendum) is a population floor with no damages leg -- no sum of direct
+    losses is an extinction -- so it is not a point on the loss ladder the
+    fold integrates, and every run before it stays foldable."""
     if spec is None:
         from .questions import load_ladder
         spec = load_ladder()
-    return [(r["short"], float(r["deaths"])) for r in spec["rungs"]]
+    return [(r["short"], float(r["deaths"])) for r in spec["rungs"]
+            if r.get("kind", "deaths_or_damages") == "deaths_or_damages"]
 
 
 def expected_loss(survival, rungs):

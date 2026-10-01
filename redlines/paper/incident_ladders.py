@@ -17,9 +17,14 @@ def render(blob: dict):
     horizons = ("2030", "2050", "2100")
     fig, axes = plt.subplots(3, 1, figsize=(FULL_W, 5.4), sharex=True, sharey=True)
     fig.subplots_adjust(left=0.11, right=0.98, top=0.87, bottom=0.17, hspace=0.28)
-    rungs = blob["rungs"]
-    xs = list(range(len(rungs)))
     causes = ("cyber", "misalign", "bio")
+    # The rungs every plotted cause answered at every horizon: the extinction
+    # rung (2026-09-16) is absent from runs before it and never plotted then.
+    answered = set.intersection(*[
+        {r["rung"] for c in blob["byHorizon"][h]["causes"] if c["key"] == cause for r in c["rungs"]}
+        for h in horizons for cause in causes])
+    rungs = [r for r in blob["rungs"] if r["rung"] in answered]
+    xs = list(range(len(rungs)))
     names = {"cyber": "Cyber", "misalign": "Misalignment", "bio": "Human-caused epidemic"}
     patterns = {"cyber": "-", "misalign": "--", "bio": ":"}
     values = []
@@ -47,12 +52,14 @@ def render(blob: dict):
         ax.yaxis.set_minor_formatter(NullFormatter())
     axes[0].set_ylim(min(values) / 1.5, 150)
     axes[-1].set_xticks(xs)
-    # The blob's own labels supply the paired dollar amounts, including units.
-    axes[-1].set_xticklabels([
-        style.esc(f"{r['rung']}\n{r['label'].split(' or ', 1)[1]}").replace(
+    # The blob's own labels supply the paired dollar amounts, including units;
+    # the extinction rung (2026-09-16) has no dollar leg and says so.
+    def _tick(r):
+        lower = r["label"].split(" or ", 1)[1] if " or " in r["label"] else "no dollar leg"
+        upper = "Extinction" if r.get("damages") is None else r["rung"]
+        return style.esc(f"{upper}\n{lower}").replace(
             "$", r"\textdollar{}" if style.backend() == "pgf" else "$")
-        for r in rungs
-    ])
+    axes[-1].set_xticklabels([_tick(r) for r in rungs])
     axes[-1].set_xlabel("Severity: deaths or equivalent morbidity (upper)\n"
                         "or economic damages in 2026 dollars (lower)", labelpad=7)
     fig.text(0.015, 0.55, "Probability of reaching the threshold (log scale)",

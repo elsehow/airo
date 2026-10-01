@@ -91,11 +91,16 @@ class TestBaselineShape(unittest.TestCase):
             self.assertEqual(b["units"], "percent")
             for group, v in b["groups"].items():
                 with self.subTest(b["question_id"], h=b["horizon"], g=group):
+                    # A published number (ESPAI) carries the paper's IQR width,
+                    # not the quartiles, so p25/p75 are checked when present.
                     for k in ("median", "mean", "p25", "p75"):
+                        if k in ("p25", "p75") and v.get(k) is None:
+                            continue
                         self.assertGreaterEqual(v[k], 0)
                         self.assertLessEqual(v[k], 100)
                     self.assertGreater(v["n"], 0)
-                    self.assertLessEqual(v["p25"], v["p75"])
+                    if v.get("p25") is not None and v.get("p75") is not None:
+                        self.assertLessEqual(v["p25"], v["p75"])
 
     def test_every_baseline_carries_the_question_its_panel_answered(self):
         """A median without its wording is what made the diamonds wrong."""

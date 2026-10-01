@@ -344,8 +344,8 @@ tarball — is the remaining gap in "reproduce it from this repo alone."
 ## Deploy notes
 
 The one thing that runs on a schedule, outside this machine: `code/cron_run.sh`
-on a Linux box (the host behind `airo.forecastingresearch.org`), cron-fired weekly (Fridays
-12:00 UTC). It sources `~/.config/redlines/env` for API keys, then runs:
+on a Linux box (the host behind `airo.forecastingresearch.org`), cron-fired twice weekly (Wednesdays and Fridays
+12:00 UTC, from 2026-09-16). It sources `~/.config/redlines/env` for API keys, then runs:
 
 ```bash
 "$PY" code/run_unified.py --joint --repeats 1 --workers 2 \
@@ -358,13 +358,27 @@ it (historically it pointed at the venv of the internal checkout the LLM layer
 was imported from before it was vendored). `--joint` is the single instrument:
 one call per model answers every question×horizon cell unconditionally *and*
 under each condition of the combined set (the LEAP policies plus the model's own
-capability percentiles), once per model since 2026-09-02. The unconditional
+capability percentiles), once per model since 2026-09-02. Since 2026-09-15 the
+call ends with a **debrief turn** (`redlines.llm.call_tools` `debrief`,
+`code/run_unified.py` `debrief_tool`): once the forecasts are accepted, the
+same conversation is asked, per question group, which sources mattered most
+and what each contributed, which arguments it found most compelling, the most
+likely pathway to that group's high-severity outcomes, and the base rate used.
+Asked after submission so it cannot move the numbers; stored on the call's
+first row as `debrief` and `debrief_status`, exported as `results/debriefs.csv`.
+A failed debrief is a
+validator warning, never a reason to withhold publication. The unconditional
 slice lands in the dated output file; the whole instrument is appended to
-`results/conditional_runs_combined.jsonl`. The runner's preflight refuses a
-live-ECI snapshot (`data/live_metr_eci_frontier.json`) older than ten days, since
-the capability conditions quote the frontier ECI; the box cannot refresh it
-itself (the refresh needs Node + Playwright), so it is refreshed elsewhere and
-synced with `data/`. Each run writes its own dated file under
+`results/conditional_runs_combined.jsonl`. Before the run, `code/cron_run.sh`
+fetches Epoch's published ECI scores (`python3 -m redlines.eci --fetch`, a dated
+`data/epoch_capabilities_index_*.csv`) and rebuilds the capability conditions
+from it (`code/check_eci_snapshot.py --rebuild`), so the panel and the frontier
+history the prompt quotes follow the index with no hand step (since 2026-10-01).
+The runner's preflight refuses a snapshot older than 21 days or condition sets
+not built from the newest one; a failed fetch keeps the previous snapshot and
+pages the operator (ntfy, `NTFY_TOPIC` in the env file). The dashboard draws the
+panel the newest run was chosen as (`registry.published_panel`), not the one the
+next run will be, so a fetched index never blanks or recolors it. Each run writes its own dated file under
 `results/runs/`, rather than appending to the shared
 `results/forecast_runs.jsonl` — two independent writers on one tracked file
 would conflict every week — and `runlog.py`'s `load_runlog()` reads the
@@ -392,10 +406,11 @@ to `/` so old links still land.
 
 `code/publish_dashboard.sh` (box-side) first runs the launch validator
 (`code/validate_launch_run.py`: every panel model, every question, one call
-per cell, on one date across all three instruments — otherwise publication is
-withheld and the last good site stays up), then rebuilds the run-log-driven
+per cell, on one date for the combined instrument — otherwise publication is
+withheld and the last good site stays up; the axes instruments left the
+schedule on 2026-09-14 and are audited with `--sets` when re-elicited by hand), then rebuilds the run-log-driven
 blobs and the download (`python3 -m redlines build --views
-g1,g2,databank,timeline,conditional,capability,axes,method,csv` — Graph 3,
+g1,g2,databank,timeline,conditional,capability,axes,method,rationales,csv` — Graph 3,
 Graph 4 and the two bench panels are frozen artifacts and pass through
 untouched) and copies the page and the download files into the docroot
 atomically. `cron_run.sh` calls it after every

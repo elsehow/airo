@@ -17,9 +17,19 @@ class TestCountingInstrument(unittest.TestCase):
     def test_scientific_change_is_limited_to_dates_and_cyber_boundaries(self):
         old = json.loads((ROOT / 'data/instruments/legacy-2026-08-31/autoarc_ladder.json').read_text())
         new = load_ladder()
-        self.assertEqual(old['rungs'], new['rungs'])
-        self.assertEqual(old['relations'], new['relations'])
-        for before, after in zip(old['questions'], new['questions']):
+        # 2026-09-16: the extinction rung is an addendum's, beside the archived eight.
+        self.assertEqual(old['rungs'], [r for r in new['rungs'] if not r.get('since')])
+        # 2026-09-15: the extinction addendum ADDS one subset relation; every
+        # relation of the archived instrument is still present and unchanged.
+        self.assertEqual(old['relations']['cross'], new['relations']['cross'])
+        self.assertEqual(old['relations']['bracket'], new['relations']['bracket'])
+        for rel in old['relations']['subset']:
+            self.assertIn(rel, new['relations']['subset'])
+        # The extinction rung's four questions (an addendum, 2026-09-16) are new;
+        # every archived question is still there, in order, unchanged.
+        current = [q for q in new['questions'] if not q.get('since')]
+        self.assertEqual(len(current), len(old['questions']))
+        for before, after in zip(old['questions'], current):
             self.assertEqual(before['id'], after['id'])
             self.assertEqual(before['text'], after['text'])
             self.assertEqual(before['details']['severity'], after['details']['severity'])
@@ -28,7 +38,14 @@ class TestCountingInstrument(unittest.TestCase):
                 self.assertEqual(before['criteria'], after['criteria'])
         old_cross = json.loads((ROOT / 'data/instruments/legacy-2026-08-31/autoarc_crosscutting.json').read_text())
         new_cross = json.loads((ROOT / 'data/autoarc_crosscutting.json').read_text())
-        self.assertEqual(old_cross['questions'], new_cross['questions'])
+        # The workbook's three questions are unchanged; the only additions are
+        # the addendum's extinction pair, each stamped with its `since`.
+        new_by_id = {q['id']: q for q in new_cross['questions']}
+        for q in old_cross['questions']:
+            self.assertEqual(q, new_by_id[q['id']])
+        added = [q for q in new_cross['questions'] if q['id'] not in {o['id'] for o in old_cross['questions']}]
+        self.assertEqual([q['id'] for q in added], ['extinction:general', 'extinction:ai'])
+        self.assertTrue(all(q.get('since') == '2026-09-15' for q in added))
 
     def test_windows_advance_for_every_incident_horizon_and_handle_short_months(self):
         spec = load_ladder()

@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
-"""Audit a complete, dated three-instrument launch snapshot without changing it."""
+"""Audit a complete, dated launch snapshot without changing it.
+
+By default the combined instrument alone (the headline series and the policy
+and capability panels), which is what the scheduled run elicits since the
+axes instruments left the schedule on 2026-09-14. --sets audits others, e.g.
+--sets combined,axes,paperaxes for a date on which all three were run.
+"""
 import argparse
 from collections import Counter, defaultdict
 from datetime import date
@@ -13,7 +19,8 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from redlines.instrument import CURRENT_INSTRUMENT, counting_windows
-from redlines.registry import panel
+from redlines.registry import published_panel
+from redlines.superseded import is_superseded
 
 
 def main():
@@ -21,26 +28,40 @@ def main():
     parser.add_argument('--results', type=Path, default=ROOT / 'results')
     parser.add_argument('--date', type=date.fromisoformat, required=True)
     parser.add_argument('--out', type=Path, required=True)
+    parser.add_argument('--sets', default='combined',
+                        help='comma-separated instrument slugs to audit (default: combined)')
     args = parser.parse_args()
+    files = {'combined': 'combined_conditions.json', 'axes': 'axes_conditions.json',
+             'paperaxes': 'paper_axes_conditions.json'}
+    sets = [s.strip() for s in args.sets.split(',') if s.strip()]
+    unknown = [s for s in sets if s not in files]
+    if unknown:
+        parser.error(f"unknown instrument set(s) {unknown}; choose from {sorted(files)}")
     module = importlib.util.spec_from_file_location('launch_runner', ROOT / 'code/run_unified.py')
     ru = importlib.util.module_from_spec(module)
     module.loader.exec_module(ru)
-    labels = {m['label'] for m, _ in panel()}
+    labels = {m['label'] for m, _ in published_panel()}
     report = {'date': args.date.isoformat(), 'instrument_version': CURRENT_INSTRUMENT,
-              'models': sorted(labels), 'instruments': {}, 'errors': [], 'coherence_warnings': []}
+              'models': sorted(labels), 'instruments': {}, 'errors': [], 'coherence_warnings': [],
+              # The debrief (2026-09-15) is asked after the forecasts are accepted
+              # and cannot move them, so a missing or incomplete one is a warning
+              # for the brief's author, never a reason to withhold the page.
+              'debrief_warnings': []}
 
     def check(ok, kind, detail):
         if not ok:
             report['errors'].append({'check': kind, 'detail': detail})
 
-    for slug, filename in [('combined', 'combined_conditions.json'),
-                           ('axes', 'axes_conditions.json'),
-                           ('paperaxes', 'paper_axes_conditions.json')]:
+    for slug in sets:
+        filename = files[slug]
         path = args.results / f'conditional_runs_{slug}.jsonl'
         raw = path.read_bytes()
+        # A draw the same day replaced (redlines.superseded) is not part of
+        # the day's grid: without this, a re-run day fails as duplicates.
         rows = [r for line in raw.splitlines() if line
                 for r in [json.loads(line)] if r.get('run_date') == args.date.isoformat()
-                and r.get('instrument_version') == CURRENT_INSTRUMENT]
+                and r.get('instrument_version') == CURRENT_INSTRUMENT
+                and not is_superseded(r)]
         policies = ru.load_policies(ROOT / 'data' / filename)
         policies = ru.resolve_set(policies, args.date)
         conds = ru.expand_conditions(['all'], policies)
@@ -91,6 +112,12 @@ def main():
                 check(len(evidence) >= ru.MIN_RESEARCH and all(r.get('grounded') for r in rs),
                       'grounding_floor', call_id)
                 check(bool(first.get('rationale')), 'rationale_present', call_id)
+                status = first.get('debrief_status') or {}
+                if not (isinstance(first.get('debrief'), dict) and status.get('complete')):
+                    report['debrief_warnings'].append({
+                        'set': slug, 'call_id': call_id, 'label': first['label'],
+                        'attempts': status.get('attempts'), 'error': status.get('error'),
+                        'problems': status.get('problems') or (['no debrief recorded'] if not status else [])})
                 for elicit in ru.set_elicits(policies):
                     value = (first.get('elicited') or {}).get(elicit['key'])
                     check(bool(ru.clean_elicit(value, elicit)), 'elicited_metadata', [call_id, elicit['key']])
@@ -132,6 +159,7 @@ def main():
     args.out.write_text(json.dumps(report, indent=2)+'\n')
     print(json.dumps({'integrity_errors': len(report['errors']),
                       'coherence_warnings': len(report['coherence_warnings']),
+                      'debrief_warnings': len(report['debrief_warnings']),
                       'recorded_cost_usd': report['recorded_cost_usd'], 'report': str(args.out)}))
     return int(bool(report['errors']))
 

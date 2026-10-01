@@ -60,6 +60,8 @@ class TestSeverityAxis(unittest.TestCase):
         """The placement rule's VSL must be the one the rungs actually imply."""
         gen = load_generator()
         for r in load_ladder()["rungs"]:
+            if r.get("damages_usd") is None:    # the extinction rung has no dollar leg
+                continue
             self.assertAlmostEqual(
                 r["damages_usd"] / r["deaths"], gen.VSL_USD, delta=1,
                 msg=f"rung {r['short']} implies a value of a statistical life "

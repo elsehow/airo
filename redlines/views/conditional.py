@@ -47,7 +47,8 @@ def current_forecast_rows(rows):
 # 2100 (the unconditional 2100 feeds the main page) and the summary keeps it,
 # flagged; this tab just does not show it.
 DEFAULT_HORIZONS = ("2030", "2050")
-PILOT_ORDER = ["catastrophe:ai", "catastrophe:general", "disempowerment"]
+PILOT_ORDER = ["catastrophe:ai", "catastrophe:general", "disempowerment",
+               "extinction:general", "extinction:ai"]   # the addendum pair last (2026-09-15)
 
 # The page shows the ladder compressed: one expected-loss row per cause, not
 # eight rung rows. The rungs stay in the summary (analyze_conditional.py
@@ -61,7 +62,7 @@ LOSS_GROUP = GROUP_DOMAIN
 # it is history, not a view. Two joint tags because the v1 -> v2 bump
 # (2026-08-28, the cross-cutting questions onto the six-horizon grid) was
 # additive; selection only -- build() narrows a day to ONE protocol.
-PROTOCOLS = ("unified-joint-v3", "unified-joint-v2", "unified-joint-v1")
+PROTOCOLS = ("unified-joint-v6", "unified-joint-v5", "unified-joint-v4", "unified-joint-v3", "unified-joint-v2", "unified-joint-v1")
 PROTOCOL = PROTOCOLS[0]
 
 # Where the tab's rows come from: (log, condition set, group, protocols

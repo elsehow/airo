@@ -24,7 +24,9 @@ PANEL_K highest-ECI models in the NEWEST snapshot that this table can run
 hand-typed frontier five survive as the named set `frontier5`, the panel the
 series ran on until then.
 """
+from datetime import date
 import functools
+import json
 import sys
 from pathlib import Path
 
@@ -34,22 +36,26 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 # Graph 4's vintage. Models already in this file keep its values, so the
 # ladder and every tracked artifact stay byte-identical -- refreshing those
 # values is a separate, deliberate change that has to be re-baselined against
-# tests/. The newest snapshot is consulted ONLY for models the pinned file
-# predates (Claude Opus 5 shipped 2026-07-24, GPT-5.6 Sol 2026-07-09).
+# tests/. The 2026-09-08 snapshot (eci.SUPPLEMENT), then the newest, are
+# consulted ONLY for models the pinned file predates (Claude Opus 5 shipped
+# 2026-07-24, GPT-5.6 Sol 2026-07-09).
 EPOCH_CSV = _eci.snapshot_path(_eci.PINNED)
 
 
 def load_epoch_index(csv_path: Path = EPOCH_CSV, supplement: Path | None = None) -> dict[str, dict]:
     """Official Epoch Capabilities Index, keyed by exact model name -> row dict.
 
-    The pinned snapshot wins; the supplement (default: the newest snapshot)
-    only fills in models it never had.
+    The pinned snapshot wins; the supplements fill in only models it never
+    had -- `supplement` if given, else the frozen eci.SUPPLEMENT snapshot and
+    then the newest one, in that order (so a fetched snapshot adds new
+    models without moving the ones already drawn).
     """
     idx = _eci.load(csv_path)
-    supplement = supplement or _eci.latest()[1]
-    if supplement and Path(supplement).exists() and Path(supplement) != Path(csv_path):
-        for name, rec in _eci.load(supplement).items():
-            idx.setdefault(name, rec)
+    chain = [supplement] if supplement else [_eci.snapshot_path(_eci.SUPPLEMENT), _eci.latest()[1]]
+    for sup in chain:
+        if sup and Path(sup).exists() and Path(sup) != Path(csv_path):
+            for name, rec in _eci.load(sup).items():
+                idx.setdefault(name, rec)
     return idx
 
 
@@ -132,6 +138,14 @@ _ROWS = [
     # grounding tools are the point (probed on the box 2026-09-08).
     ("claude-fable-5-1",    "claude-fable",  "Fable 5.1",       "anthropic/claude-fable-5-1",                               None,                          "Claude Fable 5.1",          "#8e2a63",  "undisclosed", []),
     ("gpt-6-astra",         "gpt-astra",     "GPT-6 Astra",     "openai/responses/gpt-6-astra",                             None,                          "GPT-6 Astra",               "#0e7c7b",  "undisclosed", []),
+    # Added 2026-10-01: Epoch's index of that day ranks them first and third
+    # (167.3 and 165.2), so they take the claude-opus seat from Opus 5 and a
+    # claude-sonnet seat of their own; GPT-5.5 Pro leaves the panel. Probed on
+    # the box the same day: max (adaptive) reasoning accepted, priced by
+    # litellm 1.96.2, and -- like Fable 5.1 -- a forced tool_choice refused
+    # (redlines/llm.py: NO_FORCED_TOOL_CHOICE). Not on Graph 4's ladder.
+    ("claude-opus-5-5",     "claude-opus",   "Opus 5.5",        "anthropic/claude-opus-5-5",                                None,                          "Claude Opus 5.5",           "#4f5bd5",  "undisclosed", []),
+    ("claude-sonnet-5-5",   "claude-sonnet", "Sonnet 5.5",      "anthropic/claude-sonnet-5-5",                              None,                          "Claude Sonnet 5.5",         "#d4892a",  "undisclosed", []),
 ]
 
 # Graph-4 clean-subset rule (TODO.md Phase 2). A model is excluded from the
@@ -301,6 +315,43 @@ def panel(k=PANEL_K, snapshot=None):
     return list(members)
 
 
+def snapshot_of(rows):
+    """(date, path) of the snapshot the newest stamped row's panel was chosen
+    from, or None when no row carries one or that file is not in data/."""
+    stamped = [r for r in rows if (r.get("panel") or {}).get("snapshot")]
+    if not stamped:
+        return None
+    newest = max(stamped, key=lambda r: (r.get("run_date") or "", r.get("elicited_at") or ""))
+    day = date.fromisoformat(newest["panel"]["snapshot"])
+    path = _eci.snapshot_path(day)
+    return (day, path) if path.exists() else None
+
+
+@functools.lru_cache(maxsize=None)
+def record_snapshot():
+    """(date, path) of the snapshot the newest scheduled run (results/runs/)
+    chose its panel from; the newest snapshot when no run says."""
+    from .runlog import RUNS_DIR
+    for p in sorted(RUNS_DIR.glob("*.jsonl"), reverse=True):
+        with open(p, encoding="utf-8") as f:
+            first = next((line for line in f if line.strip()), None)
+        snap = snapshot_of([json.loads(first)]) if first else None
+        if snap:
+            return snap
+    return _eci.latest()
+
+
+def published_panel(k=PANEL_K, rows=None):
+    """The panel the DASHBOARD draws: the one the newest run was chosen as
+    (its rows' stamped snapshot -- `rows` if given, else results/runs/),
+    not panel(), the one the NEXT run will be. Since 2026-10-01 the index is
+    fetched before every run, so the two differ from the fetch until that
+    run lands; the views must not blank or recolor in between. Same rule,
+    same registry: a past run's panel is re-derived from its snapshot."""
+    snap = (snapshot_of(rows) if rows is not None else None) or record_snapshot()
+    return panel(k, snap)
+
+
 def panel_warnings(k=PANEL_K, snapshot=None):
     snapshot = snapshot or _eci.latest()
     return list(_select(k, snapshot)[1])
@@ -341,13 +392,13 @@ def color_for(model: dict, members=None) -> str:
     """The color a chart draws `model` (a MODELS row) in: its own if it holds
     a panel seat, RETIRED_COLOR otherwise."""
     if members is None:
-        members = {m["key"] for m, _ in panel()}
+        members = {m["key"] for m, _ in published_panel()}
     return model["color"] if model["key"] in members else RETIRED_COLOR
 
 
 def model_colors() -> list[tuple[str, str]]:
-    """(label, color) for every model the views may draw: the current panel
-    first, in panel order and in its own colors, then every other registry
+    """(label, color) for every model the views may draw: the published panel
+    (published_panel) first, in panel order and in its own colors, then every other registry
     model by ECI descending (newest snapshot's value where it has one, the
     pinned one otherwise), all in RETIRED_COLOR.
 
@@ -355,9 +406,9 @@ def model_colors() -> list[tuple[str, str]]:
     the current one's future; a view iterates this list and skips models
     absent from its data, so a panel change needs no edit here.
     """
-    members = [m["key"] for m, _ in panel()]
+    members = [m["key"] for m, _ in published_panel()]
     by_key = {m["key"]: m for m in MODELS}
-    current = {r["model"]: r["eci"] for r in _eci.ranked()}
+    current = {r["model"]: r["eci"] for r in _eci.ranked(record_snapshot()[1])}
     rest = sorted((m for m in MODELS if m["key"] not in members),
                   key=lambda m: (-current.get(m["epoch_name"], m["eci"]), m["label"]))
     return [(by_key[k]["label"], by_key[k]["color"]) for k in members] + \

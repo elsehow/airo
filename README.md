@@ -1,7 +1,7 @@
 # AIRO — Automated AI Risk Outlook
 
 AIRO is a standing panel of frontier language models that forecasts AI-related
-catastrophic-risk questions, re-elicited on a weekly schedule so the forecasts
+catastrophic-risk questions, re-elicited on a twice-weekly schedule so the forecasts
 form a time series rather than a snapshot. It is a project of the
 [Forecasting Research Institute](https://forecastingresearch.org) (FRI). The
 live dashboard is at **https://airo.forecastingresearch.org**, and an accompanying white paper
@@ -61,9 +61,9 @@ and is checked byte-for-byte against the tracked output by the golden tests.
 keys (next section).
 
 ```bash
-python3 -m redlines build            # rebuild all 13 views and mirror them to results/*.json
+python3 -m redlines build            # rebuild all 14 views and mirror them to results/*.json
 python3 -m redlines build --views g1 # any subset: g1,g2,g3,g4,observational,causal,databank,
-                                     #   timeline,conditional,capability,axes,method,csv
+                                     #   timeline,conditional,capability,axes,method,rationales,csv
 python3 -m redlines build --list     # list view names and exit
 python3 -m redlines assemble         # rebuild index.html from web/demo/ chunks + fresh blobs
 python3 -m redlines export-fb        # the provisional ForecastBench-2.0 ingest artifact
@@ -108,12 +108,15 @@ identical from the outside, so the runner refuses instead;
 `--allow-ungrounded` makes that an explicit choice.
 
 **The published protocol** (since 2026-08-27; rows are tagged with a protocol
-id, currently `unified-joint-combined-v5`, see `redlines/conditional.py`) is the
+id, currently `unified-joint-combined-v6`, see `redlines/conditional.py`) is the
 single instrument: `--joint` is one call per model that answers every question ×
 horizon cell unconditionally *and* under each condition in one submission, with
 no coherence relation stated in the prompt (coherence is measured afterwards).
-The prompt is 35 questions (four AI incident types × 8 severity rungs, plus
-three cross-cutting questions) over six horizons, two of them rolling. Since
+The prompt is 37 questions (four AI incident types × 8 severity rungs, plus
+five cross-cutting questions: the two 10%-of-population catastrophe questions,
+human disempowerment, and since 2026-09-15 the two extinction questions in
+XPT's wording, `docs/extinction-questions-2026-09-15.md`) over six horizons,
+two of them rolling. Since
 2026-09-02 each model is asked once per run (`--repeats 1`); the same-day
 repeats that preceded it bought a re-asking spread, and their budget went to
 the agentic search harness instead, so the views draw no interval on a
@@ -126,10 +129,15 @@ instrument is appended to `results/conditional_runs*.jsonl`.
 (the LEAP policies plus the model's own capability percentiles, what the weekly
 run uses), `data/eci_conditions.json` (fixed ECI levels),
 `data/axes_conditions.json` (risk against an x-axis quantity). See
-`docs/conditional-forecasts.md`. A weekly cron on the serving box runs
-`code/cron_run.sh` (Fridays 12:00 UTC), which runs the combined instrument and
-then the axes instruments, and publishes the rebuilt page with
-`code/publish_dashboard.sh`.
+`docs/conditional-forecasts.md`. A cron on the serving box runs
+`code/cron_run.sh` (Wednesdays and Fridays 12:00 UTC), which runs the combined
+instrument and publishes the rebuilt page with `code/publish_dashboard.sh`.
+Each call ends with a debrief turn (since 2026-09-15): per question group, the
+sources that mattered most, the most compelling arguments, the most likely
+pathway to catastrophe and the base rate, in the model's own words, exported
+as `results/debriefs.csv`. The
+axes instruments left the schedule on 2026-09-14; run them by hand with
+`--conditions data/axes_conditions.json` when a fresh axes date is wanted.
 
 ### The question set
 
@@ -208,8 +216,10 @@ data/
   auto-arc/                 the Auto-ARC question workbook (.xlsx) and definitions (.md) by date
   autoarc_ladder.json, autoarc_crosscutting.json   the generated question sets (never hand-edited)
   instruments/              the previous instrument's definitions and question sets, archived by date
-  epoch_capabilities_index_<date>.csv   Epoch ECI snapshots (2026-07-07 pinned for Graph 4; newest picks the panel)
-  eci_projection_*.json, eci_trend_*.json, live_metr_eci_frontier.json   the ECI trend inputs
+  epoch_capabilities_index_<date>.csv   Epoch ECI snapshots (2026-07-07 pinned for Graph 4; newest picks the panel;
+                            fetched before every scheduled run since 2026-10-01)
+  eci_projection_*.json, eci_trend_*.json   the ECI trend inputs
+  live_metr_eci_frontier.json   the METR frontier the capability prompt quoted 2026-09-10 .. 09-18 (record only)
   leap_policies.json, leap_reference.json   the LEAP-derived condition set and panel aggregates (the
                             survey documents and raw pull under data/leap/ are internal, gitignored)
   *_conditions.json         the condition sets the runner takes (--conditions)
@@ -284,6 +294,7 @@ archive/jason-demo.html     the original mock dashboard the live page grew from 
 - `docs/conditional-benches.md` — Graphs 5 and 6: can the models forecast conditionals? (observational weather pairs; Starsim interventions).
 - `docs/coherence-experiment.md` — joint elicitation vs one question per call, and why the constraints are measured, not stated.
 - `docs/question-swap.md` — the design record of the move to the Auto-ARC question set.
+- `docs/extinction-questions-2026-09-15.md` — the extinction pair: why, whose wording, what it compares with, what changed, what is still the team's call.
 - `docs/eci-top4-arm.md` — the ECI-ranked panel: where the selection rule came from and what it changed.
 - `docs/counting-rules-specification-2026-09-10.md` — the incident counting rules (onset windows, cyber campaign boundaries) behind instrument `airo-incidents-prospective-v1`.
 - `docs/cyber-validation-2026-09-10.md`, `docs/cyber-validation-prospective-2026-09-10.md`, `docs/cyber-source-review-prospective-2026-09-10.md` — the September 2026 audits of the cyber forecasts and their sources (with `.json` evidence files beside them).

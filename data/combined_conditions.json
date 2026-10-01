@@ -2,15 +2,15 @@
  "title": "Policy and capability conditions in one instrument -- LEAP Wave 12 policies beside the self-elicited frontier ECI six months from the run date -- as the runner prepends them",
  "slug": "combined",
  "kind": "policy or capability",
- "protocol": "unified-joint-combined-v5",
+ "protocol": "unified-joint-combined-v8",
  "source": {
   "panel": "LEAP, for the policy conditions only; no human panel answers the capability conditions",
   "wave": "LEAP Wave 12 policies + frontier ECI 6 months from the run date (the model's own p10/p25/p50/p75/p90)",
-  "status": "policy: internal draft, received 2026-08-27; the fielded instrument may differ; capability: no human panel; the model's percentiles are compared to the live METR projection at the run's own target date (code/analyze_eci_self.py)",
+  "status": "policy: internal draft, received 2026-08-27; the fielded instrument may differ; capability: no human panel; the model's percentiles are compared to the metr_graph projection at the run's own target date (code/analyze_eci_self.py)",
   "documents": [
    "data/leap/wave12-policies-2026-08-26.md",
    "data/leap/wave12-survey-2026-08-26.md",
-   "data/live_metr_eci_frontier.json"
+   "data/epoch_capabilities_index_2026-10-01.csv"
   ],
   "outcome_horizons": [
    "2050"
@@ -29,7 +29,7 @@
    {
     "slug": "eciself6mo",
     "file": "data/eci_self6mo_conditions.json",
-    "sha256": "9a5e618fc234bdeba29acdc2aae191344b105261a6a1852580342ce48b735f02",
+    "sha256": "110f47f1d537293ce6847492c4091c257027273f43357eb53fd22113a7498a74",
     "generated_by": "code/make_eci_self_conditions.py",
     "protocol": "unified-joint-eciself6mo-v2"
    }
@@ -61,7 +61,7 @@
  "conditioning": {
   "instruction": "Every condition stands alone: a policy condition is not combined with any capability condition, and a capability condition is not combined with any policy condition. Each section below states what its conditions assume about the other.",
   "unconditional_forecast": "forecast the world as you expect it to unfold, including AI policies you expect to be implemented and whatever level of AI capability you expect to be reached by {target_date}.",
-  "definitions": "Definitions. ECI: the Epoch Capabilities Index, published by Epoch AI -- a single score summarising a model's results across dozens of benchmarks, fit with an item-response model so that scores stay comparable as benchmarks saturate and new ones are added. Higher is more capable; the scale has no ceiling. All scores here are on the scale as published by Epoch on 2026-09-10.\nFrontier ECI: the highest ECI score of any publicly released model from a US developer, as scored by Epoch.\n\nFrontier ECI history -- every release by a US developer that set a new high, best variant per model, from GPT-4 on (Epoch's index of 2026-09-10, 19 models scored):\n  2024-02-29   126.9  Claude 3 Opus\n  2024-04-09   127.2  GPT-4 Turbo (Apr 2024)\n  2024-05-13   129.0  GPT-4o (May 2024)\n  2024-06-20   130.0  Claude 3.5 Sonnet (Jun 2024)\n  2024-09-12   135.8  o1-mini (high)\n  2024-12-17   141.9  o1 (high)\n  2025-03-31   144.2  Gemini 2.5 Pro Preview (Mar 2025)\n  2025-04-16   146.9  o3 (high)\n  2025-06-10   147.5  o3-pro\n  2025-08-07   150.0  GPT-5 (low)\n  2025-10-07   150.3  GPT-5 Pro\n  2025-11-18   152.9  Gemini 3 Pro Preview\n  2025-12-11   155.3  GPT-5.2 Pro\n  2026-02-05   156.4  GPT-5.3 Codex (high)\n  2026-03-05   158.9  GPT-5.4 Pro (xhigh)\n  2026-04-23   159.2  GPT-5.5 (xhigh)\n  2026-04-23   162.0  GPT-5.5 Pro (xhigh)\n  2026-06-09   162.9  Claude Fable 5 (max)\n  2026-09-03   169.2  GPT-6 Astra (high)\nAs of 2026-09-10 no released model has scored above GPT-6 Astra (high), 169.2 (2026-09-03).",
+  "definitions": "Definitions. ECI: the Epoch Capabilities Index, published by Epoch AI -- a single score summarising a model's results across dozens of benchmarks, fit with an item-response model so that scores stay comparable as benchmarks saturate and new ones are added. Higher is more capable; the scale has no ceiling. All scores here are on the scale as published by Epoch on 2026-10-01.\nFrontier ECI: the highest ECI score of any publicly released model from a US developer, as scored by Epoch.\n\nFrontier ECI history -- every release by a US developer that set a new high, from GPT-4 on (Epoch's index of 2026-10-01, 270 models scored):\n  2023-03-14   125.9  GPT-4 (Mar 2023)\n  2024-01-25   126.5  GPT-4 Turbo (Nov 2023)\n  2024-02-29   126.9  Claude 3 Opus\n  2024-04-09   127.2  GPT-4 Turbo (Apr 2024)\n  2024-05-13   129.0  GPT-4o (May 2024)\n  2024-06-20   130.0  Claude 3.5 Sonnet\n  2024-09-12   134.8  o1-preview\n  2024-09-12   135.8  o1-mini\n  2024-12-17   141.9  o1\n  2025-03-31   144.2  Gemini 2.5 Pro (Mar 2025)\n  2025-04-16   145.6  o4-mini\n  2025-04-16   146.9  o3\n  2025-06-10   147.4  o3-pro\n  2025-08-07   150.0  GPT-5\n  2025-10-07   150.3  GPT-5 Pro\n  2025-11-18   152.9  Gemini 3 Pro\n  2025-12-11   153.5  GPT-5.2\n  2025-12-11   155.4  GPT-5.2 Pro\n  2026-02-05   156.8  GPT-5.3 Codex\n  2026-03-05   156.9  GPT-5.4\n  2026-03-05   159.1  GPT-5.4 Pro\n  2026-04-23   159.2  GPT-5.5\n  2026-04-23   162.4  GPT-5.5 Pro\n  2026-07-24   162.9  Claude Opus 5\n  2026-09-01   164.8  Claude Fable 5.1\n  2026-09-03   166.5  GPT-6 Astra\n  2026-09-22   167.3  Claude Opus 5.5\nAs of 2026-10-01 no released model has scored above Claude Opus 5.5, 167.3 (2026-09-22).",
   "horizon": "a policy condition is in force through December 31, 2050; a capability condition is a level of the frontier ECI on {target_date}."
  },
  "groups": [
@@ -103,10 +103,10 @@
    "horizon": "every condition is a level of the frontier ECI on {target_date}.",
    "source": {
     "panel": null,
-    "wave": "Frontier ECI 6 months from the run date, the model's own p10/p25/p50/p75/p90 (live METR snapshot retrieved 2026-09-10)",
-    "status": "no human panel; the model's percentiles are compared to the live METR projection at the run's own target date (code/analyze_eci_self.py)",
+    "wave": "Frontier ECI 6 months from the run date, the model's own p10/p25/p50/p75/p90 (Epoch ECI snapshot of 2026-10-01)",
+    "status": "no human panel; the model's percentiles are compared to the metr_graph projection at the run's own target date (code/analyze_eci_self.py)",
     "documents": [
-     "data/live_metr_eci_frontier.json"
+     "data/epoch_capabilities_index_2026-10-01.csv"
     ],
     "outcome_horizons": [],
     "policy_probability_horizons": []
@@ -117,6 +117,16 @@
   }
  ],
  "history": [
+  {
+   "date": "2023-03-14",
+   "score": 125.9,
+   "model": "GPT-4 (Mar 2023)"
+  },
+  {
+   "date": "2024-01-25",
+   "score": 126.5,
+   "model": "GPT-4 Turbo (Nov 2023)"
+  },
   {
    "date": "2024-02-29",
    "score": 126.9,
@@ -135,37 +145,47 @@
   {
    "date": "2024-06-20",
    "score": 130.0,
-   "model": "Claude 3.5 Sonnet (Jun 2024)"
+   "model": "Claude 3.5 Sonnet"
+  },
+  {
+   "date": "2024-09-12",
+   "score": 134.8,
+   "model": "o1-preview"
   },
   {
    "date": "2024-09-12",
    "score": 135.8,
-   "model": "o1-mini (high)"
+   "model": "o1-mini"
   },
   {
    "date": "2024-12-17",
    "score": 141.9,
-   "model": "o1 (high)"
+   "model": "o1"
   },
   {
    "date": "2025-03-31",
    "score": 144.2,
-   "model": "Gemini 2.5 Pro Preview (Mar 2025)"
+   "model": "Gemini 2.5 Pro (Mar 2025)"
+  },
+  {
+   "date": "2025-04-16",
+   "score": 145.6,
+   "model": "o4-mini"
   },
   {
    "date": "2025-04-16",
    "score": 146.9,
-   "model": "o3 (high)"
+   "model": "o3"
   },
   {
    "date": "2025-06-10",
-   "score": 147.5,
+   "score": 147.4,
    "model": "o3-pro"
   },
   {
    "date": "2025-08-07",
    "score": 150.0,
-   "model": "GPT-5 (low)"
+   "model": "GPT-5"
   },
   {
    "date": "2025-10-07",
@@ -175,42 +195,62 @@
   {
    "date": "2025-11-18",
    "score": 152.9,
-   "model": "Gemini 3 Pro Preview"
+   "model": "Gemini 3 Pro"
   },
   {
    "date": "2025-12-11",
-   "score": 155.3,
+   "score": 153.5,
+   "model": "GPT-5.2"
+  },
+  {
+   "date": "2025-12-11",
+   "score": 155.4,
    "model": "GPT-5.2 Pro"
   },
   {
    "date": "2026-02-05",
-   "score": 156.4,
-   "model": "GPT-5.3 Codex (high)"
+   "score": 156.8,
+   "model": "GPT-5.3 Codex"
   },
   {
    "date": "2026-03-05",
-   "score": 158.9,
-   "model": "GPT-5.4 Pro (xhigh)"
+   "score": 156.9,
+   "model": "GPT-5.4"
+  },
+  {
+   "date": "2026-03-05",
+   "score": 159.1,
+   "model": "GPT-5.4 Pro"
   },
   {
    "date": "2026-04-23",
    "score": 159.2,
-   "model": "GPT-5.5 (xhigh)"
+   "model": "GPT-5.5"
   },
   {
    "date": "2026-04-23",
-   "score": 162.0,
-   "model": "GPT-5.5 Pro (xhigh)"
+   "score": 162.4,
+   "model": "GPT-5.5 Pro"
   },
   {
-   "date": "2026-06-09",
+   "date": "2026-07-24",
    "score": 162.9,
-   "model": "Claude Fable 5 (max)"
+   "model": "Claude Opus 5"
+  },
+  {
+   "date": "2026-09-01",
+   "score": 164.8,
+   "model": "Claude Fable 5.1"
   },
   {
    "date": "2026-09-03",
-   "score": 169.2,
-   "model": "GPT-6 Astra (high)"
+   "score": 166.5,
+   "model": "GPT-6 Astra"
+  },
+  {
+   "date": "2026-09-22",
+   "score": 167.3,
+   "model": "Claude Opus 5.5"
   }
  ],
  "trend": null,
@@ -358,6 +398,6 @@
   "levels": "per call: the model's own eci_forecast values; the runner stamps condition.value with the number the condition refers to.",
   "conditioning": "policy: LEAP's exogenous-intervention clause; capability: a fact learned about the world (the component sets' own clauses, each in its own section).",
   "target": "run date + 6 months; the prompt's {target_date} is filled by run_unified.resolve_set with the same month arithmetic as the rolling horizons (day clamped to the month's length).",
-  "cost": "210 cells x 14 keys = 2,940 probabilities per call, against 1,890 on the policy instrument and 1,260 on the capability one."
+  "cost": "222 cells x 14 keys = 3,108 probabilities per call (210 x 14 = 2,940 before the extinction pair, 2026-09-15), against 1,998 on the policy instrument and 1,332 on the capability one."
  }
 }

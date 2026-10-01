@@ -18,7 +18,7 @@ import json
 import statistics
 
 from ..config import CLIM_FREECIV_COMBINED, FC_BAND, FC_HORIZONS, PAN_MIN_N
-from ..registry import CONFOUNDED_ARCHITECTURES, MODELS, color_for, demo_set_with_eci, panel
+from ..registry import CONFOUNDED_ARCHITECTURES, MODELS, color_for, demo_set_with_eci, published_panel
 from ..stats import brier_mean, bss, deciles_weighted, spearman
 
 # litellm_id -> architecture, for joining onto demo_set_with_eci()'s rows
@@ -155,8 +155,8 @@ def build(eval_path, questions_path, pandemic_preds_path, final=False):
     # their registry colors, the same as on every other chart, and the rest
     # of the ladder in the one retired gray (project lead, 2026-09-08). Before, an
     # 11-step ECI ramp colored the ladder and the panel was an accent green.
-    panel_ids = {row["litellm_id"] for row, _ in panel()}
-    members = {row["key"] for row, _ in panel()}
+    panel_ids = {row["litellm_id"] for row, _ in published_panel()}
+    members = {row["key"] for row, _ in published_panel()}
 
     models_out, scatter, all_w = [], [], []
     for i, m in enumerate(order):
@@ -223,7 +223,7 @@ def build(eval_path, questions_path, pandemic_preds_path, final=False):
             "members": [by_id[m]["label"] for m in members if m in by_id],
             "membersCiv": [by_id[m]["label"] for m in used_fc if m in by_id],
             "membersStar": [by_id[m]["label"] for m in used_pan if m in by_id],
-            "absent": [row["label"] for row, _ in panel() if row["litellm_id"] not in members],
+            "absent": [row["label"] for row, _ in published_panel() if row["litellm_id"] not in members],
             # Drawn at the members' median ECI; the ensemble has no ECI of its own.
             "eci": statistics.median(by_id[m]["eci"] for m in members if m in by_id),
             "rule": "median of the members' probabilities per question; equal weight per simulator",

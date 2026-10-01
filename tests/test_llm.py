@@ -19,6 +19,10 @@ that this repo reached into over sys.path. Three things are worth pinning.
   * THE LOOP STILL LOOPS. call_tools takes an injectable `complete` backend, so
     the tool-call -> tool-result -> submit cycle is checkable offline.
 """
+import contextlib
+import json
+import json
+import io
 import os
 import subprocess
 import sys
@@ -90,6 +94,32 @@ class TestImportIsStdlibOnly(unittest.TestCase):
         self.assertNotIn(str(mod.MAX_ROUNDS), mod.SYSTEM)
         self.assertNotIn("rounds of tool calls", mod.SYSTEM)
         self.assertIn("recent_days", mod.SYSTEM)
+
+    def test_research_tools_narrow_cause_to_the_batch_groups(self):
+        """The forecasting run's web_search carries `cause` as a required enum
+        of the batch's group keys and the loop's coverage keys are the same
+        list; the shared tool definition stays generic and optional."""
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("ru", REPO / "code" / "run_unified.py")
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        groups = [{"key": "ai", "label": "AI-related incident"},
+                  {"key": "crosscutting", "label": "Cross-cutting"}]
+        research, keys = mod.research_tools(groups)
+        cause = research[0]["parameters"]["properties"]["cause"]
+        self.assertEqual(keys, ["ai", "crosscutting"])
+        self.assertEqual(cause["enum"], keys)
+        self.assertIn("AI-related incident", cause["description"])
+        self.assertEqual(research[0]["parameters"]["required"], ["query", "cause"])
+        self.assertIs(research[0]["fn"], tools.web_search)
+        self.assertEqual(research[1:], tools.FORECAST_TOOLS[1:])
+        self.assertNotIn("enum", tools.WEB_SEARCH_TOOL["parameters"]["properties"]["cause"])
+        self.assertEqual(tools.WEB_SEARCH_TOOL["parameters"]["required"], ["query"])
+        self.assertIn("cause", mod.SYSTEM)
+        self.assertEqual(mod.coverage_line([{"evidence": [
+            {"tool": "web_search", "args": {"query": "q", "cause": "ai", "recent_days": 30}, "result": {}},
+            {"tool": "web_search", "args": {"query": "q", "cause": "bio"}, "result": {}}]}]),
+            "coverage ai:1")
 
     def test_read_page_degrades_without_a_key(self):
         """Same contract as web_search: no key -> an {error} result, never a raise,
@@ -321,6 +351,76 @@ class TestCallToolsLoop(unittest.TestCase):
         self.assertEqual([e["args"]["query"] for e in ev], ["a", "b"])
         self.assertEqual(offered, [False, False, True])
 
+    def test_coverage_withholds_submit_until_every_group_has_a_recent_search(self):
+        """With coverage=["ai", "bio"] the final tool stays withheld after the
+        floor is met until each group has a recent_days search tagged with it;
+        a premature submit is refused naming only the groups still missing,
+        and a search without a window (or without a tag) does not count."""
+        offered, refusals, n = [], [], [0]
+
+        def backend(model, messages, *, tools=None, **kw):
+            n[0] += 1
+            offered.append("submit" in [t["function"]["name"] for t in tools])
+            if n[0] == 1:   # floor met (2 calls); ai covered; bio searched with no window
+                return {"content": "", "tool_calls": [
+                    {"id": "c1", "name": "web_search",
+                     "arguments": '{"query": "a", "cause": "ai", "recent_days": 30}'},
+                    {"id": "c2", "name": "web_search", "arguments": '{"query": "b", "cause": "bio"}'}]}
+            if n[0] == 2:   # tries to submit -- refused
+                return {"content": "", "tool_calls": [{"id": "s0", "name": "submit", "arguments": '{"p": 0.1}'}]}
+            if n[0] == 3:   # sees the refusal, covers bio
+                refusals.append(messages[-1]["content"])
+                return {"content": "", "tool_calls": [
+                    {"id": "c3", "name": "web_search",
+                     "arguments": '{"query": "c", "cause": "bio", "recent_days": 30}'}]}
+            return {"content": "", "tool_calls": [{"id": "s1", "name": "submit", "arguments": '{"p": 0.2}'}]}
+
+        ans, ev = llm.call_tools("fake/model", "forecast", tools.FORECAST_TOOLS, self.FINAL,
+                                 complete=backend, min_evidence=2, max_iters=8,
+                                 coverage=["ai", "bio"])
+        self.assertEqual(ans, {"p": 0.2})
+        self.assertEqual(offered, [False, False, False, True])
+        self.assertEqual(len(refusals), 1)
+        self.assertIn("bio", refusals[0])
+        self.assertNotIn("ai", refusals[0].split("needed for:")[1])
+        self.assertNotIn("more research call", refusals[0])   # the floor was met
+        self.assertEqual(llm.research_coverage(ev), {"ai": 1, "bio": 1})
+
+    def test_coverage_prose_nudge_names_the_missing_groups(self):
+        seen = []
+
+        def backend(model, messages, *, tools=None, **kw):
+            seen.append(messages[-1]["content"])
+            if len(seen) == 1:
+                return {"content": "thinking out loud", "tool_calls": []}
+            return {"content": "", "tool_calls": [{"id": "s", "name": "submit", "arguments": "{}"}]}
+
+        llm.call_tools("fake/model", "forecast", [], self.FINAL, complete=backend,
+                       min_evidence=0, max_iters=2, coverage=["cyber"])
+        self.assertIn("recent_days on each of: cyber", seen[1])
+
+    def test_coverage_still_forces_submission_on_the_last_turn(self):
+        """The turn guard wins over the coverage rule, and the log says what
+        went uncovered."""
+        def backend(model, messages, *, tools=None, tool_choice=None, **kw):
+            if "submit" in [t["function"]["name"] for t in tools]:
+                return {"content": "", "tool_calls": [{"id": "s", "name": "submit", "arguments": "{}"}]}
+            return {"content": "hm", "tool_calls": []}
+
+        with contextlib.redirect_stderr(io.StringIO()) as err:
+            ans, ev = llm.call_tools("fake/model", "forecast", [], self.FINAL, complete=backend,
+                                     min_evidence=0, max_iters=3, coverage=["ai", "bio"])
+        self.assertEqual(ans, {})
+        self.assertIn("WARN", err.getvalue())
+        self.assertIn("ai, bio", err.getvalue())
+
+    def test_web_search_echoes_cause_and_never_sends_it(self):
+        self.assertNotIn("cause", tools.search_body("q", recent_days=7))
+        out = tools.web_search("q", recent_days=7, cause="bio")   # no key: an {error} result
+        self.assertEqual(out["cause"], "bio")
+        self.assertIn("error", out)
+        self.assertNotIn("cause", tools.web_search("q"))
+
     def test_fable_submission_guard_keeps_context_without_forced_tool_choice(self):
         seen = []
         usage = {}
@@ -345,6 +445,164 @@ class TestCallToolsLoop(unittest.TestCase):
         self.assertEqual(seen[-1][0][-2]["role"], "tool")
         self.assertIn("Now call submit", seen[-1][0][-1]["content"])
         self.assertEqual(usage["submission_guard"], "auto-final-tool-only")
+
+    def test_the_claude_5_5_models_never_get_a_forced_tool_choice(self):
+        """Probed 2026-10-01: Opus 5.5 and Sonnet 5.5 refuse it, Opus 5 does not."""
+        for m in ("anthropic/claude-opus-5-5", "anthropic/claude-sonnet-5-5",
+                  "anthropic/claude-fable-5-1"):
+            self.assertTrue(llm.refuses_forced_tool_choice(m), m)
+        self.assertFalse(llm.refuses_forced_tool_choice("anthropic/claude-opus-5"))
+
+    def test_an_unknown_refusal_is_learned_and_the_call_still_submits(self):
+        """A model nobody probed refuses the forced turn: the loop redoes that
+        turn the Fable 5.1 way (final tool only, asked in words) instead of
+        raising, WARNs, and remembers the model for the process."""
+        model = "anthropic/claude-test-refuses-force"
+        llm._NO_FORCE_LEARNED.discard(model)
+        seen = []
+
+        def backend(model, messages, *, tools=None, tool_choice=None, **kw):
+            seen.append(tool_choice)
+            if isinstance(tool_choice, dict):
+                raise RuntimeError('AnthropicException - tool_choice: type "tool" and "any" '
+                                   'are not supported for this model.')
+            if any(isinstance(c, dict) for c in seen):   # only after the refused forced turn
+                self.assertEqual([t["function"]["name"] for t in tools], ["submit"])
+                return {"content": "", "tool_calls": [{"id": "s", "name": "submit",
+                                                        "arguments": '{"p": 0.3}'}]}
+            return {"content": "still reading", "tool_calls": []}
+
+        try:
+            with contextlib.redirect_stderr(io.StringIO()) as err:
+                ans, _ = llm.call_tools(model, "forecast", [], self.FINAL, complete=backend,
+                                        min_evidence=0, max_iters=2)
+            self.assertEqual(ans, {"p": 0.3})
+            self.assertIn("refuses a forced tool_choice", err.getvalue())
+            self.assertTrue(llm.refuses_forced_tool_choice(model))
+            self.assertEqual(seen[-1], "auto")
+        finally:
+            llm._NO_FORCE_LEARNED.discard(model)
+
+    def test_any_other_error_on_the_forced_turn_still_raises(self):
+        def backend(model, messages, *, tools=None, tool_choice=None, **kw):
+            raise RuntimeError("overloaded")
+        with self.assertRaises(RuntimeError):
+            llm.call_tools("fake/model", "forecast", [], self.FINAL, complete=backend,
+                           min_evidence=0, max_iters=1)
+        self.assertFalse(llm.refuses_forced_tool_choice("fake/model"))
+
+    DEBRIEF = {"name": "submit_debrief", "description": "debrief",
+               "parameters": {"type": "object"}}
+
+    def test_debrief_turn_follows_the_accepted_submission(self):
+        seen, usage = [], {}
+
+        def backend(model, messages, *, tools=None, tool_choice=None, **kw):
+            seen.append((list(messages), [t["function"]["name"] for t in tools], tool_choice))
+            if len(seen) == 1:
+                return {"content": "", "usage": {"cost_usd": 1.0},
+                        "tool_calls": [{"id": "s", "name": "submit", "arguments": '{"p": 0.2}'}]}
+            return {"content": "", "usage": {"cost_usd": 0.5},
+                    "tool_calls": [{"id": "d", "name": "submit_debrief",
+                                    "arguments": '{"ai": {"pathway": "x"}}'}]}
+
+        state = {"tool": self.DEBRIEF, "prompt": "Now the debrief.",
+                 "validate": lambda args: [] if "ai" in args else ["ai: missing"]}
+        ans, ev = llm.call_tools("fake/model", "forecast", [], self.FINAL, complete=backend,
+                                 usage=usage, debrief=state)
+        self.assertEqual(ans, {"p": 0.2})
+        self.assertEqual(state["result"], {"ai": {"pathway": "x"}})
+        self.assertTrue(state["complete"])
+        self.assertEqual(state["attempts"], 1)
+        # the debrief request: only the debrief tool, forced; preceded by the
+        # submission's tool result and the debrief prompt
+        msgs, names, choice = seen[1]
+        self.assertEqual(names, ["submit_debrief"])
+        self.assertEqual(choice["function"]["name"], "submit_debrief")
+        self.assertEqual(msgs[-1], {"role": "user", "content": "Now the debrief."})
+        self.assertEqual(msgs[-2]["role"], "tool")
+        self.assertIn("accepted", msgs[-2]["content"])
+        # its cost is part of the call's
+        self.assertEqual(usage["cost_usd"], 1.5)
+        self.assertEqual(usage["turns"], 2)
+
+    def test_debrief_problems_are_returned_and_retried_once(self):
+        replies = [
+            {"content": "", "tool_calls": [{"id": "s", "name": "submit", "arguments": '{"p": 0.2}'}]},
+            {"content": "", "tool_calls": [{"id": "d1", "name": "submit_debrief", "arguments": '{}'}]},
+            {"content": "", "tool_calls": [{"id": "d2", "name": "submit_debrief",
+                                            "arguments": '{"ai": {"pathway": "x"}}'}]},
+        ]
+        seen = []
+
+        def backend(model, messages, **kw):
+            seen.append(list(messages))
+            return replies[len(seen) - 1]
+
+        state = {"tool": self.DEBRIEF, "prompt": "Now the debrief.",
+                 "validate": lambda args: [] if "ai" in args else ["ai: missing"]}
+        ans, ev = llm.call_tools("fake/model", "forecast", [], self.FINAL, complete=backend,
+                                 debrief=state)
+        self.assertEqual(ans, {"p": 0.2})
+        self.assertTrue(state["complete"])
+        self.assertEqual(state["attempts"], 2)
+        self.assertEqual(state["problems"], [])
+        # the retry saw the problems as the tool result, then a user nudge
+        third = seen[2]
+        self.assertEqual(third[-2]["role"], "tool")
+        self.assertIn("ai: missing", third[-2]["content"])
+        self.assertIn("fixing: ai: missing", third[-1]["content"])
+
+    def test_debrief_that_keeps_failing_is_recorded_not_raised(self):
+        replies = [
+            {"content": "", "tool_calls": [{"id": "s", "name": "submit", "arguments": '{"p": 0.2}'}]},
+            {"content": "", "tool_calls": [{"id": "d1", "name": "submit_debrief", "arguments": '{}'}]},
+            {"content": "", "tool_calls": [{"id": "d2", "name": "submit_debrief", "arguments": '{}'}]},
+        ]
+        n = [0]
+
+        def backend(model, messages, **kw):
+            n[0] += 1
+            return replies[n[0] - 1]
+
+        state = {"tool": self.DEBRIEF, "prompt": "Now the debrief.",
+                 "validate": lambda args: ["ai: missing"]}
+        ans, ev = llm.call_tools("fake/model", "forecast", [], self.FINAL, complete=backend,
+                                 debrief=state)
+        self.assertEqual(ans, {"p": 0.2})
+        self.assertFalse(state["complete"])
+        self.assertEqual(state["attempts"], 2)
+        self.assertEqual(state["result"], {})
+        self.assertEqual(state["problems"], ["ai: missing"])
+        self.assertEqual(n[0], 3)
+
+    def test_debrief_backend_error_never_loses_the_forecast(self):
+        def backend(model, messages, *, tools=None, **kw):
+            if [t["function"]["name"] for t in tools] == ["submit_debrief"]:
+                raise RuntimeError("provider down")
+            return {"content": "", "tool_calls": [{"id": "s", "name": "submit", "arguments": '{"p": 0.2}'}]}
+
+        state = {"tool": self.DEBRIEF, "prompt": "Now the debrief."}
+        ans, ev = llm.call_tools("fake/model", "forecast", [], self.FINAL, complete=backend,
+                                 debrief=state)
+        self.assertEqual(ans, {"p": 0.2})
+        self.assertFalse(state["complete"])
+        self.assertIn("provider down", state["error"])
+
+    def test_fable_debrief_is_offered_not_forced(self):
+        choices = []
+
+        def backend(model, messages, *, tools=None, tool_choice=None, **kw):
+            choices.append(tool_choice)
+            if len(choices) == 1:
+                return {"content": "", "tool_calls": [{"id": "s", "name": "submit", "arguments": '{"p": 0.2}'}]}
+            return {"content": "", "tool_calls": [{"id": "d", "name": "submit_debrief", "arguments": '{"ai": {}}'}]}
+
+        state = {"tool": self.DEBRIEF, "prompt": "Now the debrief."}
+        llm.call_tools("anthropic/claude-fable-5-1", "forecast", [], self.FINAL,
+                       complete=backend, max_iters=1, debrief=state)
+        self.assertEqual(choices[-1], "auto")
+        self.assertTrue(state["complete"])
 
     def test_submission_failure_retains_diagnostic_usage_and_conversation(self):
         import json
@@ -518,3 +776,102 @@ class TestThinkingBudget(unittest.TestCase):
         finally:
             del os.environ["REDLINES_THINKING_BUDGET"]
             os.environ.pop("REDLINES_REASONING", None)
+
+
+class DebriefTurn2026_09_16(unittest.TestCase):
+    """The debrief turn since 2026-09-16: deliveries merge across attempts, a
+    stringified entry is parsed, an empty reply gets one text-only ask, and
+    the debrief may set its own output cap."""
+    FINAL = {"name": "submit", "description": "final", "parameters": {"type": "object"}}
+    DEBRIEF = {"name": "submit_debrief", "description": "debrief", "parameters": {"type": "object"}}
+    SUBMIT = {"content": "", "tool_calls": [{"id": "s", "name": "submit", "arguments": '{"p": 0.2}'}]}
+
+    @staticmethod
+    def _validate(args):
+        return [f"{k}: missing" for k in ("q1", "q2") if not isinstance(args.get(k), dict)]
+
+    def test_deliveries_merge_across_attempts(self):
+        replies = [self.SUBMIT,
+                   {"content": "", "tool_calls": [{"id": "d1", "name": "submit_debrief",
+                                                   "arguments": '{"q1": {"rationale": "a"}}'}]},
+                   {"content": "", "tool_calls": [{"id": "d2", "name": "submit_debrief",
+                                                   "arguments": '{"q2": {"rationale": "b"}}'}]}]
+        seen = []
+
+        def backend(model, messages, **kw):
+            seen.append((list(messages), kw))
+            return replies[len(seen) - 1]
+
+        state = {"tool": self.DEBRIEF, "prompt": "Now the debrief.", "validate": self._validate,
+                 "retries": 2, "max_tokens": 48000}
+        llm.call_tools("fake/model", "forecast", [], self.FINAL, complete=backend, debrief=state)
+        self.assertTrue(state["complete"])
+        self.assertEqual(state["result"], {"q1": {"rationale": "a"}, "q2": {"rationale": "b"}})
+        self.assertEqual(state["attempts"], 2)
+        # the retry named what was missing and promised to keep what arrived
+        self.assertIn("q2: missing", seen[2][0][-1]["content"])
+        self.assertIn("already sent are kept", seen[2][0][-1]["content"])
+        # the debrief's own cap reached the backend
+        self.assertEqual(seen[1][1]["max_tokens"], 48000)
+
+    def test_two_calls_in_one_turn_both_count(self):
+        replies = [self.SUBMIT,
+                   {"content": "", "tool_calls": [
+                       {"id": "d1", "name": "submit_debrief", "arguments": '{"q1": {"rationale": "a"}}'},
+                       {"id": "d2", "name": "submit_debrief", "arguments": '{"q2": {"rationale": "b"}}'}]}]
+        n = [0]
+
+        def backend(model, messages, **kw):
+            n[0] += 1
+            return replies[n[0] - 1]
+
+        state = {"tool": self.DEBRIEF, "prompt": "Now the debrief.", "validate": self._validate}
+        llm.call_tools("fake/model", "forecast", [], self.FINAL, complete=backend, debrief=state)
+        self.assertTrue(state["complete"])
+        self.assertEqual(sorted(state["result"]), ["q1", "q2"])
+
+    def test_stringified_entries_are_parsed(self):
+        replies = [self.SUBMIT,
+                   {"content": "", "tool_calls": [{"id": "d1", "name": "submit_debrief",
+                                                   "arguments": json.dumps({"q1": '{"rationale": "a"}',
+                                                                            "q2": {"rationale": "b"}})}]}]
+        n = [0]
+
+        def backend(model, messages, **kw):
+            n[0] += 1
+            return replies[n[0] - 1]
+
+        state = {"tool": self.DEBRIEF, "prompt": "Now the debrief.", "validate": self._validate}
+        llm.call_tools("fake/model", "forecast", [], self.FINAL, complete=backend, debrief=state)
+        self.assertTrue(state["complete"])
+        self.assertEqual(state["result"]["q1"], {"rationale": "a"})
+
+    def test_empty_reply_gets_one_text_ask(self):
+        replies = [self.SUBMIT,
+                   {"content": "", "tool_calls": [], "usage": {"cost_usd": 1.0, "output_tokens": 0}},
+                   {"content": 'Here it is:\n```json\n{"q1": {"rationale": "a"}, "q2": {"rationale": "b"}}\n```',
+                    "usage": {"cost_usd": 0.5}}]
+        seen = []
+
+        def backend(model, messages, *, tools=None, tool_choice=None, **kw):
+            seen.append((list(messages), tools))
+            return replies[len(seen) - 1]
+
+        usage = {}
+        state = {"tool": self.DEBRIEF, "prompt": "Now the debrief.", "validate": self._validate}
+        llm.call_tools("anthropic/claude-fable-5-1", "forecast", [], self.FINAL, complete=backend,
+                       max_iters=1, usage=usage, debrief=state)
+        self.assertTrue(state["complete"])
+        self.assertEqual(state["delivery"], "text")
+        self.assertEqual(state["result"]["q2"], {"rationale": "b"})
+        # the text ask carried no tools and its cost is counted
+        self.assertIsNone(seen[2][1])
+        self.assertIn("nothing else", seen[2][0][-1]["content"])
+        self.assertEqual(usage["cost_usd"], 1.5)
+
+    def test_json_object_in_text(self):
+        self.assertEqual(llm._json_object_in('x {"a": 1} y'), {"a": 1})
+        self.assertIsNone(llm._json_object_in("no object here"))
+        self.assertIsNone(llm._json_object_in("[1, 2]"))
+        self.assertEqual(llm._parse_stringified({"a": '{"b": 1}', "c": "text", "d": 2}),
+                         {"a": {"b": 1}, "c": "text", "d": 2})

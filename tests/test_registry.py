@@ -48,6 +48,9 @@ class TestSnapshots(unittest.TestCase):
     def test_both_formats_load_to_the_same_shape(self):
         rank = eci.load(eci.snapshot_path(date(2026, 8, 28)))
         raw = eci.load(REPO / "data" / "epoch_capabilities_index_2026-08-21.csv")
+        published = eci.load(REPO / "data" / "epoch_capabilities_index_2026-10-01.csv")
+        for rec in published.values():
+            self.assertEqual({"model", "eci", "ci_low", "ci_high", "rank"} - set(rec), set())
         for idx in (rank, raw):
             for rec in idx.values():
                 self.assertEqual({"model", "eci", "ci_low", "ci_high", "rank"} - set(rec), set())
@@ -79,6 +82,81 @@ class TestSnapshots(unittest.TestCase):
         self.assertEqual(eci.warn_if_stale(today=late, file=buf), msg)
         self.assertTrue(buf.getvalue().startswith("WARN: "))
         self.assertEqual(eci.STALE_AFTER_DAYS, 31)
+
+
+PUBLISHED_HEADER = ["Model", "Display name", "eci", "eci_ci_low", "eci_ci_high", "date",
+                    "Organization", "Country (of organization)", "Model accessibility",
+                    "Accessibility group", "model_versions"]
+US = "United States of America"
+
+
+def _published_csv(rows):
+    """Epoch's published format: rows are (model, eci, date, country)."""
+    buf = io.StringIO()
+    w = csv.writer(buf)
+    w.writerow(PUBLISHED_HEADER)
+    for m, e, d, c in rows:
+        w.writerow([m, m, e, e - 3 if e != "" else "", e + 3 if e != "" else "", d, "Lab", c, "API access", "Closed", ""])
+    return buf.getvalue()
+
+
+class TestPublishedFormat(unittest.TestCase):
+    """Since 2026-10-01 the snapshot is Epoch's published CSV, fetched by the
+    cron before every run (redlines.eci.fetch)."""
+
+    def test_published_format_loads_to_the_same_shape(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            p = Path(tmp) / "x.csv"
+            p.write_text(_published_csv([("A", 160.5, "2026-01-01", US), ("B", 161.25, "2026-02-01", "China"),
+                                         ("C", "", "2026-03-01", US)]))
+            idx = eci.load(p)
+        self.assertEqual(set(idx), {"A", "B"})                  # unscored rows are skipped
+        self.assertEqual({"model", "eci", "ci_low", "ci_high", "rank"} - set(idx["A"]), set())
+        self.assertEqual((idx["B"]["rank"], idx["A"]["rank"]), (1, 2))
+        self.assertEqual(idx["A"]["ci_low"], 157.5)
+        self.assertEqual(idx["B"]["country"], "China")
+
+    def test_frontier_is_us_new_highs_in_release_order(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            p = Path(tmp) / "x.csv"
+            p.write_text(_published_csv([
+                ("Old", 150, "2022-01-01", US),        # before `since`: raises the bar, not listed
+                ("Below", 149, "2023-05-01", US),
+                ("First", 151, "2023-06-01", US),
+                ("Foreign", 170, "2023-07-01", "China"),
+                ("SameDayLow", 152, "2024-01-01", US),
+                ("SameDayHigh", 153, "2024-01-01", US),
+                ("Later", 152.5, "2024-02-01", US),
+            ]))
+            hist = eci.frontier_history(p, since="2023-03-01")
+        self.assertEqual([m for _, _, m in hist], ["First", "SameDayLow", "SameDayHigh"])
+
+    def test_fetch_writes_today_and_refuses_a_bad_download(self):
+        good = _published_csv([(f"M{i}", 100 + i, "2025-01-01", US) for i in range(eci.MIN_SCORED)])
+
+        class Resp(io.BytesIO):
+            def __enter__(self): return self
+            def __exit__(self, *a): return False
+
+        import urllib.request
+        real = urllib.request.urlopen
+        with tempfile.TemporaryDirectory() as tmp:
+            old_dir = eci.SNAPSHOT_DIR
+            eci.SNAPSHOT_DIR = Path(tmp)
+            try:
+                urllib.request.urlopen = lambda *a, **k: Resp(good.encode())
+                path = eci.fetch(today=date(2026, 10, 1))
+                self.assertEqual(path.name, "epoch_capabilities_index_2026-10-01.csv")
+                self.assertEqual(eci.latest_published()[1], path)
+                for bad in (good.splitlines()[0] + "\n" + "\n".join(good.splitlines()[1:10]),
+                            "Model,eci\nA,1\n"):
+                    urllib.request.urlopen = lambda *a, **k: Resp(bad.encode())
+                    with self.assertRaises(ValueError):
+                        eci.fetch(today=date(2026, 10, 2))
+                self.assertEqual([d for d, _ in eci.snapshots()], [date(2026, 10, 1)])
+            finally:
+                urllib.request.urlopen = real
+                eci.SNAPSHOT_DIR = old_dir
 
 
 class TestPanel(unittest.TestCase):
@@ -203,16 +281,38 @@ class TestPanel(unittest.TestCase):
         self.assertEqual(stamp, {"set": "frontier5"})
 
 
+class TestPublishedPanel(unittest.TestCase):
+    def test_the_views_panel_is_the_one_the_rows_were_chosen_as(self):
+        """A fetched snapshot moves panel() at once; the views follow the
+        snapshot stamped on the newest rows, so they neither blank nor recolor
+        before the first run on the new panel lands."""
+        old = [{"panel": {"set": "eci_topk", "k": 4, "snapshot": "2026-09-08"},
+                "run_date": "2026-09-18", "elicited_at": "2026-09-18T12:00:00Z"}]
+        new = old + [{"panel": {"set": "eci_topk", "k": 4, "snapshot": "2026-10-01"},
+                      "run_date": "2026-10-02", "elicited_at": "2026-10-02T12:00:00Z"}]
+        with redirect_stderr(io.StringIO()):
+            self.assertEqual([m["label"] for m, _ in registry.published_panel(rows=old)],
+                             ["GPT-6 Astra", "Fable 5.1", "Opus 5", "GPT-5.5 Pro"])
+            self.assertEqual([m["label"] for m, _ in registry.published_panel(rows=new)],
+                             [m["label"] for m, _ in registry.panel(snapshot=(date(2026, 10, 1),
+                              eci.snapshot_path(date(2026, 10, 1))))])
+        self.assertIsNone(registry.snapshot_of([{"panel": {"set": "frontier5"}}]))
+        self.assertIsNone(registry.snapshot_of([{"panel": {"snapshot": "1999-01-01"}}]))   # file not in data/
+
+
 class TestTableInvariants(unittest.TestCase):
     def test_pinned_vintage_and_colors(self):
         by = {m["key"]: m for m in registry.MODELS}
         self.assertEqual(by["claude-fable-5"]["eci"], 161)        # pinned 2026-07-07, not 162
         self.assertEqual(by["gpt-5.5"]["eci"], 159)
-        self.assertEqual(by["claude-opus-5"]["eci"], 163)          # predates the pin: from the newest (2026-09-08)
+        self.assertEqual(by["claude-opus-5"]["eci"], 163)          # predates the pin: from eci.SUPPLEMENT (2026-09-08)
         self.assertEqual(by["gpt-5.6-sol"]["eci"], 162)
         self.assertEqual(by["claude-fable-5-1"]["eci"], 164)      # 2026-09-08 snapshot
         self.assertEqual(by["gpt-6-astra"]["eci"], 167)
         self.assertEqual(by["gpt-6-astra"]["litellm_id"], "openai/responses/gpt-6-astra")
+        # 2026-10-01: newer than both files, so from the newest snapshot.
+        self.assertEqual(by["claude-opus-5-5"]["eci"], 167)
+        self.assertEqual(by["claude-sonnet-5-5"]["eci"], 165)
         for m in registry.MODELS:
             self.assertRegex(m["color"], r"^#[0-9a-f]{6}$", m["key"])
         self.assertEqual(len({m["color"] for m in registry.MODELS}), len(registry.MODELS))
@@ -220,7 +320,10 @@ class TestTableInvariants(unittest.TestCase):
     def test_model_colors_is_panel_in_its_colors_then_everyone_in_gray(self):
         mc = registry.model_colors()
         labels = [l for l, _ in mc]
-        panel = [m for m, _ in registry.panel()]
+        # The dashboard colors the panel the newest run was chosen as, not
+        # the one the next run will be (2026-10-01: the index is fetched
+        # before every run, so the two differ until that run lands).
+        panel = [m for m, _ in registry.published_panel()]
         self.assertEqual(labels[:registry.PANEL_K], [m["label"] for m in panel])
         self.assertEqual(len(mc), len(registry.MODELS))
         frontier = [l for l, _ in registry.frontier_models()]
