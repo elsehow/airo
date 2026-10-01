@@ -19,6 +19,7 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from redlines.instrument import CURRENT_INSTRUMENT, counting_windows
+from redlines.logs import iter_rows, log_files
 from redlines.registry import published_panel
 from redlines.superseded import is_superseded
 
@@ -55,11 +56,10 @@ def main():
     for slug in sets:
         filename = files[slug]
         path = args.results / f'conditional_runs_{slug}.jsonl'
-        raw = path.read_bytes()
+        raw = b''.join(f.read_bytes() for f in log_files(path))
         # A draw the same day replaced (redlines.superseded) is not part of
         # the day's grid: without this, a re-run day fails as duplicates.
-        rows = [r for line in raw.splitlines() if line
-                for r in [json.loads(line)] if r.get('run_date') == args.date.isoformat()
+        rows = [r for r in iter_rows(path) if r.get('run_date') == args.date.isoformat()
                 and r.get('instrument_version') == CURRENT_INSTRUMENT
                 and not is_superseded(r)]
         policies = ru.load_policies(ROOT / 'data' / filename)

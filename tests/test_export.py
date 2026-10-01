@@ -64,11 +64,12 @@ class TestDownloads(unittest.TestCase):
                 readme = z.read("README.md").decode()
         self.assertEqual(len(names), k)
         for must in ("README.md", "forecasts.csv", "rationales.csv",
-                     "raw/forecast_runs_unified.jsonl", "raw/conditional_runs_combined.jsonl",
+                     "raw/forecast_runs_unified.jsonl",
                      "raw/legacy-forecasts/forecast_runs.jsonl", "questions/autoarc_ladder.json",
                      "conditions/combined_conditions.json"):
             self.assertIn(must, names)
         self.assertTrue(any(n.startswith("raw/runs/") and n.endswith(".jsonl") for n in names))
+        self.assertTrue(any(n.startswith("raw/conditional_runs_combined/") and n.endswith(".jsonl") for n in names))
         self.assertTrue(any(n.startswith("conditions/epoch_capabilities_index_") for n in names))
         for col in export.COLUMNS + export.RATIONALE_COLUMNS:
             self.assertIn(col, readme)

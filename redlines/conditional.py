@@ -233,8 +233,8 @@ def _paths(path):
         ps = path.split(":")
     else:
         ps = [path]
-    from pathlib import Path
-    return [Path(p) for p in ps if Path(p).exists()]
+    from .logs import log_files
+    return [f for p in ps for f in log_files(p)]
 
 
 def protocols_in(path=CONDITIONAL_LOG):

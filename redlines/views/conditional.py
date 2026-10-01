@@ -18,6 +18,7 @@ the conditionals came from the same calls.
 """
 import json
 
+from ..logs import log_exists
 from ..conditional import (COMBINED_PROTOCOL, CONDITIONAL_LOG, LOSS_PREFIX, POLICIES, USD_PER_DEATH, group_rows, group_view, load_conditional, method_notes, protocol_line, protocols_in, summarize)
 from ..config import REPO_ROOT
 from pathlib import Path
@@ -88,7 +89,7 @@ def pick_source(sources=SOURCES, experiment=None):
     None when no source has rows."""
     best = None
     for log, set_path, group, protocols in sources:
-        if not Path(log).exists():
+        if not log_exists(log):
             continue
         rows = [r for r in instrument_rows(load_conditional(str(log), experiment)) if r.get("protocol") in protocols]
         if not rows:

@@ -31,16 +31,17 @@ import json
 from datetime import date
 from pathlib import Path
 from redlines.instrument import CURRENT_INSTRUMENT
+from redlines.logs import iter_rows, log_exists
 from redlines.runlog import load_runlog
 
 paths = [Path('results') / 'conditional_runs_combined.jsonl']
 rows = load_runlog(panel_only=False)
 missing = []
 for path in paths:
-    if not path.exists():
+    if not log_exists(path):
         missing.append(str(path))
         continue
-    rows.extend(json.loads(line) for line in path.read_text().splitlines() if line.strip())
+    rows.extend(iter_rows(path))
 days = [date.fromisoformat(r['run_date']).isoformat() for r in rows
         if r.get('instrument_version') == CURRENT_INSTRUMENT and r.get('run_date')]
 if missing or not days:

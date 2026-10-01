@@ -90,6 +90,7 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.insert(0, ROOT)
 
 from redlines.llm import call_tools, load_keys, reasoning_for, research_coverage  # noqa: E402
+from redlines.logs import run_file  # noqa: E402
 from redlines.tools import FORECAST_TOOLS                # noqa: E402
 from redlines.registry import DEFAULT_MODEL_SET, MODEL_SETS, panel_provenance  # noqa: E402
 from redlines.instrument import counting_windows  # noqa: E402
@@ -1798,6 +1799,10 @@ def main_joint(args):
     for qid, why in skipped:
         print(f"    SKIP {qid}: {why}")
     os.makedirs(os.path.dirname(os.path.abspath(out)), exist_ok=True)
+    # An instrument log named conditional_runs* is a folder of one file per
+    # run (redlines.logs); any other --conditional-out is a plain file.
+    if os.path.basename(cond_out).startswith("conditional_runs"):
+        cond_out = str(run_file(cond_out, run_id))
     os.makedirs(os.path.dirname(os.path.abspath(cond_out)), exist_ok=True)
     lock = threading.Lock()
     done = failed = 0

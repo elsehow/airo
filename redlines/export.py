@@ -52,6 +52,7 @@ from pathlib import Path
 from functools import lru_cache
 
 from .conditional import CONDITIONAL_LOG
+from .logs import iter_rows, log_exists, log_files, log_names
 from .questions import all_questions
 from .runlog import RUNLOG, RUNS_DIR
 from .runlog import load_runlog, panel_rows
@@ -262,8 +263,8 @@ def conditional_logs():
     """Every instrument log: results/conditional_runs*.jsonl, the LEAP policy
     instrument and the combined one first, then the rest by name."""
     first = [COMBINED_LOG, CONDITIONAL_LOG]
-    rest = sorted(p for p in RESULTS.glob("conditional_runs*.jsonl") if p not in first)
-    return [p for p in first if p.exists()] + rest
+    rest = [p for p in log_names(RESULTS) if p not in first]
+    return [p for p in first if log_exists(p)] + rest
 
 
 def _published_rows(conditional_log=CONDITIONAL_LOG, combined_log=COMBINED_LOG):
@@ -275,17 +276,10 @@ def _published_rows(conditional_log=CONDITIONAL_LOG, combined_log=COMBINED_LOG):
     logs = [Path(combined_log), Path(conditional_log)]
     logs += [p for p in conditional_logs() if p not in logs]
     for p in logs:
-        if not p.exists():
-            continue
-        with open(p) as fh:
-            for line in fh:
-                line = line.strip()
-                if not line:
-                    continue
-                r = json.loads(line)
-                if r.get("condition"):
-                    r["forecasts"] = r.get("forecasts") or []
-                    rows.append(r)
+        for r in iter_rows(p):
+            if r.get("condition"):
+                r["forecasts"] = r.get("forecasts") or []
+                rows.append(r)
     return rows
 
 
@@ -412,7 +406,7 @@ raw/runs/*.jsonl              one file per scheduled run: the unconditional
                               with the full tool transcript (every search
                               and page read) under `evidence`
 raw/forecast_runs_unified.jsonl  the same series before 2026-08-21, one file
-raw/conditional_runs*.jsonl   the whole instruments: every (call, question,
+raw/conditional_runs*/*.jsonl the whole instruments, one file per run: every (call, question,
                               condition) row, same shape
 raw/*_runs/*.jsonl            the capability-condition pilots' own logs
 raw/experiments/              pilots and smokes -- NOT the published series
@@ -441,7 +435,8 @@ def _bundle_members():
     if RUNLOG.exists():
         out.append((f"raw/{RUNLOG.name}", RUNLOG))
     for p in conditional_logs():
-        out.append((f"raw/{p.name}", p))
+        for f in log_files(p):
+            out.append((f"raw/{f.relative_to(RESULTS)}", f))
     for d in sorted(RESULTS.glob("*_runs")):
         if d.is_dir():
             for p in sorted(d.glob("*.jsonl")):

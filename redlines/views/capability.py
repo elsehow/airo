@@ -31,6 +31,7 @@ import json
 import statistics as st
 from datetime import datetime
 
+from ..logs import log_exists
 from ..conditional import (USD_PER_DEATH, group_rows, group_view, load_conditional, method_notes, newest_protocol, protocol_line)
 from ..config import REPO_ROOT
 from ..instrument import instrument_rows
@@ -185,7 +186,7 @@ def _pick(sources):
         # The set's protocol and its predecessors (redlines.conditional
         # PROTOCOL_LINEAGE): the newest tag present wins, so a bump keeps the
         # tab on the old rows until the first run under the new tag lands.
-        rows = instrument_rows(load_conditional(str(log))) if log.exists() else []
+        rows = instrument_rows(load_conditional(str(log))) if log_exists(log) else []
         rows, proto = newest_protocol(rows, protocol_line(spec["protocol"]))
         if not rows:
             if best is None:
