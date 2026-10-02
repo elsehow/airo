@@ -17,12 +17,13 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from redlines.conditional import expected_loss, ladder_rungs
+from redlines.logs import iter_rows  # noqa: E402
 
 RUN = "2026-09-08T1717Z"
 
 
 def read_jsonl(path):
-    return [json.loads(line) for line in (ROOT / path).read_text().splitlines() if line.strip()]
+    return list(iter_rows(ROOT / path))
 
 
 def main():

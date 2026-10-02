@@ -54,7 +54,8 @@ def _require(d, keys, what):
 
 
 def load_crosscutting(path=CROSS_PATH):
-    """-> the three cross-cutting questions, validated."""
+    """-> the cross-cutting questions, validated (three from the workbook,
+    plus any an addendum adds -- the extinction pair since 2026-09-15)."""
     doc = json.loads(open(path).read())
     if "questions" not in doc:
         raise ValueError(f"{path}: missing top-level 'questions'")
@@ -102,6 +103,24 @@ def all_questions():
     return out
 
 
+def questions_asked_on(run_date, questions=None):
+    """-> {question_id: question}: the set as it stood on `run_date`.
+
+    A question added by an addendum carries `since`, the date it entered the
+    set (the extinction pair: 2026-09-15). A run made before that date was
+    complete without it, and must stay complete -- otherwise the day a
+    question is added, every earlier reading becomes "incomplete" and the
+    latest-reading views go blank until the next scheduled run answers it.
+    Questions without `since` have been in the set since the instrument began.
+    """
+    questions = all_questions() if questions is None else questions
+    if not isinstance(run_date, str):
+        run_date = run_date.isoformat()
+    day = run_date[:10]
+    return {qid: q for qid, q in questions.items()
+            if not q.get("since") or q["since"] <= day}
+
+
 # ── display labels: the single source for every threshold a human reads ──────
 
 def severity_label(q, short=False):
@@ -115,6 +134,9 @@ def severity_label(q, short=False):
                          stay put. It is an anchor on the severity axis, not a
                          rung of it.
       none               human disempowerment, which has no severity axis at all
+      extinction         the extinction pair (an addendum, 2026-09-15): a
+                         population FLOOR (below 5,000) rather than a death
+                         count, placed at the whole population on the axis.
     """
     s = q["severity"]
     if short:
@@ -135,7 +157,7 @@ def severity_deaths(q):
     s = q["severity"]
     if s["kind"] == "deaths_or_damages":
         return s["deaths"]
-    if s["kind"] == "population_share":
+    if s["kind"] in ("population_share", "extinction"):
         return s["deaths_equiv"]
     return None
 

@@ -30,7 +30,7 @@ from ..config import REPO_ROOT
 from ..registry import panel_provenance
 from ..runlog import current_rows, load_runlog
 from ..instrument import instrument_rows
-from ..questions import load_ladder
+from ..questions import load_ladder, questions_asked_on
 
 
 def _runner():
@@ -55,15 +55,20 @@ def build(today=None):
     rows = instrument_rows(current_rows(load_runlog()))
     recorded = max((r for r in rows if r.get("prompt")),
                    key=lambda r: r["elicited_at"], default=None) if today is None else None
-    today = today or latest_run_date()
+    today = today or (date.fromisoformat(recorded["run_date"]) if recorded else latest_run_date())
     policies = ru.load_policies(ru.COMBINED)
     conds = ru.expand_conditions(["all"], policies)
     groups, by_group, horizons, _skipped, spec = ru.load_batch(ru.LADDER, ru.CROSS, ru.UNBATCHED)
+    # The set AS OF that day (redlines.questions.questions_asked_on): a question
+    # added since the latest run (the extinction pair, 2026-09-15) is not in
+    # the prompt those forecasts answered, so the counts below describe the
+    # recorded prompt and not the next run's.
+    asked = questions_asked_on(today)
+    by_group = {k: [q for q in qs if q["id"] in asked] for k, qs in by_group.items()}
     horizons = ru.set_horizons(policies, horizons)
     prompt, n, cells = ru.build_prompt_joint(groups, by_group, horizons, spec, conds, policies, today)
     if recorded:
         prompt = recorded["prompt"]
-        today = date.fromisoformat(recorded["run_date"])
     prov = panel_provenance()
     return {
         "today": today.isoformat(),
@@ -71,7 +76,9 @@ def build(today=None):
         "promptSha256": recorded.get("prompt_sha256") if recorded else None,
         "system": ru.SYSTEM,
         "prompt": prompt,
-        "protocol": ru.set_protocol(policies),
+        # The tag the recorded prompt was sent under, else the one the next
+        # run will carry.
+        "protocol": (recorded.get("protocol") if recorded else None) or ru.set_protocol(policies),
         "conditionSet": ru.set_slug(policies),
         "nQuestions": n,
         "cells": cells,

@@ -35,7 +35,7 @@ if str(REPO_ROOT) not in sys.path:
 
 from redlines.config import FBSIM_ROOT, FB_DATASETS_ROOT  # noqa: E402
 from redlines.views import (axes, capability, causal, databank, graph1, graph2, graph3, graph4,  # noqa: E402
-                            observational, timeline)
+                            observational, rationales, timeline)
 
 RESULTS = REPO_ROOT / "results"
 
@@ -117,6 +117,11 @@ class TestCapabilityGolden(unittest.TestCase):
 class TestAxesGolden(unittest.TestCase):
     def test_build_matches_tracked_mirror(self):
         self.assertEqual(axes.build(), _tracked_mirror("axes_data"))
+
+
+class TestRationalesGolden(unittest.TestCase):
+    def test_build_matches_tracked_mirror(self):
+        self.assertEqual(rationales.build(), _tracked_mirror("rationales_data"))
 
 
 class TestObservationalGolden(unittest.TestCase):

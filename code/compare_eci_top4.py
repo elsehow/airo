@@ -18,6 +18,9 @@ import argparse, glob, json, os, statistics as st
 from collections import defaultdict
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+import sys  # noqa: E402
+sys.path.insert(0, REPO)
+from redlines.logs import log_exists, log_files  # noqa: E402
 PUBLISHED = os.path.join(REPO, "results", "conditional_runs.jsonl")
 NEW_GLOB = os.path.join(REPO, "results", "experiments", "eci_top4", "instrument_*.jsonl")
 FRONTIER5 = ["Fable 5", "GPT-5.5", "Opus 4.8", "Gemini 3.1 Pro", "Grok 4.20"]
@@ -28,9 +31,9 @@ def load(paths, date, protocol="unified-joint-v1"):
     """(condition, question_id, horizon) -> {label: [p per repeat]}"""
     out = defaultdict(lambda: defaultdict(list))
     for p in paths:
-        if not os.path.exists(p):
+        if not log_exists(p):
             continue
-        with open(p) as f:
+        for f in (open(fp) for fp in log_files(p)):
             for line in f:
                 d = json.loads(line)
                 if d.get("protocol") != protocol or (date and d.get("run_date") != date):

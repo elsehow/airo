@@ -18,6 +18,7 @@ the conditionals came from the same calls.
 """
 import json
 
+from ..logs import log_exists
 from ..conditional import (COMBINED_PROTOCOL, CONDITIONAL_LOG, LOSS_PREFIX, POLICIES, USD_PER_DEATH, group_rows, group_view, load_conditional, method_notes, protocol_line, protocols_in, summarize)
 from ..config import REPO_ROOT
 from pathlib import Path
@@ -47,7 +48,8 @@ def current_forecast_rows(rows):
 # 2100 (the unconditional 2100 feeds the main page) and the summary keeps it,
 # flagged; this tab just does not show it.
 DEFAULT_HORIZONS = ("2030", "2050")
-PILOT_ORDER = ["catastrophe:ai", "catastrophe:general", "disempowerment"]
+PILOT_ORDER = ["catastrophe:ai", "catastrophe:general", "disempowerment",
+               "extinction:general", "extinction:ai"]   # the addendum pair last (2026-09-15)
 
 # The page shows the ladder compressed: one expected-loss row per cause, not
 # eight rung rows. The rungs stay in the summary (analyze_conditional.py
@@ -61,7 +63,7 @@ LOSS_GROUP = GROUP_DOMAIN
 # it is history, not a view. Two joint tags because the v1 -> v2 bump
 # (2026-08-28, the cross-cutting questions onto the six-horizon grid) was
 # additive; selection only -- build() narrows a day to ONE protocol.
-PROTOCOLS = ("unified-joint-v3", "unified-joint-v2", "unified-joint-v1")
+PROTOCOLS = ("unified-joint-v6", "unified-joint-v5", "unified-joint-v4", "unified-joint-v3", "unified-joint-v2", "unified-joint-v1")
 PROTOCOL = PROTOCOLS[0]
 
 # Where the tab's rows come from: (log, condition set, group, protocols
@@ -87,7 +89,7 @@ def pick_source(sources=SOURCES, experiment=None):
     None when no source has rows."""
     best = None
     for log, set_path, group, protocols in sources:
-        if not Path(log).exists():
+        if not log_exists(log):
             continue
         rows = [r for r in instrument_rows(load_conditional(str(log), experiment)) if r.get("protocol") in protocols]
         if not rows:

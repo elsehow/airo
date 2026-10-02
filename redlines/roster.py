@@ -27,7 +27,7 @@ import csv
 from functools import lru_cache
 
 from .config import REPO_ROOT
-from .registry import MODELS, RETIRED_COLOR, color_for, panel
+from .registry import MODELS, RETIRED_COLOR, color_for, published_panel
 
 ROSTER = REPO_ROOT / "data" / "causal" / "models.csv"
 # The Graph 4 ladder's models the causal roster lacks (GPT-3.5 .. Opus 4.8),
@@ -89,8 +89,8 @@ def load():
     else, registry row or not (project lead, 2026-09-08).
     """
     by_key = {m["key"]: m for m in MODELS}
-    panel_ids = {row["litellm_id"] for row, _ in panel()}
-    members = {row["key"] for row, _ in panel()}
+    panel_ids = {row["litellm_id"] for row, _ in published_panel()}
+    members = {row["key"] for row, _ in published_panel()}
     out = []
     with open(ROSTER, newline="", encoding="utf-8") as fh:
         for r in csv.DictReader(fh):

@@ -1,5 +1,5 @@
 {
-  "title": "Auto-ARC incident ladder — four AI incident types, eight severity rungs",
+  "title": "Auto-ARC incident ladder — four AI incident types, 9 severity rungs",
   "instrument_version": "airo-incidents-prospective-v1",
   "provenance": {
     "author": "Bridget Williams, FRI",
@@ -108,6 +108,17 @@
       "label": "1B deaths or $2.2Q",
       "short": "1B",
       "source_text": "1 billion deaths (or equivalent morbidity) or $2.2 quadrillion"
+    },
+    {
+      "kind": "extinction",
+      "deaths": 8200000000.0,
+      "deaths_equiv": 8200000000.0,
+      "damages_usd": null,
+      "floor_population": 5000,
+      "label": "human extinction (global population below 5,000)",
+      "short": "extinction",
+      "source_text": "human extinction (a reduction of the global population below 5,000)",
+      "since": "2026-09-16"
     }
   ],
   "horizons": [
@@ -164,6 +175,11 @@
         "narrower": "catastrophe:ai",
         "broader": "catastrophe:general",
         "why": "an AI-caused global catastrophe is a global catastrophe"
+      },
+      {
+        "narrower": "extinction:ai",
+        "broader": "extinction:general",
+        "why": "an extinction caused by AI is an extinction (the check agreed on 2026-09-03: an AI-caused extinction event should never be more likely than an extinction event of any cause)"
       }
     ]
   },
@@ -469,6 +485,47 @@
       "severity": "Date",
       "text": "If such an event (at least 50 deaths or $100 billion (in 2025 USD) in damages) occurs by the end of 2050, in what calendar year will the first qualifying event occur?",
       "criteria": ""
+    },
+    {
+      "id": "xpt-total-extinction-below-5000",
+      "project": "XPT",
+      "category": "Total Extinction Risk",
+      "elicited": "2022-10-01",
+      "resolution_dates": [
+        "2030",
+        "2050",
+        "2100"
+      ],
+      "severity": "human extinction or global population below 5,000",
+      "text": "What is the overall probability of human extinction or a reduction in the global population below 5,000 by the end of 2030/2050/2100?",
+      "criteria": "XPT question set \"10. Total Extinction Risk\" (XPT report Appendix 6). No further resolution criteria beyond the question text are recorded in archive/legacy-questions/starter_questions.json.",
+      "source": "data/auto-arc/addendum-extinction-2026-09-15.json"
+    },
+    {
+      "id": "xpt-ai-extinction-below-5000",
+      "project": "XPT",
+      "category": "AI Extinction Risk",
+      "elicited": "2022-10-01",
+      "resolution_dates": [
+        "2030",
+        "2050",
+        "2100"
+      ],
+      "severity": "human extinction or global population below 5,000",
+      "text": "What is the probability that artificial intelligence will cause human extinction or reduce the global population below 5,000 by the end of 2030/2050/2100?",
+      "criteria": "Artificial intelligence is defined here as ‘the development of machines capable of sophisticated (intelligent) information processing (Dafoe 2018, AI Governance: A Research Agenda; See pg 5 footnote 2 for more.)\nAI would be considered to have \"caused\" extinction if it is the direct or proximate cause of the deaths. For example, if a terminator-style robot powered by AI kills all humans, that will count for this question. Alternatively, if AI, operating without direct human intervention, causes the launch of nuclear weapons that kill all humans, that will also count for the purposes of this question. And if that same incident does not kill all humans, but the subsequent nuclear winter does, that will also count for the purposes of this question.\nIf an extinction event (global population is reduced below 5,000) is caused by multiple sources including AI, it will count as an extinction event caused by AI.",
+      "source": "data/auto-arc/addendum-extinction-2026-09-15.json"
+    },
+    {
+      "id": "espai-2023-ai-extinction-or-disempowerment-100y",
+      "project": "ESPAI",
+      "category": "AI extinction or similarly permanent and severe disempowerment, within 100 years",
+      "elicited": "2023-10-11",
+      "resolution_dates": [],
+      "severity": "human extinction or similarly permanent and severe disempowerment of the human species",
+      "text": "What probability do you put on future AI advances causing human extinction or similarly permanent and severe disempowerment of the human species within the next 100 years?",
+      "criteria": "The 2023 Expert Survey on Progress in AI (AI Impacts; Grace et al. 2024, \"Thousands of AI Authors on the Future of AI\", arXiv:2401.02843, Table 2), fielded 2023-10-11 to 2023-10-24 to authors who had recently published at six top-tier AI venues. No resolution criteria were given; \"similarly permanent and severe disempowerment\" is undefined and no population floor is stated. Each respondent saw ONE of three wordings: this one, with the 100-year limit (n=655; median 5%, mean 14.4%, SD 22.2%, IQR 19.9%); the same without a time limit (n=1,321; median 5%, mean 16.2%, SD 23%, IQR 19%); and \"human inability to control future advanced AI systems causing ...\" (n=661; median 10%, mean 19.4%). The 100-year wording, asked in late 2023, reaches roughly 2123; it is carried against AIRO's 2100 cell as the nearest horizon, not the same one.",
+      "source": "data/auto-arc/addendum-extinction-2026-09-15.json"
     }
   ],
   "questions": [
@@ -766,6 +823,47 @@
       "human_comparisons": {}
     },
     {
+      "id": "ladder:ai:extinction",
+      "cause": "ai",
+      "cause_label": "AI-related incident",
+      "color": "#3a4150",
+      "category": "incident",
+      "value_kind": "probability",
+      "severity": {
+        "kind": "extinction",
+        "deaths": 8200000000.0,
+        "deaths_equiv": 8200000000.0,
+        "damages_usd": null,
+        "floor_population": 5000,
+        "label": "human extinction (global population below 5,000)",
+        "short": "extinction",
+        "source_text": "human extinction (a reduction of the global population below 5,000)",
+        "since": "2026-09-16",
+        "source": "data/auto-arc/addendum-extinction-rung-2026-09-16.json"
+      },
+      "rung": "extinction",
+      "horizons": [
+        "6mo",
+        "12mo",
+        "2028",
+        "2030",
+        "2050",
+        "2100"
+      ],
+      "text": "What is the probability that one or more AI-related incidents cumulatively causes human extinction (a reduction of the global population below 5,000) within 6 months / within 12 months / by the end of 2028 / by the end of 2030 / by the end of 2050 / by the end of 2100?",
+      "criteria": "* An incident is considered “AI-related” if it would not occur, or not reach the severity threshold, but for the substantial involvement of AI.  \n  * An AI-related incident could be an AI-related human-caused epidemic, an AI-related cyber incident, a misaligned AI incident, or a different type of AI-related incident.",
+      "details": {
+        "perfect_knowledge": "* Perfect-knowledge clause: Assume we have perfect knowledge of the cause of each event, the intent and identity of the actors involved (including whether an AI system was involved and in what role), and the technical attribution. We want your view on the damages resulting from these events, not on the probability that they would be correctly identified or attributed.  \n* Incident categories could overlap; for example, a misaligned AI incident could also be counted as an AI-related cyber incident, provided such an incident met the defined thresholds for each category.",
+        "severity": "* The figure of [X] deaths refers to global excess mortality that is believed to be attributed to the incident(s).   \n  * The deaths do not need to be directly attributed to the incident but if there is an alternative reason for excess mortality to increase in a location (e.g. due to conflict) then the excess mortality for that region will not be counted as deaths as a result of the incident. E.g., famine deaths that would not have occurred absent the incident would count, while deaths due to a conflict that likely would have occurred anyway would not.  \n  * For this question to resolve positively, more than X million excess deaths attributable to the incident must occur within a 3-year period, beginning from the onset of the incident.  \n  * In the absence of a published estimate, we will defer to the majority opinion of a panel of at least five experts to determine if this criterion has been met.  \n* Equivalent morbidity is defined as roughly 10 QALYs per death, e.g. 100 million QALYs is intended to represent morbidity roughly equivalent to 10 million deaths.  \n  * A quality-adjusted life year (QALY) is a measure used in health economics that combines both the length and quality of life, where one QALY equals one year lived in perfect health. It's calculated by multiplying the number of years lived by a quality score between 0 (death) and 1 (perfect health), allowing comparison of different health interventions' effectiveness.  \n  * An estimate of QALYs lost due to the pathogen that is published in a peer-reviewed journal, or by an international organization such as the World Health Organization or World Bank, would be sufficient to resolve this question.  \n  * In the absence of such an estimate, we will defer to the majority opinion of a panel of at least five experts to determine if this criterion has been met.  \n* Economic damages: Economic damages refer to global economic costs attributable to the event, beginning from the start of the event and extending to three years after the event onset. These include:  \n  * Direct economic losses — e.g., reduced productivity and income (commonly estimated as a reduction in GDP); costs of response, remediation, recovery, and decontamination; destroyed or unrecoverable data and hardware; ransoms paid; medical and public-health response costs; regulatory penalties tied to the event.  \n  * Monetized mortality, using a value of a statistical life (VSL) of $2.2 million, regardless of the geographic distribution of fatalities.  \n  * Exclude purely notional losses such as declines in market capitalization or share price that do not correspond to real resource costs. Give all estimates in 2026 USD.  \n* Resolution sources: Assume access to authoritative assessments, which may include estimates from the WHO, World Bank, IMF, national cybersecurity agencies (e.g., CISA, ENISA), major insurers and reinsurers, incident-response and threat-intelligence firms, and academic epidemiological and economic-modeling groups. Where multiple analyses exist, we will use the consensus or median; absent that, we will defer to the majority opinion of a panel of at least five experts.",
+        "dates": "* Count only incidents whose onset falls within the specified counting interval, beginning on the elicitation date. All dates refer to UTC calendar dates, inclusive of the stated start and end dates.\n* For six- and twelve-month horizons, the interval ends that many calendar months after the elicitation date. For a fixed-year horizon, it ends on December 31 of the named year. The exact start and end dates are supplied with this forecast. Every later elicitation starts a new counting interval; there is no permanent project-start or calendar-year baseline.\n* Exclude incidents that began before the interval, including their later harms. New reporting, additional losses or later AI involvement does not by itself establish a new incident onset.\n* For each eligible incident, count attributable mortality, equivalent morbidity and economic damages within its first three years after onset, under the severity definitions above. Harm after the interval's end date can count if it falls within that incident's three-year harm window. The horizon is an onset deadline, not a deadline for all harm to occur.\n* These date rules apply to all four incident categories only; the separate large-scale-catastrophe and human-disempowerment questions retain their own date criteria."
+      },
+      "human": {},
+      "human_wanted": [],
+      "human_comparisons": {},
+      "since": "2026-09-16",
+      "source": "data/auto-arc/addendum-extinction-rung-2026-09-16.json"
+    },
+    {
       "id": "ladder:bio:100",
       "cause": "bio",
       "cause_label": "AI-related human-caused epidemic",
@@ -1053,6 +1151,47 @@
         "2100"
       ],
       "human_comparisons": {}
+    },
+    {
+      "id": "ladder:bio:extinction",
+      "cause": "bio",
+      "cause_label": "AI-related human-caused epidemic",
+      "color": "#a63d76",
+      "category": "incident",
+      "value_kind": "probability",
+      "severity": {
+        "kind": "extinction",
+        "deaths": 8200000000.0,
+        "deaths_equiv": 8200000000.0,
+        "damages_usd": null,
+        "floor_population": 5000,
+        "label": "human extinction (global population below 5,000)",
+        "short": "extinction",
+        "source_text": "human extinction (a reduction of the global population below 5,000)",
+        "since": "2026-09-16",
+        "source": "data/auto-arc/addendum-extinction-rung-2026-09-16.json"
+      },
+      "rung": "extinction",
+      "horizons": [
+        "6mo",
+        "12mo",
+        "2028",
+        "2030",
+        "2050",
+        "2100"
+      ],
+      "text": "What is the probability that one or more AI-related human-caused epidemics cumulatively causes human extinction (a reduction of the global population below 5,000) within 6 months / within 12 months / by the end of 2028 / by the end of 2030 / by the end of 2050 / by the end of 2100?",
+      "criteria": "* This could include: pathogens released deliberately by malicious human actors who have used AI; pathogens deliberately created by humans using AI but released accidentally; or pathogens created and released entirely by AI without human involvement.",
+      "details": {
+        "perfect_knowledge": "* Perfect-knowledge clause: Assume we have perfect knowledge of the cause of each event, the intent and identity of the actors involved (including whether an AI system was involved and in what role), and the technical attribution. We want your view on the damages resulting from these events, not on the probability that they would be correctly identified or attributed.  \n* Incident categories could overlap; for example, a misaligned AI incident could also be counted as an AI-related cyber incident, provided such an incident met the defined thresholds for each category.",
+        "severity": "* The figure of [X] deaths refers to global excess mortality that is believed to be attributed to the incident(s).   \n  * The deaths do not need to be directly attributed to the incident but if there is an alternative reason for excess mortality to increase in a location (e.g. due to conflict) then the excess mortality for that region will not be counted as deaths as a result of the incident. E.g., famine deaths that would not have occurred absent the incident would count, while deaths due to a conflict that likely would have occurred anyway would not.  \n  * For this question to resolve positively, more than X million excess deaths attributable to the incident must occur within a 3-year period, beginning from the onset of the incident.  \n  * In the absence of a published estimate, we will defer to the majority opinion of a panel of at least five experts to determine if this criterion has been met.  \n* Equivalent morbidity is defined as roughly 10 QALYs per death, e.g. 100 million QALYs is intended to represent morbidity roughly equivalent to 10 million deaths.  \n  * A quality-adjusted life year (QALY) is a measure used in health economics that combines both the length and quality of life, where one QALY equals one year lived in perfect health. It's calculated by multiplying the number of years lived by a quality score between 0 (death) and 1 (perfect health), allowing comparison of different health interventions' effectiveness.  \n  * An estimate of QALYs lost due to the pathogen that is published in a peer-reviewed journal, or by an international organization such as the World Health Organization or World Bank, would be sufficient to resolve this question.  \n  * In the absence of such an estimate, we will defer to the majority opinion of a panel of at least five experts to determine if this criterion has been met.  \n* Economic damages: Economic damages refer to global economic costs attributable to the event, beginning from the start of the event and extending to three years after the event onset. These include:  \n  * Direct economic losses — e.g., reduced productivity and income (commonly estimated as a reduction in GDP); costs of response, remediation, recovery, and decontamination; destroyed or unrecoverable data and hardware; ransoms paid; medical and public-health response costs; regulatory penalties tied to the event.  \n  * Monetized mortality, using a value of a statistical life (VSL) of $2.2 million, regardless of the geographic distribution of fatalities.  \n  * Exclude purely notional losses such as declines in market capitalization or share price that do not correspond to real resource costs. Give all estimates in 2026 USD.  \n* Resolution sources: Assume access to authoritative assessments, which may include estimates from the WHO, World Bank, IMF, national cybersecurity agencies (e.g., CISA, ENISA), major insurers and reinsurers, incident-response and threat-intelligence firms, and academic epidemiological and economic-modeling groups. Where multiple analyses exist, we will use the consensus or median; absent that, we will defer to the majority opinion of a panel of at least five experts.",
+        "dates": "* Count only incidents whose onset falls within the specified counting interval, beginning on the elicitation date. All dates refer to UTC calendar dates, inclusive of the stated start and end dates.\n* For six- and twelve-month horizons, the interval ends that many calendar months after the elicitation date. For a fixed-year horizon, it ends on December 31 of the named year. The exact start and end dates are supplied with this forecast. Every later elicitation starts a new counting interval; there is no permanent project-start or calendar-year baseline.\n* Exclude incidents that began before the interval, including their later harms. New reporting, additional losses or later AI involvement does not by itself establish a new incident onset.\n* For each eligible incident, count attributable mortality, equivalent morbidity and economic damages within its first three years after onset, under the severity definitions above. Harm after the interval's end date can count if it falls within that incident's three-year harm window. The horizon is an onset deadline, not a deadline for all harm to occur.\n* These date rules apply to all four incident categories only; the separate large-scale-catastrophe and human-disempowerment questions retain their own date criteria."
+      },
+      "human": {},
+      "human_wanted": [],
+      "human_comparisons": {},
+      "since": "2026-09-16",
+      "source": "data/auto-arc/addendum-extinction-rung-2026-09-16.json"
     },
     {
       "id": "ladder:cyber:100",
@@ -1344,6 +1483,47 @@
       "human_comparisons": {}
     },
     {
+      "id": "ladder:cyber:extinction",
+      "cause": "cyber",
+      "cause_label": "AI-related cyber incident",
+      "color": "#a1801a",
+      "category": "incident",
+      "value_kind": "probability",
+      "severity": {
+        "kind": "extinction",
+        "deaths": 8200000000.0,
+        "deaths_equiv": 8200000000.0,
+        "damages_usd": null,
+        "floor_population": 5000,
+        "label": "human extinction (global population below 5,000)",
+        "short": "extinction",
+        "source_text": "human extinction (a reduction of the global population below 5,000)",
+        "since": "2026-09-16",
+        "source": "data/auto-arc/addendum-extinction-rung-2026-09-16.json"
+      },
+      "rung": "extinction",
+      "horizons": [
+        "6mo",
+        "12mo",
+        "2028",
+        "2030",
+        "2050",
+        "2100"
+      ],
+      "text": "What is the probability that one or more AI-related cyber incidents cumulatively causes human extinction (a reduction of the global population below 5,000) within 6 months / within 12 months / by the end of 2028 / by the end of 2030 / by the end of 2050 / by the end of 2100?",
+      "criteria": "* A set of malicious cyber operations sharing a common perpetrator (an individual, group, or coordinated set of actors) and a common campaign or method, directed at a target or set of related targets within a bounded, contiguous period.   \n  * Treat a campaign as a distinct, bounded operation, assessed by the continuity of its activity, targets and objectives. Sharing an actor or tools does not by itself merge separate operations. Adding victims, changing tools, adding AI, or receiving a new reporting label does not by itself create a new campaign from an ongoing operation.\n  * Campaign onset is its first malicious action against a target, such as an intrusion or fraudulent solicitation. Planning and tool development alone do not establish onset. Discovery, first reported loss, later encryption, or first use of AI does not reset an earlier onset within the same campaign.\n  * Qualifying AI contributions include (non-exhaustive): discovering or developing exploits or pathogen modifications; generating, adapting, or synthesizing malware or biological agents; conducting or scaling social engineering; autonomously selecting targets, propagating, or dispersing; and planning or orchestrating the operation. Routine, long-standing automation (e.g., conventional vulnerability scanners) does not qualify; the AI contribution must be non-trivial to the event's occurrence or scale.",
+      "details": {
+        "perfect_knowledge": "* Perfect-knowledge clause: Assume we have perfect knowledge of the cause of each event, the intent and identity of the actors involved (including whether an AI system was involved and in what role), and the technical attribution. We want your view on the damages resulting from these events, not on the probability that they would be correctly identified or attributed.  \n* Incident categories could overlap; for example, a misaligned AI incident could also be counted as an AI-related cyber incident, provided such an incident met the defined thresholds for each category.",
+        "severity": "* The figure of [X] deaths refers to global excess mortality that is believed to be attributed to the incident(s).   \n  * The deaths do not need to be directly attributed to the incident but if there is an alternative reason for excess mortality to increase in a location (e.g. due to conflict) then the excess mortality for that region will not be counted as deaths as a result of the incident. E.g., famine deaths that would not have occurred absent the incident would count, while deaths due to a conflict that likely would have occurred anyway would not.  \n  * For this question to resolve positively, more than X million excess deaths attributable to the incident must occur within a 3-year period, beginning from the onset of the incident.  \n  * In the absence of a published estimate, we will defer to the majority opinion of a panel of at least five experts to determine if this criterion has been met.  \n* Equivalent morbidity is defined as roughly 10 QALYs per death, e.g. 100 million QALYs is intended to represent morbidity roughly equivalent to 10 million deaths.  \n  * A quality-adjusted life year (QALY) is a measure used in health economics that combines both the length and quality of life, where one QALY equals one year lived in perfect health. It's calculated by multiplying the number of years lived by a quality score between 0 (death) and 1 (perfect health), allowing comparison of different health interventions' effectiveness.  \n  * An estimate of QALYs lost due to the pathogen that is published in a peer-reviewed journal, or by an international organization such as the World Health Organization or World Bank, would be sufficient to resolve this question.  \n  * In the absence of such an estimate, we will defer to the majority opinion of a panel of at least five experts to determine if this criterion has been met.  \n* Economic damages: Economic damages refer to global economic costs attributable to the event, beginning from the start of the event and extending to three years after the event onset. These include:  \n  * Direct economic losses — e.g., reduced productivity and income (commonly estimated as a reduction in GDP); costs of response, remediation, recovery, and decontamination; destroyed or unrecoverable data and hardware; ransoms paid; medical and public-health response costs; regulatory penalties tied to the event.  \n  * Monetized mortality, using a value of a statistical life (VSL) of $2.2 million, regardless of the geographic distribution of fatalities.  \n  * Exclude purely notional losses such as declines in market capitalization or share price that do not correspond to real resource costs. Give all estimates in 2026 USD.  \n* Resolution sources: Assume access to authoritative assessments, which may include estimates from the WHO, World Bank, IMF, national cybersecurity agencies (e.g., CISA, ENISA), major insurers and reinsurers, incident-response and threat-intelligence firms, and academic epidemiological and economic-modeling groups. Where multiple analyses exist, we will use the consensus or median; absent that, we will defer to the majority opinion of a panel of at least five experts.",
+        "dates": "* Count only incidents whose onset falls within the specified counting interval, beginning on the elicitation date. All dates refer to UTC calendar dates, inclusive of the stated start and end dates.\n* For six- and twelve-month horizons, the interval ends that many calendar months after the elicitation date. For a fixed-year horizon, it ends on December 31 of the named year. The exact start and end dates are supplied with this forecast. Every later elicitation starts a new counting interval; there is no permanent project-start or calendar-year baseline.\n* Exclude incidents that began before the interval, including their later harms. New reporting, additional losses or later AI involvement does not by itself establish a new incident onset.\n* For each eligible incident, count attributable mortality, equivalent morbidity and economic damages within its first three years after onset, under the severity definitions above. Harm after the interval's end date can count if it falls within that incident's three-year harm window. The horizon is an onset deadline, not a deadline for all harm to occur.\n* These date rules apply to all four incident categories only; the separate large-scale-catastrophe and human-disempowerment questions retain their own date criteria."
+      },
+      "human": {},
+      "human_wanted": [],
+      "human_comparisons": {},
+      "since": "2026-09-16",
+      "source": "data/auto-arc/addendum-extinction-rung-2026-09-16.json"
+    },
+    {
       "id": "ladder:misalign:100",
       "cause": "misalign",
       "cause_label": "Misaligned AI incident",
@@ -1631,6 +1811,47 @@
         "2100"
       ],
       "human_comparisons": {}
+    },
+    {
+      "id": "ladder:misalign:extinction",
+      "cause": "misalign",
+      "cause_label": "Misaligned AI incident",
+      "color": "#33a8bd",
+      "category": "incident",
+      "value_kind": "probability",
+      "severity": {
+        "kind": "extinction",
+        "deaths": 8200000000.0,
+        "deaths_equiv": 8200000000.0,
+        "damages_usd": null,
+        "floor_population": 5000,
+        "label": "human extinction (global population below 5,000)",
+        "short": "extinction",
+        "source_text": "human extinction (a reduction of the global population below 5,000)",
+        "since": "2026-09-16",
+        "source": "data/auto-arc/addendum-extinction-rung-2026-09-16.json"
+      },
+      "rung": "extinction",
+      "horizons": [
+        "6mo",
+        "12mo",
+        "2028",
+        "2030",
+        "2050",
+        "2100"
+      ],
+      "text": "What is the probability that one or more Misaligned AI incidents cumulatively causes human extinction (a reduction of the global population below 5,000) within 6 months / within 12 months / by the end of 2028 / by the end of 2030 / by the end of 2050 / by the end of 2100?",
+      "criteria": "* An incident in which an AI system behaves in a way that neither its developer nor its operating user intended or endorsed. This \"neither\" reading is deliberate and separates loss of control from misuse:  \n    * Excluded (misuse): a user intentionally directs an AI to cause harm and it complies. The user's intent is served even if the developer's is not. If such an event involves a cyber attack, it belongs under the Cyber questions.  \n    * Included (loss of control): the AI pursues objectives, takes actions, or produces outputs that diverge from what both the developer and the operating user wanted — e.g., an autonomous agent taking destructive actions no one authorized, specification-gaming with large real-world costs, or deceptive or manipulative behavior neither party sought.  \n  * Boundary with ordinary failure: the incident should center on the AI system's own behavior or decision-making being the proximate cause, rather than a conventional software defect or an operator error. This line is not crisp; use your judgment and assume the perfect-knowledge clause lets us determine whether the AI was acting contrary to both parties' intent versus functioning as designed.  \n  * The harm may arise from the AI acting directly, or from actions humans took in direct reliance on the AI's misaligned outputs; in either case the AI's behavior must be the proximate driver.",
+      "details": {
+        "perfect_knowledge": "* Perfect-knowledge clause: Assume we have perfect knowledge of the cause of each event, the intent and identity of the actors involved (including whether an AI system was involved and in what role), and the technical attribution. We want your view on the damages resulting from these events, not on the probability that they would be correctly identified or attributed.  \n* Incident categories could overlap; for example, a misaligned AI incident could also be counted as an AI-related cyber incident, provided such an incident met the defined thresholds for each category.",
+        "severity": "* The figure of [X] deaths refers to global excess mortality that is believed to be attributed to the incident(s).   \n  * The deaths do not need to be directly attributed to the incident but if there is an alternative reason for excess mortality to increase in a location (e.g. due to conflict) then the excess mortality for that region will not be counted as deaths as a result of the incident. E.g., famine deaths that would not have occurred absent the incident would count, while deaths due to a conflict that likely would have occurred anyway would not.  \n  * For this question to resolve positively, more than X million excess deaths attributable to the incident must occur within a 3-year period, beginning from the onset of the incident.  \n  * In the absence of a published estimate, we will defer to the majority opinion of a panel of at least five experts to determine if this criterion has been met.  \n* Equivalent morbidity is defined as roughly 10 QALYs per death, e.g. 100 million QALYs is intended to represent morbidity roughly equivalent to 10 million deaths.  \n  * A quality-adjusted life year (QALY) is a measure used in health economics that combines both the length and quality of life, where one QALY equals one year lived in perfect health. It's calculated by multiplying the number of years lived by a quality score between 0 (death) and 1 (perfect health), allowing comparison of different health interventions' effectiveness.  \n  * An estimate of QALYs lost due to the pathogen that is published in a peer-reviewed journal, or by an international organization such as the World Health Organization or World Bank, would be sufficient to resolve this question.  \n  * In the absence of such an estimate, we will defer to the majority opinion of a panel of at least five experts to determine if this criterion has been met.  \n* Economic damages: Economic damages refer to global economic costs attributable to the event, beginning from the start of the event and extending to three years after the event onset. These include:  \n  * Direct economic losses — e.g., reduced productivity and income (commonly estimated as a reduction in GDP); costs of response, remediation, recovery, and decontamination; destroyed or unrecoverable data and hardware; ransoms paid; medical and public-health response costs; regulatory penalties tied to the event.  \n  * Monetized mortality, using a value of a statistical life (VSL) of $2.2 million, regardless of the geographic distribution of fatalities.  \n  * Exclude purely notional losses such as declines in market capitalization or share price that do not correspond to real resource costs. Give all estimates in 2026 USD.  \n* Resolution sources: Assume access to authoritative assessments, which may include estimates from the WHO, World Bank, IMF, national cybersecurity agencies (e.g., CISA, ENISA), major insurers and reinsurers, incident-response and threat-intelligence firms, and academic epidemiological and economic-modeling groups. Where multiple analyses exist, we will use the consensus or median; absent that, we will defer to the majority opinion of a panel of at least five experts.",
+        "dates": "* Count only incidents whose onset falls within the specified counting interval, beginning on the elicitation date. All dates refer to UTC calendar dates, inclusive of the stated start and end dates.\n* For six- and twelve-month horizons, the interval ends that many calendar months after the elicitation date. For a fixed-year horizon, it ends on December 31 of the named year. The exact start and end dates are supplied with this forecast. Every later elicitation starts a new counting interval; there is no permanent project-start or calendar-year baseline.\n* Exclude incidents that began before the interval, including their later harms. New reporting, additional losses or later AI involvement does not by itself establish a new incident onset.\n* For each eligible incident, count attributable mortality, equivalent morbidity and economic damages within its first three years after onset, under the severity definitions above. Harm after the interval's end date can count if it falls within that incident's three-year harm window. The horizon is an onset deadline, not a deadline for all harm to occur.\n* These date rules apply to all four incident categories only; the separate large-scale-catastrophe and human-disempowerment questions retain their own date criteria."
+      },
+      "human": {},
+      "human_wanted": [],
+      "human_comparisons": {},
+      "since": "2026-09-16",
+      "source": "data/auto-arc/addendum-extinction-rung-2026-09-16.json"
     }
   ]
 }

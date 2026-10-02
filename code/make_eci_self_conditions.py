@@ -29,8 +29,8 @@ code/eci_projection_metrgraph.project), so the file has no `trend` block.
 WHAT IS DERIVED AND WHAT IS AUTHORED
 
   derived    the frontier history the model is shown -- every new high among
-             US developers' models since GPT-4, best variant per model,
-             looked up in the vendored Epoch CSV -- and, for the record, the
+             US developers' models since GPT-4, one score per model as Epoch
+             publishes it, from the newest Epoch snapshot in data/ -- and, for the record, the
              metr_graph 2030-EOY percentiles the answers are compared to
              (never shown to the model).
   authored   the definitions, the two steps, the conditioning instruction,
@@ -52,12 +52,19 @@ import sys
 from datetime import datetime
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-# The capability prompt must be based on the same live METR ECI snapshot shown
-# in the dashboard.  The previous generator read a vendored August CSV, which
-# made a new elicitation tell models that Fable 5 (162.5) was still frontier
-# after Astra had reached 169.2.  `code/refresh_live_eci_snapshot.cjs` refreshes this
-# file before every capability elicitation.
-LIVE_SNAPSHOT = os.path.join(ROOT, "data", "live_metr_eci_frontier.json")
+sys.path.insert(0, ROOT)
+from redlines import eci  # noqa: E402
+
+# The frontier history the prompt quotes comes from the newest Epoch snapshot
+# in data/ (redlines.eci.latest_published), which code/cron_run.sh fetches
+# before every elicitation and regenerates this file from. Project lead,
+# 2026-10-01: Epoch's ECI is the source of truth. From 2026-09-10 to then it
+# was a Playwright scrape of METR's Streamlit app (data/live_metr_eci_frontier.json,
+# kept as the record of what those runs were shown); the cron box could not
+# run the scrape, so the runs stopped when the copy aged out (2026-09-23).
+# Before 2026-09-10 a vendored August CSV, which told models Fable 5 was
+# still frontier after Astra had passed it -- the reason the history must
+# follow the index rather than a file someone remembers to refresh.
 OUT = os.path.join(ROOT, "data", "eci_self_conditions.json")
 
 TARGET = "2030EOY"
@@ -85,7 +92,7 @@ DEFINITIONS = (
     "Frontier ECI: the highest ECI score of any publicly released model from a "
     "US developer, as scored by Epoch.\n\n"
     "Frontier ECI history -- every release by a US developer that set a new "
-    "high, best variant per model, from GPT-4 on (Epoch's index of "
+    "high, from GPT-4 on (Epoch's index of "
     "{csv_date}, {n_models} models scored):\n"
     "{history}\n"
     "As of {csv_date} no released model has scored above {top_name}, "
@@ -124,21 +131,21 @@ LABEL_FIXED = "Frontier ECI at end of 2030 = your {ord} percentile"
 LABEL_ROLLING = "Frontier ECI {months} months from the run date = your {ord} percentile"
 
 
-def frontier_history(live):
-    """The current US-frontier series as plotted by the live METR app."""
-    rows = live.get("frontier") or []
-    if not rows:
-        raise ValueError(f"{LIVE_SNAPSHOT} has no live frontier series")
-    return [(r["date"], round(float(r["score"]), 1), r["model"])
-            for r in rows if r["date"] >= HISTORY_FROM], len(rows)
+def frontier_history(path):
+    """Every US release that set a new high since GPT-4, from one Epoch
+    snapshot (redlines.eci.frontier_history), and how many models it scores."""
+    hist = eci.frontier_history(path, since=HISTORY_FROM, country=US)
+    if not hist:
+        raise ValueError(f"{path}: no US frontier history")
+    return hist, len(eci.load(path))
 
 
 def build(months=None):
     """months=None: the fixed end-of-2030 set. months=N: the rolling set,
     target = run date + N months, texts carry PLACEHOLDER."""
-    live = json.load(open(LIVE_SNAPSHOT, encoding="utf-8"))
-    csv_date = live["retrieved_at"][:10]
-    hist, n_models = frontier_history(live)
+    day, snapshot = eci.latest_published()
+    csv_date = day.isoformat()
+    hist, n_models = frontier_history(snapshot)
     top_date, top_score, top_name = hist[-1]
     history = "\n".join(f"  {d}  {s:6.1f}  {dn}" for d, s, dn in hist)
     date_text = PLACEHOLDER if months else TARGET_DATE_TEXT
@@ -164,10 +171,10 @@ def build(months=None):
         "protocol": f"unified-joint-{slug}-v2",
         "source": {
             "panel": None,
-            "wave": f"Frontier ECI {when}, the model's own p10/p25/p50/p75/p90 (live METR snapshot retrieved {csv_date})",
-            "status": "no human panel; the model's percentiles are compared to the live METR "
+            "wave": f"Frontier ECI {when}, the model's own p10/p25/p50/p75/p90 (Epoch ECI snapshot of {csv_date})",
+            "status": "no human panel; the model's percentiles are compared to the metr_graph "
                       "projection at the run's own target date (code/analyze_eci_self.py)",
-            "documents": [os.path.relpath(LIVE_SNAPSHOT, ROOT)],
+            "documents": [os.path.relpath(snapshot, ROOT)],
             "outcome_horizons": [],
             "policy_probability_horizons": [],
         },

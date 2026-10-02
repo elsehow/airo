@@ -17,6 +17,7 @@ class TestPublishPreflight(unittest.TestCase):
         (root / 'redlines/__init__.py').write_text('')
         (root / 'redlines/instrument.py').write_text("CURRENT_INSTRUMENT = 'current-test'\n")
         (root / 'redlines/runlog.py').write_text('def load_runlog(panel_only=False): return []\n')
+        (root / 'redlines/logs.py').write_text((ROOT / 'redlines/logs.py').read_text())
         (root / 'redlines/__main__.py').write_text("from pathlib import Path\nPath('build-called').write_text('yes')\n")
         (root / 'code/validate_launch_run.py').write_text('''import argparse,json
 from pathlib import Path
@@ -60,10 +61,14 @@ raise SystemExit(status)
     def test_newest_partial_instrument_blocks_build_and_copy(self):
         with tempfile.TemporaryDirectory() as d:
             root = self.fixture(d)
-            with (root / 'results/conditional_runs_axes.jsonl').open('a') as f:
+            with (root / 'results/conditional_runs_combined.jsonl').open('a') as f:
                 f.write(json.dumps({'instrument_version':'current-test','run_date':'2026-09-11'})+'\n')
                 # A later obsolete run cannot set the validation date.
                 f.write(json.dumps({'instrument_version':'legacy','run_date':'2026-09-12'})+'\n')
+            with (root / 'results/conditional_runs_axes.jsonl').open('a') as f:
+                # Nor can a later axes date: the axes instruments left the
+                # schedule on 2026-09-14 and no longer gate publication.
+                f.write(json.dumps({'instrument_version':'current-test','run_date':'2026-09-13'})+'\n')
             self.assert_preserved(root, self.run_script(root))
             self.assertEqual((root / 'validator-date').read_text(), '2026-09-11')
             self.assertTrue((root / 'results/validation/latest-integrity.json').exists())
@@ -73,7 +78,7 @@ raise SystemExit(status)
             with self.subTest(missing_file=missing_file), tempfile.TemporaryDirectory() as d:
                 root = self.fixture(d)
                 if missing_file:
-                    (root / 'results/conditional_runs_paperaxes.jsonl').unlink()
+                    (root / 'results/conditional_runs_combined.jsonl').unlink()
                 else:
                     for path in (root / 'results').glob('*.jsonl'): path.write_text('')
                 self.assert_preserved(root, self.run_script(root))

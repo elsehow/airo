@@ -28,6 +28,7 @@ protocol line, as the other conditional views do.
 import json
 import statistics as st
 
+from ..logs import log_exists
 from ..conditional import (USD_PER_DEATH, group_rows, group_view, load_conditional,
                            newest_protocol, protocol_line)
 from ..config import REPO_ROOT
@@ -67,7 +68,7 @@ AXES = {
 
 
 def _rows(log_path, spec, experiment):
-    if not log_path.exists():
+    if not log_exists(log_path):
         return [], spec["protocol"], None
     rows = instrument_rows(load_conditional(str(log_path)))
     rows = [r for r in rows if (r.get("experiment") or None) == experiment]

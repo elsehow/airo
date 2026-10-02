@@ -4,7 +4,8 @@
 # forecast run (see cron_run.sh); safe to run by hand.
 #
 # Only the run-log-driven views rebuild here (g1, g2, databank, timeline, axes,
-# conditional, method -- the FAQ's live prompt and panel) plus the CSV export.
+# conditional, method -- the FAQ's live prompt and panel, rationales -- the
+# "Why these forecasts?" explanations) plus the CSV export.
 # Graph 3 and Graph 4 are frozen artifacts whose inputs (the ForecastBench
 # tarball, the forecastbench-sim eval) live on the laptop; their blocks in the
 # page pass through untouched, and refresh only when the laptop rsyncs new
@@ -18,8 +19,11 @@ REPO="${REDLINES_REPO:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 DOCROOT="${REDLINES_DOCROOT:-/var/www/html}"
 
 cd "$REPO"
-# Validate the newest current-version date across all three instruments and
-# the headline log before rebuilding or touching nginx's last good files.
+# Validate the newest current-version date across the combined instrument and
+# the headline log before rebuilding or touching nginx's last good files. The
+# axes instruments left the schedule on 2026-09-14: their views draw the newest
+# complete date they have, and a hand re-elicitation is audited separately
+# (validate_launch_run.py --sets axes,paperaxes).
 # The validator reports coherence warnings separately; only integrity errors
 # block publication. Its diagnostic contains no provider traces or prompts.
 LAUNCH_DATE="$(python3 - <<'PY_PREFLIGHT'
@@ -27,17 +31,17 @@ import json
 from datetime import date
 from pathlib import Path
 from redlines.instrument import CURRENT_INSTRUMENT
+from redlines.logs import iter_rows, log_exists
 from redlines.runlog import load_runlog
 
-paths = [Path('results') / f'conditional_runs_{slug}.jsonl'
-         for slug in ('combined', 'axes', 'paperaxes')]
+paths = [Path('results') / 'conditional_runs_combined.jsonl']
 rows = load_runlog(panel_only=False)
 missing = []
 for path in paths:
-    if not path.exists():
+    if not log_exists(path):
         missing.append(str(path))
         continue
-    rows.extend(json.loads(line) for line in path.read_text().splitlines() if line.strip())
+    rows.extend(iter_rows(path))
 days = [date.fromisoformat(r['run_date']).isoformat() for r in rows
         if r.get('instrument_version') == CURRENT_INSTRUMENT and r.get('run_date')]
 if missing or not days:
@@ -57,7 +61,7 @@ if ! python3 code/validate_launch_run.py --date "$LAUNCH_DATE" --out results/val
     echo "Publication withheld: integrity validation failed; currently served files are unchanged." >&2
     exit 1
 fi
-python3 -m redlines build --views g1,g2,databank,timeline,conditional,capability,axes,method,csv
+python3 -m redlines build --views g1,g2,databank,timeline,conditional,capability,axes,method,rationales,csv
 # Atomic: copy beside the target, then rename, so a request that lands
 # mid-publish never sees a truncated page or a half-written archive.
 publish() { cp "$1" "$2.tmp" && mv -f "$2.tmp" "$2"; }
@@ -79,6 +83,8 @@ publish results/forecasts.csv "$DOCROOT/forecasts.csv"
 # ... and the rationales beside them (one line per call x question x
 # condition; join on call_id + question_id + condition).
 publish results/rationales.csv "$DOCROOT/rationales.csv"
+# ... and the debriefs (2026-09-15; one line per call x question group).
+if [ -f results/debriefs.csv ]; then publish results/debriefs.csv "$DOCROOT/debriefs.csv"; fi
 # The Download button's target: everything, zipped (redlines/export.py::bundle_zip).
 publish results/redlines-data.zip "$DOCROOT/redlines-data.zip"
 echo "published -> $DOCROOT ($(date -u +%Y-%m-%dT%H%MZ))"

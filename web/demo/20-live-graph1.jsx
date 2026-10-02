@@ -6,7 +6,7 @@ const G1 = (typeof window !== "undefined" && window.__GRAPH1__) || null;
 const diamondPath = (cx, cy, r) => `M ${cx} ${cy - r} L ${cx + r} ${cy} L ${cx} ${cy + r} L ${cx - r} ${cy} Z`;
 // Display-only shortening. A lookup with a fallback to the raw value — it never
 // decides whether a group is drawn, so an unfamiliar group still renders.
-const GROUP_SHORT = { superforecaster: "supers", expert: "experts", public: "public" };
+const GROUP_SHORT = { superforecaster: "supers", expert: "experts", public: "public", ai_researcher: "AI researchers" };
 const groupShort = g => GROUP_SHORT[g] || g;
 
 

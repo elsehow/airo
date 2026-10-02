@@ -15,12 +15,19 @@ const HIST = (G2 && G2.historical && Array.isArray(G2.historical.events) &&
 // Full severity ladder: every cause asked at every rung, so each curve spans the
 // whole severity axis and causes are comparable at equal severity.
 //
-// The diamonds are the two 10%-of-population catastrophe questions, placed at
-// their death-equivalent (~820M). They are NOT rungs — a population share
-// floats as population changes while the rungs stay fixed, and it has no
-// damages leg — and unlike the retired XPT markers they are our own live
-// forecasts, so they move between runs. Where a human panel has asked the same
-// question its median is shown alongside, named.
+// The diamonds are the two EXTINCTION questions (an addendum, 2026-09-15; the
+// project lead asked for them on this chart), drawn at the Extinction
+// reference mark: hollow for extinction of any cause, filled for AI-caused.
+// They are NOT rungs and are never joined to a curve -- XPT's wording, a
+// population floor (below 5,000) rather than a deaths-or-damages threshold,
+// no onset window, and AI attribution by XPT's rule rather than the ladder's.
+// What they are comes from the blob (G2.anchorsNote), not from prose here.
+// They are our own live forecasts, so they move between runs; the catastrophe
+// questions (10% of population) stay off this chart (removed 2026-08-18).
+const g2Diamond = (cx, cy, r) => `M ${cx} ${cy - r} L ${cx + r} ${cy} L ${cx} ${cy + r} L ${cx - r} ${cy} Z`;
+// The two marks share one x (the whole population); a small fixed offset keeps
+// both legible, any-cause to the left of the mark, AI-caused to the right.
+const anchorX = (x, a) => x(a.deaths) + (a.ai ? 7 : -7);
 //
 // Coherence violations (P rising with severity — logically impossible) are
 // ringed. They are REPORTED, never corrected: the models are told nothing about
@@ -83,8 +90,8 @@ function SeverityChart({ d, h, showModels, scale }) {
             <title>{r.label}</title>
             <line x1={x(r.deaths)} x2={x(r.deaths)} y1={pad.t} y2={H - pad.b} stroke="var(--line-soft)" />
             {(!narrow || i % 2 === 0 || i === G2.rungs.length - 1) && <>
-              <text x={x(r.deaths)} y={H - pad.b + 16} textAnchor="middle" fontSize={narrow ? 8.5 : 9.5} fill="var(--ink-soft)">{cFmtBig(r.damages, "$")}</text>
-              <text x={x(r.deaths)} y={H - pad.b + 30} textAnchor="middle" fontSize={narrow ? 9 : 10} fill="var(--ink-soft)">{r.rung}</text>
+              <text x={x(r.deaths)} y={H - pad.b + 16} textAnchor="middle" fontSize={narrow ? 8.5 : 9.5} fill="var(--ink-soft)">{r.damages == null ? "" : cFmtBig(r.damages, "$")}</text>
+              <text x={x(r.deaths)} y={H - pad.b + 30} textAnchor="middle" fontSize={narrow ? 9 : 10} fill="var(--ink-soft)">{r.damages == null ? "Extinction" : r.rung}</text>
             </>}
           </g>
         ))}
@@ -151,6 +158,12 @@ function SeverityChart({ d, h, showModels, scale }) {
             </circle>
           ))
         ))}
+        {showModels && (d.anchors || []).map(a => G2.models.filter(m => a.per_model[m.label] != null).map(m => (
+          <circle key={a.qid + m.label} cx={anchorX(x, a)} cy={y(a.per_model[m.label])} r="3.2"
+            fill={m.color} opacity="0.7" stroke="var(--panel)" strokeWidth="0.8">
+            <title>{m.label} · {a.label}: {fmtP(a.per_model[m.label])}</title>
+          </circle>
+        )))}
 
         {d.causes.map(c => (
           <g key={c.key}>
@@ -177,6 +190,29 @@ function SeverityChart({ d, h, showModels, scale }) {
             })}
           </g>
         ))}
+
+        {/* The extinction diamonds (see the header comment): one per
+            question at the Extinction mark, with the same CI whisker a rung
+            gets, hollow = any cause, filled = AI-caused. Drawn after the
+            curves and never joined to one. */}
+        {(d.anchors || []).map(a => {
+          const cx = anchorX(x, a), cy = y(a.median);
+          return (
+            <g key={a.qid}>
+              {a.ci && a.ci[1] > a.ci[0] && (
+                <g stroke="var(--ink)" strokeWidth="1.5" opacity="0.6">
+                  <line x1={cx} x2={cx} y1={y(a.ci[1])} y2={y(a.ci[0])} />
+                  <line x1={cx - 3.5} x2={cx + 3.5} y1={y(a.ci[1])} y2={y(a.ci[1])} />
+                  <line x1={cx - 3.5} x2={cx + 3.5} y1={y(a.ci[0])} y2={y(a.ci[0])} />
+                </g>
+              )}
+              <path d={g2Diamond(cx, cy, 6)} fill={a.ai ? "var(--ink)" : "var(--panel)"} stroke="var(--ink)" strokeWidth="1.8"
+                style={{ cursor: "pointer" }}
+                onMouseEnter={() => setHov({ ...a, cause: a.label, label: a.severity, color: "var(--ink)", bad: [], extinction: true })}
+                onMouseLeave={() => setHov(null)} />
+            </g>
+          );
+        })}
 
         {/* End labels ride the same estimated-width chip as the rotated
             marker labels: the reference marks' dashed lines run through this
@@ -236,6 +272,11 @@ function SeverityChart({ d, h, showModels, scale }) {
           {hov.ci && (
             <div style={{ display: "flex", justifyContent: "space-between", gap: 14, fontSize: 12, color: "var(--ink-soft)" }}>
               <span>95% CI</span><span className="mono">{fmtP(hov.ci[0])}–{fmtP(hov.ci[1])}</span>
+            </div>
+          )}
+          {hov.extinction && (
+            <div style={{ fontSize: 11, color: "var(--ink-faint)", marginTop: 6, paddingTop: 5, borderTop: "1px solid var(--line-soft)" }}>
+              A separate question in the Existential Risk Persuasion Tournament's wording (population below 5,000), not a rung of any curve.
             </div>
           )}
           {hov.bad && hov.bad.length > 0 && (
@@ -362,6 +403,14 @@ function LiveGraph2Current({ onDefinitions }) {
               coherence violation
             </span>
           )}
+          {(d.anchors || []).map(a => (
+            <span key={a.qid} style={{ display: "inline-flex", alignItems: "center", gap: 7, fontSize: 12.5, color: "var(--ink-soft)" }}>
+              <svg width="15" height="15" style={{ display: "block" }}>
+                <path d={g2Diamond(7.5, 7.5, 5.5)} fill={a.ai ? "var(--ink)" : "var(--panel)"} stroke="var(--ink)" strokeWidth="1.6" />
+              </svg>
+              {a.label}{a.ai ? "" : " (any cause)"}
+            </span>
+          ))}
           {only && btn(true, () => setOnly(null), "show all causes")}
           {btn(showModels, () => setShowModels(s => !s), (showModels ? "hide" : "show") + " individual models")}
           <ScaleToggle value={scale} onChange={setScale} style={{ marginLeft: "auto" }} />
@@ -376,12 +425,16 @@ function LiveGraph2Current({ onDefinitions }) {
         <p style={{ fontSize: 12, lineHeight: 1.5, color: "var(--ink-soft)", margin: "8px 0 0" }}>
           Each of the four curves shows forecasts from asking the ensemble model to predict the likelihood of one or more qualifying incidents of the given severity level and time horizon. Severity is measured in any combination of deaths (or equivalent morbidity) <strong>OR</strong> economic damages. In other words, a cyber-attack causing economic damage of the relevant scale would count, as would a mortality event. Event types are not exclusive, so an event could fit multiple categories. That is why the sub-event types do not necessarily sum to the overall forecast.
         </p>
+        {G2.anchorsNote && (d.anchors || []).length > 0 && (
+          <p style={{ fontSize: 12, lineHeight: 1.5, color: "var(--ink-soft)", margin: "8px 0 0" }}>{G2.anchorsNote}</p>
+        )}
         <details style={{ fontSize: 12, lineHeight: 1.5, color: "var(--ink-soft)", marginTop: 6 }}>
           <summary style={{ cursor: "pointer" }}>Time windows and reference markers</summary>
           <p style={{ margin: "6px 0" }}>The selected horizon is an incident-onset deadline. Harm is counted over the three years after onset, so it can extend beyond that deadline. Dollar thresholds use 2026 USD. Historical and extinction markers show mortality, except NotPetya, a damages figure converted at the ladder’s value of a statistical life; they are context for the thresholds, not forecasts of the combined deaths-or-damages outcome.</p>
           {windows.map((w, i) => <p key={i} style={{ margin: "6px 0" }}>Eligible incident onset: {w.start} through {w.end}, inclusive ({w.timezone}). The start advances with each run, including for fixed-year deadlines.</p>)}
         </details>
         {onDefinitions && <button className="linkbtn" onClick={onDefinitions} style={{ fontSize: 12, marginTop: 6 }}>Definitions and full severity ladder →</button>}
+        <LadderRationales causes={d.causes} date={G2.instrumentInfo.runDate} />
       </div>
     </Panel>
   );

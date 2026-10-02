@@ -45,7 +45,7 @@ against a quiet re-instruction.
 
 Composition (Auto-ARC set, 2026-08-18):
   - the four incident causes, each spanning all eight severity rungs
-  - the three cross-cutting questions as their own group; they belong to no
+  - the cross-cutting questions (five since 2026-09-15) as their own group; they belong to no
     cause, because a catastrophe at 10% of population is not a rung of any
     incident type
   - EXCLUDED: config.UNBATCHED (the P6-bio comparison rows, which sit at 2045 on
@@ -76,6 +76,7 @@ dependency the runners need; `python3 -m redlines build` still needs none):
 """
 import argparse
 import concurrent.futures as cf
+import copy
 import hashlib
 import json
 import os
@@ -88,7 +89,8 @@ from datetime import date, datetime, timezone
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.insert(0, ROOT)
 
-from redlines.llm import call_tools, load_keys, reasoning_for  # noqa: E402
+from redlines.llm import call_tools, load_keys, reasoning_for, research_coverage  # noqa: E402
+from redlines.logs import run_file  # noqa: E402
 from redlines.tools import FORECAST_TOOLS                # noqa: E402
 from redlines.registry import DEFAULT_MODEL_SET, MODEL_SETS, panel_provenance  # noqa: E402
 from redlines.instrument import counting_windows  # noqa: E402
@@ -134,22 +136,35 @@ MAX_ROUNDS = 40
 # not offered until this many tool calls have returned. Asked nicely, with the
 # prompt below and no floor, Fable 5 searched four times, read nothing and
 # submitted (2026-09-02 smoke) -- the same behaviour as under the old one-pass
-# prompt. Ten is a floor, not a target: 35 questions over six causes of
+# prompt. Ten is a floor, not a target: 37 questions over six causes of
 # catastrophe, so it is roughly one search and one read per cause before the
 # model may answer. A turn may carry several calls, so the floor costs a
 # handful of turns out of RESEARCH_ROUNDS.
 MIN_RESEARCH = 10
+# THE COVERAGE RULE (2026-09-11; redlines.llm.call_tools coverage): beside the
+# floor, submission is withheld until EVERY question group has had a
+# web_search with recent_days tagged with the group's key (`cause`). The
+# floor counts calls; this says what they must span. Why: of three GPT-6
+# Astra draws of the combined instrument (2026-09-08, 09-10, a 09-11 smoke),
+# the 09-10 draw ran eight searches and none on misalignment, and put its
+# loss-of-control forecasts at half the other two's, which had each read a
+# loss-of-control incident report -- run-to-run spread that was a gap in the
+# reading, not a change of mind. The prompt had asked for a recent check on
+# each cause all along; the loop now holds the model to it. The groups come
+# from the batch (research_tools), so the rule follows the question set.
 
 SYSTEM = f"""You are a careful probabilistic forecaster producing calibrated
 probabilities for catastrophic-risk questions. Ground your forecast in evidence,
 and gather it in steps: web_search for current events, expert reports, base
 rates and published estimates; read_page to read the results that matter in
 full; then search again on what you learned. Let each round shape the next
-query. Before you estimate, check what has happened recently on each cause
-(web_search with recent_days, counted back from today's date in your prompt).
+query. Before you estimate, check what has happened recently on EVERY question
+group: for each group, at least one web_search with recent_days (counted back
+from today's date in your prompt) tagged with that group's key as `cause`.
 The submission tools (submit_cells, submit_forecast) are offered only after at
-least {MIN_RESEARCH} tool calls have returned (searches or page reads); stop
-once more searching would not move a number. Reason from base rates first, then adjust. These are low-probability
+least {MIN_RESEARCH} tool calls have returned (searches or page reads) and every
+group has had its recent search; stop once more searching would not move a
+number. Reason from base rates first, then adjust. These are low-probability
 questions — beware both dismissing tail risk as zero and inflating it for
 vividness. When done, call submit_forecast."""
 
@@ -167,7 +182,10 @@ rates and expert estimates that bear on each cause of catastrophe, read the
 pages that matter most, and search again on what you learn. Then call
 submit_forecast ONCE, with a probability in [0,1] for every question x horizon
 cell ({cells} in total), a 3-6 sentence rationale covering the whole set, and the
-key sources you relied on."""
+key sources you relied on. After it is accepted you will be asked one more thing, per question: a short
+rationale for its numbers naming the mechanism at that severity and the anchor
+you used, the sources that mattered most to it, and the assumption you are least
+sure of -- research with those questions in mind."""
 
 # The CONDITIONAL ARM (--condition). Everything else in the call is identical
 # to the unconditional run -- same models, tools, questions, criteria, horizons,
@@ -230,7 +248,12 @@ unconditional one.
 # This tag is the LEAP-only set's; the published set (COMBINED) carries its own
 # in the file (unified-joint-combined-v2 since 2026-09-02, the agentic harness:
 # code/make_combined_conditions.py).
-PROTOCOL_JOINT = "unified-joint-v3"
+# v3 -> v4 on 2026-09-15: the extinction pair (35 -> 37 questions, 210 -> 222
+# cells; data/auto-arc/addendum-extinction-2026-09-15.json). Additive, like
+# the v1 -> v2 bump: every existing block renders byte-identically.
+# v5 -> v6 on 2026-10-01: the extinction pair's criteria stop naming their
+# source (XPT, AIRO); docs/extinction-questions-2026-09-15.md.
+PROTOCOL_JOINT = "unified-joint-v6"
 RUNS_DIR = os.path.join(ROOT, "results", "runs")
 UNCONDITIONAL_KEY = "unconditional"
 
@@ -256,7 +279,10 @@ probability in [0,1] under each of the {k} conditions
 ({total} probabilities, keyed by condition id); a later call for a cell
 replaces the earlier one. Then call submit_forecast ONCE,
 with{extra} a 3-6 sentence rationale covering the whole set, the key sources
-you relied on (only pages you read), and any cells not yet delivered."""
+you relied on (only pages you read), and any cells not yet delivered. After it is accepted you will be asked one more thing, per question: a short
+rationale for its numbers naming the mechanism at that severity and the anchor
+you used, the sources that mattered most to it, and the assumption you are least
+sure of -- research with those questions in mind."""
 
 # The framing lines are ours; the instruction, the unconditional wording, the
 # definitions and every policy description are LEAP's, verbatim. Nothing here
@@ -358,7 +384,10 @@ probability in [0,1] under each of the {k} conditions
 ({total} probabilities, keyed by condition id); a later call for a cell
 replaces the earlier one. Then call submit_forecast ONCE,
 with{extra} a 3-6 sentence rationale covering the whole set, the key sources
-you relied on (only pages you read), and any cells not yet delivered."""
+you relied on (only pages you read), and any cells not yet delivered. After it is accepted you will be asked one more thing, per question: a short
+rationale for its numbers naming the mechanism at that severity and the anchor
+you used, the sources that mattered most to it, and the assumption you are least
+sure of -- research with those questions in mind."""
 
 GROUP_BLOCK = """
 ===== {heading} =====
@@ -878,6 +907,162 @@ def submit_tool_joint(qids, horizons, cond_ids, elicit=None):
     return tool
 
 
+# THE DEBRIEF (2026-09-15, project lead; PER QUESTION since 2026-09-16):
+# after the forecasts are accepted, one more turn asks, for EACH question,
+# what drove its numbers -- a short rationale naming the mechanism at that
+# severity and the anchor used, the sources that mattered most, and the
+# assumption the model is least sure of. The first version (2026-09-15)
+# asked per question GROUP (five entries); the cyber tail diagnostic of
+# 2026-09-16 showed that a
+# group-level pathway says nothing about the individual rungs that carry
+# the expected loss, and the project lead's design was always the standard
+# elicitation plus a rationale per rung per outcome: the run is the run,
+# and the rationale data comes with it. Asked AFTER submission so it cannot
+# move the numbers (redlines.llm.call_tools `debrief`); stored on the
+# call's first row as `debrief` (the answer, keyed by question id) and
+# `debrief_status`; exported as results/debriefs.csv (redlines.export).
+# The harness merges deliveries across attempts and accepts a stringified
+# entry, because Fable 5.1 truncated and stringified the five-entry version.
+DEBRIEF_QUESTION_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "rationale": {
+            "type": "string",
+            "description": "2-4 plain sentences: what drives your numbers for this question "
+                           "across its horizons -- for a severity rung, the mechanism by which "
+                           "that severity is reached and the historical anchor or base rate you "
+                           "used, with its number; for a cross-cutting question, the pathway and "
+                           "anchor likewise"},
+        "key_sources": {
+            "type": "array",
+            "description": "the 1-3 sources that mattered most to this question's numbers, by "
+                           "URL, each with one clause on what it contributed; only sources you "
+                           "read or saw in this conversation",
+            "items": {"type": "object",
+                      "properties": {"url": {"type": "string"},
+                                     "contribution": {"type": "string"}},
+                      "required": ["url", "contribution"]}},
+        "weakest_link": {
+            "type": "string",
+            "description": "one sentence: the assumption behind these numbers that the evidence "
+                           "supports least"},
+    },
+    "required": ["rationale", "key_sources", "weakest_link"],
+}
+
+
+def debrief_questions(groups, by_group):
+    """The questions a debrief covers, in prompt order."""
+    return [q for g in groups for q in by_group[g["key"]]]
+
+
+# Anthropic's tool schemas allow property keys matching ^[a-zA-Z0-9_.-]{1,64}$
+# only: a question id's colons are refused ("ladder:ai:100"), which is how
+# the first per-question debrief (2026-09-16 16:45 UTC) failed for Fable 5.1
+# and Opus 5 while the OpenAI models answered it. The tool is keyed by the
+# id with ':' written as '__', and the answer is keyed back by id before it
+# is stored, so the row and the CSV never see the tool's spelling.
+def debrief_key(qid):
+    return qid.replace(":", "__")
+
+
+def debrief_qid(key):
+    return key.replace("__", ":")
+
+
+def debrief_tool(questions):
+    """The debrief tool: one object per question, all required."""
+    return {
+        "name": "submit_debrief",
+        "description": "After your forecasts are accepted: for each question, what drove "
+                       "its numbers. Plain language a reader outside this conversation can "
+                       "follow; no shorthand. May be called more than once, each call "
+                       "carrying some questions; entries merge. Keys are the question ids "
+                       "with ':' written as '__'.",
+        "parameters": {
+            "type": "object",
+            "properties": {debrief_key(q["id"]): {**DEBRIEF_QUESTION_SCHEMA,
+                                                  "description": f"{q['id']}: " + (q.get("text") or "")[:180]}
+                           for q in questions},
+            "required": [debrief_key(q["id"]) for q in questions],
+        },
+    }
+
+
+def debrief_prompt(questions):
+    ids = ", ".join(debrief_key(q["id"]) for q in questions)
+    return (
+        "Your forecasts are accepted and will not change. Now call submit_debrief with one "
+        f"entry for EACH question, keyed by its id with ':' written as '__': {ids}. If one "
+        "call cannot carry them all, call it again with the rest; entries merge. For each "
+        "question, in plain language "
+        "that a reader who has not seen this conversation can follow (spell out every idea; "
+        "no abbreviations or shorthand): rationale -- 2-4 sentences on what drives your "
+        "numbers for it across its horizons: for a severity rung, the mechanism by which that "
+        "severity is reached and the historical anchor or base rate you used, with its "
+        "number; key_sources -- the 1-3 sources that mattered most, by URL, each with one "
+        "clause on what it contributed, only sources you read or saw here; weakest_link -- "
+        "one sentence naming the assumption the evidence supports least. Be specific and "
+        "concrete; do not restate your probabilities.")
+
+
+def validate_debrief(args, questions):
+    """Problems with a debrief, in the model's terms; [] when it is complete."""
+    problems = []
+    if not isinstance(args, dict):
+        return ["the debrief must be an object keyed by question id"]
+    for q in questions:
+        d = args.get(debrief_key(q["id"]), args.get(q["id"]))
+        if not isinstance(d, dict):
+            problems.append(f"{q['id']}: missing")
+            continue
+        r = d.get("rationale")
+        if not (isinstance(r, str) and len(r.strip()) >= 60):
+            problems.append(f"{q['id']}: rationale needs 2-4 sentences")
+        ks = d.get("key_sources")
+        if not (isinstance(ks, list) and ks and all(
+                isinstance(x, dict) and isinstance(x.get("url"), str) and x["url"].strip()
+                and isinstance(x.get("contribution"), str) and x["contribution"].strip() for x in ks)):
+            problems.append(f"{q['id']}: key_sources needs 1-3 items, each with url and contribution")
+        wl = d.get("weakest_link")
+        if not (isinstance(wl, str) and wl.strip()):
+            problems.append(f"{q['id']}: weakest_link missing")
+    return problems
+
+
+def debrief_state(groups, by_group):
+    """A fresh `debrief` dict for redlines.llm.call_tools, per attempt. Three
+    retries and a 48k turn: 37 entries is a long tool call, and deliveries
+    merge across attempts."""
+    qs = debrief_questions(groups, by_group)
+    return {"tool": debrief_tool(qs), "prompt": debrief_prompt(qs),
+            "validate": lambda args: validate_debrief(args, qs), "retries": 3,
+            "max_tokens": 48000}
+
+
+def debrief_fields(state, first):
+    """The two row fields, on the call's first row only."""
+    if not first:
+        return {"debrief": None, "debrief_status": None}
+    result = state.get("result")
+    if isinstance(result, dict):     # the tool's key spelling -> the question id
+        result = {debrief_qid(k): v for k, v in result.items()}
+    return {"debrief": result,
+            "debrief_status": {k: state.get(k) for k in ("complete", "attempts", "problems", "error")}}
+
+
+def debrief_note(rows):
+    """For the log: how the debrief went, from the first row."""
+    st = (rows[0].get("debrief_status") if rows else None) or {}
+    if not st or st.get("attempts") is None:
+        return "no debrief"
+    if st.get("complete"):
+        return f"debrief ok ({st['attempts']} attempt(s))"
+    if st.get("error"):
+        return f"debrief FAILED ({st['error'][:80]})"
+    return f"debrief INCOMPLETE ({len(st.get('problems') or [])} problem(s) after {st['attempts']} attempt(s))"
+
+
 def clean_elicit(raw, elicit):
     """-> {field: float} with every field present and non-decreasing, else None."""
     if isinstance(raw, str):
@@ -993,6 +1178,28 @@ def clean_forecasts_joint(raw, allowed, horizons, cond_ids):
     return out or None
 
 
+def research_tools(groups):
+    """FORECAST_TOOLS with web_search's `cause` narrowed to this batch's
+    question groups (an enum, required), and the coverage keys the loop
+    holds the model to. -> (tools, keys). The shared tool is left untouched."""
+    keys = [g["key"] for g in groups]
+    search = copy.deepcopy(FORECAST_TOOLS[0])
+    search["parameters"]["properties"]["cause"] = {
+        "type": "string", "enum": keys,
+        "description": "the question group this search is for: "
+                       + "; ".join(f"{g['key']} = {g['label']}" for g in groups)
+                       + ". Every group needs at least one search with recent_days "
+                         "tagged with its key before submission is offered."}
+    search["parameters"]["required"] = ["query", "cause"]
+    return [search] + list(FORECAST_TOOLS[1:]), keys
+
+
+def coverage_line(rows):
+    """'coverage ai:1 bio:1 ...' from a call's recorded evidence, for the log."""
+    cov = research_coverage([e for r in rows for e in (r.get("evidence") or [])])
+    return "coverage " + " ".join(f"{k}:{n}" for k, n in cov.items()) if cov else "coverage none"
+
+
 def run_one_joint(label, model_id, groups, by_group, horizons, run_id, retries, spec,
                   conds, policies, experiment=None, arm=None, panel=None, today=None):
     """One call: the full instrument. -> rows, one per (question, condition)."""
@@ -1047,10 +1254,13 @@ def run_one_joint(label, model_id, groups, by_group, horizons, run_id, retries, 
         received.clear()
         delivery.update(cells_calls=0, cells_in_pieces=0, cells_in_final=0)
         try:
+            research, coverage = research_tools(groups)
+            debrief = debrief_state(groups, by_group)
             answer, evidence = call_tools(
-                model_id, prompt, FORECAST_TOOLS, submit_tool_joint(qids, horizons, cond_ids, elicits),
+                model_id, prompt, research, submit_tool_joint(qids, horizons, cond_ids, elicits),
                 system=SYSTEM, max_iters=MAX_ROUNDS, max_tokens=64000,
-                min_evidence=MIN_RESEARCH, usage=usage, partial_tool=partial)
+                min_evidence=MIN_RESEARCH, usage=usage, partial_tool=partial,
+                coverage=coverage, debrief=debrief)
         except Exception as exc:
             # A provider error or a call that never submitted: worth the same
             # retry budget as a short grid, and just as visible in the log.
@@ -1086,6 +1296,7 @@ def run_one_joint(label, model_id, groups, by_group, horizons, run_id, retries, 
             stamps[c["id"]]["value"] = ((elicited or {}).get(key) or {}).get(c["field"])
     hits = sum(len((e.get("result") or {}).get("results") or [])
                for e in evidence if e.get("tool") == "web_search")
+    debrief = debrief if attempts else debrief_state(groups, by_group)
     # Cited but not read (the source-quality pass, 2026-09-02 evening): the
     # key sources the model lists that no read_page call in this call fetched.
     read = {(e.get("args") or {}).get("url") for e in evidence if e.get("tool") == "read_page"}
@@ -1112,6 +1323,9 @@ def run_one_joint(label, model_id, groups, by_group, horizons, run_id, retries, 
                     # call) and which cited sources were never read.
                     "delivery": dict(delivery) if first else None,
                     "unread_sources": unread if first else None,
+                    # The debrief turn's answer and how it went (call_tools
+                    # `debrief`), on the call's first row like the evidence.
+                    **debrief_fields(debrief, first),
                     "resolves_on": {h: resolves_on(h, today, spec) for h in horizons},
                     "run_date": today.isoformat(),
                     "instrument_version": spec.get("instrument_version"),
@@ -1174,12 +1388,15 @@ def run_one(label, model_id, groups, by_group, horizons, run_id, retries, spec,
     # not one. Gemini 3.1 Pro did exactly that in the ladder experiment (searched
     # seven times, submitted nothing). Retry on an empty or badly partial grid.
     usage = {}   # the whole call's tokens and price, retries included
+    debrief = debrief_state(groups, by_group)
     while attempts <= retries:
         attempts += 1
+        research, coverage = research_tools(groups)
+        debrief = debrief_state(groups, by_group)
         answer, evidence = call_tools(
-            model_id, prompt, FORECAST_TOOLS, submit_tool(qids, horizons),
+            model_id, prompt, research, submit_tool(qids, horizons),
             system=SYSTEM, max_iters=MAX_ROUNDS, max_tokens=32000,
-            min_evidence=MIN_RESEARCH, usage=usage)
+            min_evidence=MIN_RESEARCH, usage=usage, coverage=coverage, debrief=debrief)
         grid = clean_forecasts(answer.get("forecasts"), allowed, horizons)
         # CELLS, not questions. The guard used to read len(grid) >= 0.9 *
         # len(qids), which counts a question as complete the moment ONE of its
@@ -1227,6 +1444,7 @@ def run_one(label, model_id, groups, by_group, horizons, run_id, retries, spec,
                 # per-call count wrong.
                 "evidence": evidence if q is first else [],
                 "usage": usage if q is first else None,
+                **debrief_fields(debrief, q is first),
                 "resolves_on": {h: resolves_on(h, today, spec) for h in horizons},
                 "run_date": today.isoformat(),
                 "instrument_version": spec.get("instrument_version"),
@@ -1368,14 +1586,14 @@ def main():
     args = ap.parse_args()
 
     # The combined instrument asks models to forecast and condition on frontier
-    # ECI. Refuse to run it against a stale frontier history: the live METR
-    # app can lead the public CSV (as it did for GPT-6 Astra). The gate is an
-    # age (code/check_live_eci_snapshot.py, 10 days by default) because the
-    # cron box cannot run the Playwright refresh itself. A dry run calls no
-    # model and prints the prompt as it stands, so it is not gated.
+    # ECI. Refuse to run it against a stale frontier history or a condition
+    # set not generated from the newest Epoch snapshot
+    # (code/check_eci_snapshot.py; code/cron_run.sh fetches and regenerates
+    # before every run). A dry run calls no model and prints the prompt as it
+    # stands, so it is not gated.
     if args.joint and not args.dry_run and \
             os.path.abspath(args.conditions) == os.path.abspath(COMBINED):
-        subprocess.run([sys.executable, os.path.join(ROOT, "code", "check_live_eci_snapshot.py")],
+        subprocess.run([sys.executable, os.path.join(ROOT, "code", "check_eci_snapshot.py")],
                        check=True)
 
     if args.joint:
@@ -1488,7 +1706,8 @@ def main():
             ev = sum(len(r["evidence"]) for r in rows)
             spent = tally_spend(spent, rows)
             print(f"  done  {tag} {got}/{len(rows)} questions answered, {usage_line(rows)}, "
-                  f"{ev} evidence, {rows[0]['attempts']} attempt(s)")
+                  f"{ev} evidence, {coverage_line(rows)}, {rows[0]['attempts']} attempt(s), "
+                  f"{debrief_note(rows)}")
     print(f"{done} ok, {failed} failed, ${spent:.2f} priced spend -> {args.out}")
 
 
@@ -1569,7 +1788,8 @@ def main_joint(args):
           f"({len(models)} models x {len(arms)} repeat(s)), {n} questions x "
           f"{len(horizons)} horizons = {cells} cells x {len(conds) + 1} conditions "
           f"= {cells * (len(conds) + 1)} probabilities each")
-    print(f"    harness: research floor {MIN_RESEARCH} calls, guard {MAX_ROUNDS} rounds; reasoning "
+    print(f"    harness: research floor {MIN_RESEARCH} calls, coverage "
+          f"{', '.join(g['key'] for g in groups)}, guard {MAX_ROUNDS} rounds; reasoning "
           + ", ".join(f"{l}={reasoning_for(m) or 'default'}" for l, m in models))
     print(f"    conditions: {UNCONDITIONAL_KEY}, {', '.join(c['id'] for c in conds)}"
           + (f"  [experiment: {args.experiment}]" if args.experiment else ""))
@@ -1579,6 +1799,10 @@ def main_joint(args):
     for qid, why in skipped:
         print(f"    SKIP {qid}: {why}")
     os.makedirs(os.path.dirname(os.path.abspath(out)), exist_ok=True)
+    # An instrument log named conditional_runs* is a folder of one file per
+    # run (redlines.logs); any other --conditional-out is a plain file.
+    if os.path.basename(cond_out).startswith("conditional_runs"):
+        cond_out = str(run_file(cond_out, run_id))
     os.makedirs(os.path.dirname(os.path.abspath(cond_out)), exist_ok=True)
     lock = threading.Lock()
     done = failed = 0
@@ -1609,7 +1833,8 @@ def main_joint(args):
             ev = sum(len(r["evidence"]) for r in rows)
             spent = tally_spend(spent, rows)
             print(f"  done  {tag} {got}/{len(rows)} question x condition rows answered, {usage_line(rows)}, "
-                  f"{ev} evidence, {rows[0]['attempts']} attempt(s)")
+                  f"{ev} evidence, {coverage_line(rows)}, {rows[0]['attempts']} attempt(s), "
+                  f"{debrief_note(rows)}")
     print(f"{done} ok, {failed} failed, ${spent:.2f} priced spend -> {out} (unconditional) + {cond_out} (instrument)")
     if failed:
         # An incomplete panel cannot be published (code/validate_launch_run.py

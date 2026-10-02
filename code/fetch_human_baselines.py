@@ -86,7 +86,37 @@ SOURCES = {
     "leap-ai-catastrophe-50-deaths-or-100b": {
         "kind": "leap", "question_group_name": "First Major AI Global Harm Event (1)",
         "survey_name": "Wave 9: Risks"},
+    # The extinction pair (data/auto-arc/addendum-extinction-2026-09-15.json):
+    # XPT's own two extinction sets, re-aggregated from the pinned panel like
+    # the catastrophe pair above.
+    "xpt-total-extinction-below-5000": {
+        "kind": "xpt", "set_name": "10. Total Extinction Risk"},
+    "xpt-ai-extinction-below-5000": {
+        "kind": "xpt", "set_name": "4. AI Extinction Risk"},
+    # A PUBLISHED number, typed from the paper: the 2023 Expert Survey on
+    # Progress in AI's AI-researcher median. There is no individual-response
+    # file to re-aggregate, so the statistics are the paper's own (Table 2,
+    # question 3: the "within the next 100 years" wording), carried against
+    # our 2100 cell as the nearest horizon. IQR is the paper's width; the
+    # quartiles themselves are not published, so p25/p75 are absent.
+    "espai-2023-ai-extinction-or-disempowerment-100y": {
+        "kind": "published",
+        "citation": "Grace, Stewart, Sandkühler, Thomas, Weinstein-Raun and Brauner (2024), "
+                    "\"Thousands of AI Authors on the Future of AI\", arXiv:2401.02843, "
+                    "Table 2, question 3 (2023 responses)",
+        "url": "https://arxiv.org/abs/2401.02843",
+        "elicited": {"date": "2023-10-11", "start": "2023-10-11", "end": "2023-10-24",
+                     "project": "AI Impacts, Expert Survey on Progress in AI 2023"},
+        "at": {"2100": {"ai_researcher": {"median": 5.0, "mean": 14.4, "sd": 22.2,
+                                         "iqr": 19.9, "n": 655}}},
+        "horizon_note": "asked as \"within the next 100 years\" in October 2023 "
+                        "(about 2123); carried against the 2100 cell as the nearest "
+                        "horizon, not the same one. The no-time-limit variant "
+                        "(n=1,321) had the same median, 5%, mean 16.2%.",
+    },
 }
+# Which fetch kind each project token in a comparison column names.
+PROJECT_KIND = {"XPT": "xpt", "LEAP": "leap", "ESPAI": "published"}
 
 # Which prior question a cell pairs with, when her column names only a project.
 # LEAP filed three AI-catastrophe questions and "LEAP" alone does not say which
@@ -100,13 +130,17 @@ JOIN = {
     ("catastrophe:ai", "XPT"): "xpt-ai-catastrophe-10-of-population",
     ("catastrophe:ai", "LEAP"): "leap-ai-catastrophe-10-of-population",
     ("ladder:ai:10k", "LEAP"): "leap-ai-catastrophe-50-deaths-or-100b",
+    ("extinction:general", "XPT"): "xpt-total-extinction-below-5000",
+    ("extinction:ai", "XPT"): "xpt-ai-extinction-below-5000",
+    ("extinction:ai", "ESPAI"): "espai-2023-ai-extinction-or-disempowerment-100y",
 }
 
 
 # ── XPT ──────────────────────────────────────────────────────────────────────
 XPT_REPO = "https://github.com/forecastingresearch/xpt-lib.git"
 XPT_COMMIT = "251acb5254448c9bdb4caa4b5011481c2c149aef"
-XPT_CACHE = os.path.expanduser("~/.cache/redlines/xpt-lib")
+# Override with REDLINES_XPT_CACHE when ~/.cache is not writable (a sandbox).
+XPT_CACHE = os.environ.get("REDLINES_XPT_CACHE") or os.path.expanduser("~/.cache/redlines/xpt-lib")
 XPT_ELICITED = "2022-10-01"     # her sheet's date for the XPT panel
 
 
@@ -184,8 +218,9 @@ def summarize(vs):
 # ── LEAP ─────────────────────────────────────────────────────────────────────
 # The FRI data warehouse's BigQuery project, from the environment: it is
 # internal infrastructure, not part of the public record.
-LEAP_PROJECT = os.environ.get("FRI_WAREHOUSE_PROJECT") or sys.exit(
-    "FRI_WAREHOUSE_PROJECT is unset: the BigQuery project of the FRI data warehouse (internal)")
+# Required only when LEAP is actually fetched (leap_client checks); --only XPT
+# or --only ESPAI must work on a machine with no warehouse access.
+LEAP_PROJECT = os.environ.get("FRI_WAREHOUSE_PROJECT")
 
 # Unconditional forecasts only. LEAP asks the catastrophe pair four times per
 # horizon -- once outright and once under each of three AI-progress scenarios
@@ -216,6 +251,9 @@ from resp group by 1, 2
 
 
 def leap_client():
+    if not LEAP_PROJECT:
+        sys.exit("FRI_WAREHOUSE_PROJECT is unset: the BigQuery project of the FRI data "
+                 "warehouse (internal). Pass --only XPT / --only ESPAI to skip LEAP.")
     try:
         from google.cloud import bigquery
     except ImportError:
@@ -309,6 +347,7 @@ def build(only=None):
         if only and spec["kind"] not in only:
             continue
 
+        published = None
         if spec["kind"] == "xpt":
             if xpt_cache is None:
                 xpt_cache = xpt_checkout()
@@ -318,6 +357,13 @@ def build(only=None):
             groups = xpt_cached[key].get(horizon)
             elicited = {"date": row["elicited"] or XPT_ELICITED,
                         "commit": XPT_COMMIT, "repo": XPT_REPO}
+        elif spec["kind"] == "published":
+            # Typed from a paper, so the citation and the horizon caveat ride
+            # on the entry where the reader can see them.
+            groups = spec["at"].get(horizon)
+            elicited = dict(spec["elicited"])
+            published = {"citation": spec["citation"], "url": spec["url"],
+                         "horizon_note": spec["horizon_note"]}
         else:
             if client is None:
                 client = leap_client()
@@ -356,14 +402,36 @@ def build(only=None):
                 "resolution_dates": row["resolution_dates"],
             },
             "our_question": {"text": q["text"], "severity": q["severity"]["label"]},
+            **({"published": published} if published else {}),
         })
+
+    # A partial fetch (--only) keeps what is already on disk for the other
+    # kinds: pulling XPT on a machine without warehouse access must not drop
+    # the LEAP numbers that are already here.
+    if only and os.path.exists(OUT):
+        old = json.load(open(OUT, encoding="utf-8"))
+        asked = set(wanted(questions))
+        have = {(b["question_id"], b["horizon"], b["project"]) for b in baselines}
+        for b in old.get("baselines", []):
+            key = (b["question_id"], b["horizon"], b["project"])
+            if PROJECT_KIND.get(b["project"]) not in only and key in asked and key not in have:
+                baselines.append(b)
+        have_u = {(u["question_id"], u["horizon"], u["project"]) for u in unavailable}
+        for u in old.get("unavailable", []):
+            key = (u["question_id"], u["horizon"], u["project"])
+            if PROJECT_KIND.get(u["project"]) not in only and key in asked \
+                    and key not in have and key not in have_u:
+                unavailable.append(u)
+        baselines.sort(key=lambda b: (b["question_id"], b["horizon"], b["project"]))
+        unavailable.sort(key=lambda u: (u["question_id"], u["horizon"], u["project"]))
 
     return {
         "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H%MZ"),
         "generated_by": "code/fetch_human_baselines.py",
         "asked_for_by": "the 'Human comparisons (Project)' column of "
-                        "data/auto-arc/questions-2026-08-18.xlsx, carried into "
-                        "data/autoarc_*.json as each question's human_comparisons",
+                        "data/auto-arc/questions-2026-08-31.xlsx, and the "
+                        "human_comparisons of data/auto-arc/addendum-*.json, carried "
+                        "into data/autoarc_*.json as each question's human_comparisons",
         "adjusted": False,
         "note": "Medians as each panel reported them, in percent, unadjusted. "
                 "Every entry carries the question the panel answered; the "
@@ -380,8 +448,9 @@ def dumps(doc):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--only", action="append", choices=["XPT", "LEAP"],
-                    help="fetch only these projects (repeatable)")
+    ap.add_argument("--only", action="append", choices=sorted(PROJECT_KIND),
+                    help="fetch only these projects (repeatable); the file keeps "
+                         "what is on disk for the others")
     ap.add_argument("--check", action="store_true",
                     help="report what her sheet asks for and what is on disk; "
                          "write nothing, touch no network")
@@ -406,8 +475,7 @@ def main():
             print(f"  missing: {qid} @ {h} from {p}")
         return 1 if missing else 0
 
-    only = {"XPT": "xpt", "LEAP": "leap"}
-    kinds = {only[o] for o in args.only} if args.only else None
+    kinds = {PROJECT_KIND[o] for o in args.only} if args.only else None
     doc = build(kinds)
     open(OUT, "w", encoding="utf-8").write(dumps(doc))
     print(f"wrote {os.path.relpath(OUT, ROOT)}")

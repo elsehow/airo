@@ -92,6 +92,17 @@ on the 10th and 90th percentiles too, now that they are elicited).
 The elicitation was already five percentiles; the instrument now asks a
 question in each of those five worlds -- 210 x 14 = 2,940 probabilities a
 call. First cron run under v4: Friday 2026-09-04.
+
+v4 -> v5 on 2026-09-10: the prospective incident-counting definitions
+(redlines.instrument.CURRENT_INSTRUMENT), same call shape.
+
+v5 -> v6 on 2026-09-15: THE EXTINCTION PAIR. Two cross-cutting questions in
+XPT's wording (human extinction, AI extinction: data/auto-arc/
+addendum-extinction-2026-09-15.json, docs/extinction-questions-2026-09-15.md)
+join the grid, 35 -> 37 questions and 210 -> 222 cells, 3,108 probabilities
+a call. Nothing in this file changed; the tag moves because the grid a
+model answers beside these conditions did. First scheduled run under v6:
+the first cron run after the box carries this code.
 """
 import argparse
 import hashlib
@@ -105,7 +116,7 @@ CAP = os.path.join(ROOT, "data", "eci_self6mo_conditions.json")
 OUT = os.path.join(ROOT, "data", "combined_conditions.json")
 
 SLUG = "combined"
-PROTOCOL = "unified-joint-combined-v5"
+PROTOCOL = "unified-joint-combined-v8"
 PLACEHOLDER = "{target_date}"
 
 # ── The authored sentences ──────────────────────────────────────────────────
@@ -231,8 +242,9 @@ def build():
                             "fact learned about the world (the component sets' own clauses, "
                             "each in its own section).",
             "target": cap["notes"]["target"],
-            "cost": "210 cells x 14 keys = 2,940 probabilities per call, against 1,890 on "
-                    "the policy instrument and 1,260 on the capability one.",
+            "cost": "222 cells x 14 keys = 3,108 probabilities per call (210 x 14 = 2,940 "
+                    "before the extinction pair, 2026-09-15), against 1,998 on the policy "
+                    "instrument and 1,332 on the capability one.",
         },
     }
 

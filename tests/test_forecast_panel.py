@@ -9,9 +9,8 @@ from tests.test_instrument_views import current
 
 
 def _current_fixture():
-    path = capability.REPO_ROOT / 'results/conditional_runs_combined.jsonl'
-    import json
-    rows = [json.loads(line) for line in path.read_text().splitlines()]
+    from redlines.logs import iter_rows
+    rows = list(iter_rows(capability.REPO_ROOT / 'results/conditional_runs_combined.jsonl'))
     return current([r for r in rows if r['elicited_at'][:10] == '2026-09-08'
                     and r.get('protocol') == 'unified-joint-combined-v4'])
 

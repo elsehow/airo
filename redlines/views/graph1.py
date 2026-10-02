@@ -1,10 +1,12 @@
 """Graph 1: the bottom-line forecasts from the frontier ensemble.
 
-Seven questions in two rail groups:
+Nine questions in two rail groups:
 
-  crosscutting  general catastrophe, AI catastrophe, human disempowerment.
-                Severity is fixed at 10% of population for the first two and
-                absent for the third; only dates vary.
+  crosscutting  general catastrophe, AI catastrophe, human disempowerment,
+                and since 2026-09-15 the extinction pair (human extinction,
+                AI extinction; an addendum in XPT's wording). Severity is
+                fixed -- 10% of population, none, a population floor of
+                5,000 -- and only dates vary.
   incident      one EXPECTED-LOSS row per cause (since 2026-08-27): the
                 eight rung forecasts folded to a floor on E[loss] in
                 death-equivalents, the arithmetic the Conditional-on tab
@@ -68,12 +70,15 @@ HUMAN_COLORS = [
 # everywhere). The data file keeps every group; the panel plots the one the
 # paper compares against, which also keeps it to one human mark per panel per
 # horizon instead of three. Widen this tuple to bring experts/public back.
-PLOTTED_GROUPS = ("superforecaster",)
+# Widened 2026-09-15 for the extinction pair: the AI-researcher median from the
+# 2023 Expert Survey on Progress in AI is the comparison the project team asked for, and
+# it is a group of its own panel (ESPAI), not an expert row of an FRI one.
+PLOTTED_GROUPS = ("superforecaster", "ai_researcher")
 # Display order only, so the palette assignment is stable. Unknown panels/groups
 # sort last but still render — nothing here decides WHETHER a series is drawn,
 # except the PLOTTED_GROUPS filter above.
-_PANEL_RANK = {"XPT": 0, "LEAP": 1}
-_GROUP_RANK = {"superforecaster": 0, "expert": 1, "public": 2}
+_PANEL_RANK = {"XPT": 0, "LEAP": 1, "ESPAI": 2}
+_GROUP_RANK = {"superforecaster": 0, "expert": 1, "public": 2, "ai_researcher": 3}
 
 
 def _human_series(qid, horizons, doc):
@@ -243,6 +248,12 @@ def build():
     rungs = ladder_rungs(spec)
     questions, done = [], set()
     for q in qs:
+        # A question that entered the set after the latest complete run (an
+        # addendum's `since`) has no reading yet: not drawn as an empty panel,
+        # for the same reason an unanswered horizon is not drawn as an empty
+        # column (runlog.answered_horizons). It appears the run that answers it.
+        if not q.get("cause") and q["id"] not in answered:
+            continue
         rail = per_q[q["id"]]
         horizons = sorted([h for h in q["horizons"]
                            if is_future(h, spec)
@@ -424,13 +435,20 @@ def human_coverage(qs, plotted=None):
         # print "XPT 2022" as a constant again.
         "panels": {k: panels[k] for k in sorted(panels)},
         "plotted": True,
-        "note": "Superforecaster medians from prior panels are shown as hollow "
-                "diamonds, each labelled with its panel (experts and the public "
-                "are in the data but not plotted). They answer close but not "
-                "identical wordings — XPT counted deaths where Bridget counts "
-                "attributable excess mortality, and both XPT and LEAP require "
-                "the AI's involvement within a year of the event where she sets "
-                "no time limit — so they are a dated reference, not a "
-                "like-for-like overlay. Only the two catastrophe questions have "
-                "a prior panel; the rest show models alone." + gap,
+        "note": "Superforecaster medians from prior FRI panels, and the AI-researcher "
+                "median from the 2023 Expert Survey on Progress in AI (ESPAI), are "
+                "shown as hollow diamonds, each labelled with its panel (experts "
+                "and the public are in the data but not plotted). On the catastrophe "
+                "questions they answer close but not identical wordings — XPT counted "
+                "deaths where this question set counts attributable excess mortality, and both "
+                "XPT and LEAP require the AI's involvement within a year of the "
+                "event where she sets no time limit — so they are a dated reference, "
+                "not a like-for-like overlay. The extinction questions are asked in "
+                "XPT's own words, so those XPT diamonds are like-for-like; the AI "
+                "researchers were asked about extinction OR similarly permanent and "
+                "severe disempowerment, within 100 years of late 2023, so that "
+                "diamond sits at 2100 as the nearest horizon, not the same one. "
+                + (f"{len(shown)} of the plotted questions have a prior panel; the "
+                   "rest show models alone." if shown else
+                   "No plotted question has a prior panel yet.") + gap,
     }

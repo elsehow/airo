@@ -13,6 +13,7 @@ import sys
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 from redlines.instrument import CURRENT_INSTRUMENT, instrument_rows
+from redlines.logs import iter_rows  # noqa: E402
 from redlines.runlog import current_panel, load_runlog
 from redlines.paper.dates import month_year
 
@@ -29,7 +30,7 @@ def load(name):
 def axis_data(slug, keys):
     spec = load('data/' + ('axes_conditions.json' if slug == 'axes' else 'paper_axes_conditions.json'))
     path = ROOT / f'results/conditional_runs_{slug}.jsonl'
-    rows = instrument_rows([json.loads(line) for line in path.read_text().splitlines() if line])
+    rows = instrument_rows(list(iter_rows(path)))
     rows = [r for r in rows if r['question_id'] == 'catastrophe:ai' and r.get('protocol') == spec['protocol']]
     day = max(r['run_date'] for r in rows)
     rows = [r for r in rows if r['run_date'] == day]

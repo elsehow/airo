@@ -19,11 +19,16 @@ nuclear and natural pandemics are outside this question set entirely — so the
 CROSS check it anchors is AI-internal. That is a real narrowing and the panel
 says so rather than letting the slate curve imply a totality it does not have.
 
-The two catastrophe questions are drawn as ANCHORS on the severity axis at
-their 10%-of-population equivalent, about 820M deaths, between the 100M and 1B
-rungs. They are not rungs: a population share floats as population changes
-while the rungs stay fixed, and it has no damages leg. They are our own live
-forecasts, so unlike the retired XPT markers they move between runs.
+The two catastrophe questions are NOT drawn here (removed 2026-08-18: they
+read as marks belonging to no curve, and nobody had asked for them). The two
+EXTINCTION questions ARE (project lead, 2026-09-15: include the extinction
+forecasts on this chart): two of our own live forecasts, drawn as diamonds at
+the Extinction reference mark -- the whole population, where the axis already
+ends -- one for extinction of any cause, one for AI-caused extinction. They
+are marks beside the curves, never joined to one: XPT's wording, a population
+floor rather than a death count, no damages leg, no onset window, and AI
+attribution by XPT's rule rather than the ladder's. `anchors` per horizon,
+`anchorsNote` for the page.
 
 Coherence is REPORTED here, never enforced. The prompt states no relation
 between these questions (code/run_unified.py), so a violation is a measurement.
@@ -39,7 +44,7 @@ from ..registry import model_colors as _model_colors
 from ..conditional import apply_or, level_or
 from ..runlog import current_rows, latest_pooled, load_runlog, instrument_info
 from ..runlog import latest_instrument_rows, complete_panel_rows
-from ..runlog import elicitation_date
+from ..runlog import elicitation_date, instrument_rows, rows_by_day
 
 
 def probs(latest, model_colors, qid, horizon):
@@ -106,9 +111,25 @@ def _display_rows(res):
     return rows
 
 
-def build():
+def _anchors_note(cross_doc):
+    """One sentence on the extinction marks, or None when the set has none."""
+    ext = [q for q in cross_doc["questions"] if q["severity"].get("kind") == "extinction"]
+    if not ext:
+        return None
+    floor = ext[0]["severity"].get("floor_population")
+    names = " and ".join(q["name"].lower() for q in ext)
+    return (f"The diamonds are the {names} forecasts: separate questions in the "
+            "Existential Risk Persuasion Tournament's 2022 wording, resolving on the "
+            f"global population falling below {floor:,} rather than on a deaths-or-damages "
+            "threshold, with no onset window and, for the AI question, XPT's own attribution "
+            "rule rather than the ladder's. They are drawn at the Extinction mark for scale "
+            "and are not rungs of any curve.")
+
+
+def build(source_rows=None, include_history=True):
     model_colors = _model_colors()
-    rows = complete_panel_rows(latest_instrument_rows(load_runlog()))
+    source_rows = load_runlog() if source_rows is None else source_rows
+    rows = complete_panel_rows(latest_instrument_rows(source_rows))
     # Newest date per pair, that day's calls pooled to their mean
     # (redlines.runlog.pool) -- identical to latest_per() with one call a day.
     latest = latest_pooled(current_rows(rows))    # the current panel's latest reading
@@ -166,6 +187,15 @@ def build():
                            "container": bool(c.get("container")),
                            "rungs": rungs})
 
+        # NO EXTINCTION ANCHORS. Drawn 2026-09-15 to 2026-09-16 as diamonds at
+        # the Extinction mark (the XPT-worded extinction pair, before any curve
+        # reached that far); removed the day the extinction RUNG joined every
+        # ladder (project lead, 2026-09-16: "just show us the probabilities like
+        # normal"). The pair stays in the set for the XPT comparison and is
+        # plotted as its own questions on Graph 1; here the curves end at
+        # extinction themselves. `anchors` is kept empty for the chunk's shape.
+        anchors = []
+
         # NO CATASTROPHE ANCHORS. Removed 2026-08-18.
         #
         # This panel used to plot the two 10%-of-population questions as
@@ -182,7 +212,8 @@ def build():
         checked = sum(len(c["rungs"]) - 1 for c in causes) * len(model_colors)
         out_h[h] = {"causes": causes, "violations": violations,
                     "declines": declines,
-                    "pairsChecked": checked}
+                    "pairsChecked": checked,
+                    "anchors": anchors}
 
     # What each incident type MEANS, for the definitions modal. The set's own
     # first sentence, trimmed — the modal used to carry a hand-written taxonomy
@@ -222,7 +253,22 @@ def build():
     bad = sum(v["bad"] for v in res.values())
     n = sum(v["n"] for v in res.values())
 
+    history = []
+    if include_history and rows:
+        for day, day_rows in sorted(rows_by_day(instrument_rows(source_rows)).items()):
+            if day >= as_of or not complete_panel_rows(day_rows, labels):
+                continue
+            previous = build(day_rows, include_history=False)
+            history.append({"date": day, "instrumentInfo": previous["instrumentInfo"],
+                            "byHorizon": {h: {"causes": [
+                                {"key": c["key"], "rungs": [
+                                    {k: r[k] for k in ("rung", "deaths", "median")}
+                                    for r in c["rungs"]]}
+                                for c in d["causes"]]}
+                                for h, d in previous["byHorizon"].items()}})
+
     return {
+        "history": history[-2:],
         "horizons": horizons,
         "instrumentInfo": instrument_info(rows),
         "causeDefs": cause_defs,
@@ -254,6 +300,9 @@ def build():
                   for r in spec["rungs"]],
         "byHorizon": out_h,
         "container": container,
+        # What the extinction diamonds are, for the legend and the caption --
+        # from the question set, not typed into the chunk.
+        "anchorsNote": None,   # no anchors are drawn since 2026-09-16
         "notes": spec["notes"],
         # The ladder's resolution criteria, verbatim, for the Definitions
         # modal (project lead, 2026-09-10: the modal had paraphrased the onset

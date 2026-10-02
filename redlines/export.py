@@ -52,17 +52,31 @@ from pathlib import Path
 from functools import lru_cache
 
 from .conditional import CONDITIONAL_LOG
+from .logs import iter_rows, log_exists, log_files, log_names
 from .questions import all_questions
 from .runlog import RUNLOG, RUNS_DIR
 from .runlog import load_runlog, panel_rows
 from .instrument import CURRENT_INSTRUMENT
 
 from .config import REPO_ROOT
+from .superseded import superseded_note
 
 # Anchored to the repo root: `python3 -m redlines build --views csv` from any
 # working directory writes beside the other results/ mirrors.
 OUT = REPO_ROOT / "results" / "forecasts.csv"
 RATIONALES_OUT = REPO_ROOT / "results" / "rationales.csv"
+# The debriefs (2026-09-15): one line per (call, question group) -- what the
+# model said drove its numbers, asked after submission (code/run_unified.py
+# debrief_tool). JSON in the two list columns.
+DEBRIEFS_OUT = REPO_ROOT / "results" / "debriefs.csv"
+# Per QUESTION since 2026-09-16 (key = question_id, group derived); the
+# 2026-09-15 and 2026-09-16 12:00 UTC calls were per GROUP (key = group,
+# question_id empty) and keep their pathway/base_rate/compelling_arguments.
+DEBRIEF_COLUMNS = ["elicited_at", "run_id", "protocol", "experiment", "model", "model_id",
+                   "run_date", "condition_set", "call_id", "key", "group", "question_id",
+                   "rationale", "key_sources", "weakest_link",
+                   "compelling_arguments", "pathway", "base_rate", "complete", "problems",
+                   "panel_set", "panel_snapshot"]
 BUNDLE_OUT = REPO_ROOT / "results" / "redlines-data.zip"
 
 COLUMNS = ["elicited_at", "run_id", "protocol", "experiment", "model", "model_id",
@@ -198,6 +212,50 @@ def _rationale_lines(rows, qs):
         }
 
 
+def _debrief_group(key):
+    """The question group a debrief entry belongs to: a ladder id's cause, a
+    cross-cutting id's group, or the key itself when it already is a group."""
+    if key.startswith("ladder:"):
+        parts = key.split(":")
+        return parts[1] if len(parts) > 2 else key
+    if ":" in key or key in ("disempowerment",):
+        return "crosscutting"
+    return key
+
+
+def _debrief_lines(rows):
+    """One line per (call, entry) from the rows that carry a debrief (the
+    call's first row); a call without one contributes nothing. An entry is a
+    question (since 2026-09-16) or a group (the two earlier calls)."""
+    seen = set()
+    for r in rows:
+        d = r.get("debrief")
+        if not isinstance(d, dict) or r.get("call_id") in seen:
+            continue
+        seen.add(r.get("call_id"))
+        st = r.get("debrief_status") or {}
+        for key, g in d.items():
+            if not isinstance(g, dict):
+                continue
+            is_question = ":" in key or key == "disempowerment"
+            yield {
+                "elicited_at": r.get("elicited_at", ""), "run_id": r.get("run_id", ""),
+                "protocol": r.get("protocol", ""), "experiment": r.get("experiment") or "",
+                "model": r.get("label", ""), "model_id": r.get("model", ""),
+                "run_date": r.get("run_date", ""), "condition_set": r.get("condition_set") or "",
+                "call_id": r.get("call_id") or "", "key": key, "group": _debrief_group(key),
+                "question_id": key if is_question else "",
+                "rationale": g.get("rationale") or "",
+                "key_sources": json.dumps(g.get("key_sources") or [], ensure_ascii=False),
+                "weakest_link": g.get("weakest_link") or "",
+                "compelling_arguments": json.dumps(g.get("compelling_arguments") or [], ensure_ascii=False),
+                "pathway": g.get("pathway") or "", "base_rate": g.get("base_rate") or "",
+                "complete": "" if st.get("complete") is None else int(bool(st.get("complete"))),
+                "problems": " | ".join(st.get("problems") or []),
+                "panel_set": _panel(r)[0], "panel_snapshot": _panel(r)[1],
+            }
+
+
 RESULTS = CONDITIONAL_LOG.parent
 
 
@@ -205,8 +263,8 @@ def conditional_logs():
     """Every instrument log: results/conditional_runs*.jsonl, the LEAP policy
     instrument and the combined one first, then the rest by name."""
     first = [COMBINED_LOG, CONDITIONAL_LOG]
-    rest = sorted(p for p in RESULTS.glob("conditional_runs*.jsonl") if p not in first)
-    return [p for p in first if p.exists()] + rest
+    rest = [p for p in log_names(RESULTS) if p not in first]
+    return [p for p in first if log_exists(p)] + rest
 
 
 def _published_rows(conditional_log=CONDITIONAL_LOG, combined_log=COMBINED_LOG):
@@ -218,17 +276,10 @@ def _published_rows(conditional_log=CONDITIONAL_LOG, combined_log=COMBINED_LOG):
     logs = [Path(combined_log), Path(conditional_log)]
     logs += [p for p in conditional_logs() if p not in logs]
     for p in logs:
-        if not p.exists():
-            continue
-        with open(p) as fh:
-            for line in fh:
-                line = line.strip()
-                if not line:
-                    continue
-                r = json.loads(line)
-                if r.get("condition"):
-                    r["forecasts"] = r.get("forecasts") or []
-                    rows.append(r)
+        for r in iter_rows(p):
+            if r.get("condition"):
+                r["forecasts"] = r.get("forecasts") or []
+                rows.append(r)
     return rows
 
 
@@ -242,6 +293,19 @@ def rationales_csv(out=RATIONALES_OUT, conditional_log=CONDITIONAL_LOG, combined
     out.parent.mkdir(parents=True, exist_ok=True)
     with open(out, "w", newline="") as fh:
         w = csv.DictWriter(fh, fieldnames=RATIONALE_COLUMNS)
+        w.writeheader()
+        w.writerows(lines)
+    return len(lines)
+
+
+def debriefs_csv(out=DEBRIEFS_OUT, conditional_log=CONDITIONAL_LOG, combined_log=COMBINED_LOG):
+    """Write the debriefs CSV; return the number of data lines."""
+    lines = sorted(_debrief_lines(_published_rows(conditional_log, combined_log)),
+                   key=lambda d: (d["elicited_at"], d["model"], d["call_id"], d["group"]))
+    out = Path(out)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    with open(out, "w", newline="") as fh:
+        w = csv.DictWriter(fh, fieldnames=DEBRIEF_COLUMNS)
         w.writeheader()
         w.writerows(lines)
     return len(lines)
@@ -281,6 +345,24 @@ rationales.csv -- one line per (call, question, condition): the model's written
 rationale for that question in that call, and the sources it named. Join to
 forecasts.csv on call_id + question_id + condition.
   {rationale_columns}
+
+debriefs.csv -- one line per (call, question), from 2026-09-16: what the model
+said drove its numbers for that question, asked after its forecasts were
+accepted (so it could not move them): a short rationale naming the mechanism
+at that severity and the anchor used (rationale), the sources that mattered
+most and what each contributed (key_sources, JSON), and the assumption it is
+least sure of (weakest_link). key = question_id; group is derived from it.
+The two calls of 2026-09-15/16 asked per question GROUP instead: key = group,
+question_id empty, and their answers sit in compelling_arguments (JSON),
+pathway and base_rate. Join to the other files on call_id (and question_id).
+Earlier calls have no line.
+  {debrief_columns}
+
+Superseded runs (redlines/superseded.py): these rows are IN these files and
+in the raw run files, but every dashboard view skips them, because the same
+day re-asked the same models and the later draw replaces the earlier one.
+Filter on run_id (and model) to see what the dashboard shows:
+{superseded}
 
 Columns worth knowing:
 - instrument_version: the question-definition version actually recorded on
@@ -324,7 +406,7 @@ raw/runs/*.jsonl              one file per scheduled run: the unconditional
                               with the full tool transcript (every search
                               and page read) under `evidence`
 raw/forecast_runs_unified.jsonl  the same series before 2026-08-21, one file
-raw/conditional_runs*.jsonl   the whole instruments: every (call, question,
+raw/conditional_runs*/*.jsonl the whole instruments, one file per run: every (call, question,
                               condition) row, same shape
 raw/*_runs/*.jsonl            the capability-condition pilots' own logs
 raw/experiments/              pilots and smokes -- NOT the published series
@@ -353,7 +435,8 @@ def _bundle_members():
     if RUNLOG.exists():
         out.append((f"raw/{RUNLOG.name}", RUNLOG))
     for p in conditional_logs():
-        out.append((f"raw/{p.name}", p))
+        for f in log_files(p):
+            out.append((f"raw/{f.relative_to(RESULTS)}", f))
     for d in sorted(RESULTS.glob("*_runs")):
         if d.is_dir():
             for p in sorted(d.glob("*.jsonl")):
@@ -374,15 +457,16 @@ def _bundle_members():
     for p in sorted((DATA_DIR / "instruments").rglob("*")):
         if p.is_file():
             out.append((f"questions/instruments/{p.relative_to(DATA_DIR / 'instruments')}", p))
-    for p in sorted((DATA_DIR / "auto-arc").glob("definitions-*.md")):
+    for p in sorted((DATA_DIR / "auto-arc").glob("definitions-*.md")) + \
+            sorted((DATA_DIR / "auto-arc").glob("addendum-*.json")):
         out.append((f"questions/sources/{p.name}", p))
     for p in sorted(DATA_DIR.glob("*_conditions.json")) + sorted(DATA_DIR.glob("epoch_capabilities_index_*.csv")):
         out.append((f"conditions/{p.name}", p))
     return out
 
 
-def bundle_zip(out=BUNDLE_OUT, forecasts=OUT, rationales=RATIONALES_OUT):
-    """Write the zip: the two CSVs (already written), the raw logs, the
+def bundle_zip(out=BUNDLE_OUT, forecasts=OUT, rationales=RATIONALES_OUT, debriefs=DEBRIEFS_OUT):
+    """Write the zip: the CSVs (already written), the raw logs, the
     questions and conditions, and the README. Returns the member count."""
     import zipfile
     from datetime import datetime, timezone
@@ -391,11 +475,16 @@ def bundle_zip(out=BUNDLE_OUT, forecasts=OUT, rationales=RATIONALES_OUT):
     members = _bundle_members()
     readme = BUNDLE_README.format(
         built=datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%MZ"),
-        forecast_columns=", ".join(COLUMNS), rationale_columns=", ".join(RATIONALE_COLUMNS))
+        forecast_columns=", ".join(COLUMNS), rationale_columns=", ".join(RATIONALE_COLUMNS),
+        debrief_columns=", ".join(DEBRIEF_COLUMNS),
+        superseded=superseded_note())
     with zipfile.ZipFile(out, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=6) as z:
         z.writestr("README.md", readme)
         z.write(forecasts, "forecasts.csv")
         z.write(rationales, "rationales.csv")
+        if Path(debriefs).exists():
+            z.write(debriefs, "debriefs.csv")
         for name, p in members:
             z.write(p, name)
-    return 3 + len(members)
+    # The README, the two CSVs, the debriefs CSV when there is one, the members.
+    return 3 + int(Path(debriefs).exists()) + len(members)

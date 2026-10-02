@@ -6,67 +6,67 @@
       "category": "Catastrophe",
       "severity": "deaths reaching 10% of the population",
       "horizon": "by 2100",
-      "median": 12.25,
+      "median": 9.6,
       "n_models": 4,
       "byHorizon": {
         "12mo": {
-          "median": 0.011,
+          "median": 0.008,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 0.001,
-            "Fable 5.1": 0.02,
-            "Opus 5": 0.001,
-            "GPT-5.5 Pro": 0.025
+            "GPT-6 Astra": 0.006,
+            "Fable 5.1": 0.005,
+            "Opus 5": 0.015,
+            "GPT-5.5 Pro": 0.01
           }
         },
         "2028": {
           "median": 0.09,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 0.06,
-            "Fable 5.1": 0.15,
-            "Opus 5": 0.045,
-            "GPT-5.5 Pro": 0.12
+            "GPT-6 Astra": 0.072,
+            "Fable 5.1": 0.08,
+            "Opus 5": 0.1,
+            "GPT-5.5 Pro": 0.13
           }
         },
         "2030": {
-          "median": 0.475,
+          "median": 0.41,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 0.45,
-            "Fable 5.1": 1.1,
-            "Opus 5": 0.16,
-            "GPT-5.5 Pro": 0.5
+            "GPT-6 Astra": 0.42,
+            "Fable 5.1": 0.4,
+            "Opus 5": 0.3,
+            "GPT-5.5 Pro": 0.47
           }
         },
         "2050": {
-          "median": 6.0,
+          "median": 4.6,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 7.5,
-            "Fable 5.1": 5.5,
-            "Opus 5": 1.5,
-            "GPT-5.5 Pro": 6.5
+            "GPT-6 Astra": 6.6,
+            "Fable 5.1": 3.2,
+            "Opus 5": 3.0,
+            "GPT-5.5 Pro": 6.0
           }
         },
         "2100": {
-          "median": 12.25,
+          "median": 9.6,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 14.5,
-            "Fable 5.1": 10.0,
-            "Opus 5": 4.2,
-            "GPT-5.5 Pro": 18.0
+            "GPT-6 Astra": 12.6,
+            "Fable 5.1": 5.8,
+            "Opus 5": 7.0,
+            "GPT-5.5 Pro": 12.2
           }
         },
         "6mo": {
           "median": 0.003,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 0.0,
-            "Fable 5.1": 0.005,
-            "Opus 5": 0.0,
-            "GPT-5.5 Pro": 0.008
+            "GPT-6 Astra": 0.001,
+            "Fable 5.1": 0.001,
+            "Opus 5": 0.005,
+            "GPT-5.5 Pro": 0.005
           }
         }
       },
@@ -83,67 +83,67 @@
       "category": "Catastrophe",
       "severity": "deaths reaching 10% of the population",
       "horizon": "by 2100",
-      "median": 18.5,
+      "median": 15.75,
       "n_models": 4,
       "byHorizon": {
         "12mo": {
-          "median": 0.045,
+          "median": 0.06,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 0.05,
-            "Fable 5.1": 0.04,
-            "Opus 5": 0.004,
-            "GPT-5.5 Pro": 0.16
+            "GPT-6 Astra": 0.106,
+            "Fable 5.1": 0.03,
+            "Opus 5": 0.08,
+            "GPT-5.5 Pro": 0.04
           }
         },
         "2028": {
-          "median": 0.315,
+          "median": 0.411,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 0.25,
-            "Fable 5.1": 0.33,
+            "GPT-6 Astra": 0.472,
+            "Fable 5.1": 0.5,
             "Opus 5": 0.3,
-            "GPT-5.5 Pro": 0.5
+            "GPT-5.5 Pro": 0.35
           }
         },
         "2030": {
-          "median": 1.05,
+          "median": 1.15,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 0.9,
-            "Fable 5.1": 1.6,
-            "Opus 5": 0.65,
-            "GPT-5.5 Pro": 1.2
+            "GPT-6 Astra": 1.22,
+            "Fable 5.1": 1.2,
+            "Opus 5": 0.7,
+            "GPT-5.5 Pro": 1.1
           }
         },
         "2050": {
-          "median": 8.5,
+          "median": 7.5,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 11.0,
-            "Fable 5.1": 8.0,
-            "Opus 5": 3.2,
-            "GPT-5.5 Pro": 9.0
+            "GPT-6 Astra": 9.6,
+            "Fable 5.1": 6.5,
+            "Opus 5": 4.5,
+            "GPT-5.5 Pro": 8.5
           }
         },
         "2100": {
-          "median": 18.5,
+          "median": 15.75,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 21.5,
-            "Fable 5.1": 15.5,
-            "Opus 5": 7.8,
-            "GPT-5.5 Pro": 28.0
+            "GPT-6 Astra": 18.6,
+            "Fable 5.1": 13.0,
+            "Opus 5": 11.0,
+            "GPT-5.5 Pro": 18.5
           }
         },
         "6mo": {
-          "median": 0.014,
+          "median": 0.024,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 0.015,
-            "Fable 5.1": 0.013,
-            "Opus 5": 0.001,
-            "GPT-5.5 Pro": 0.08
+            "GPT-6 Astra": 0.031,
+            "Fable 5.1": 0.005,
+            "Opus 5": 0.03,
+            "GPT-5.5 Pro": 0.018
           }
         }
       },
@@ -160,57 +160,57 @@
       "category": "Catastrophe",
       "severity": null,
       "horizon": "by 2100",
-      "median": 28.0,
+      "median": 26.5,
       "n_models": 4,
       "byHorizon": {
         "12mo": {
-          "median": 0.031,
+          "median": 0.026,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 0.008,
-            "Fable 5.1": 0.08,
-            "Opus 5": 0.012,
-            "GPT-5.5 Pro": 0.05
+            "GPT-6 Astra": 0.012,
+            "Fable 5.1": 0.01,
+            "Opus 5": 0.15,
+            "GPT-5.5 Pro": 0.04
           }
         },
         "2028": {
-          "median": 0.35,
+          "median": 0.33,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 0.25,
-            "Fable 5.1": 0.4,
-            "Opus 5": 0.5,
+            "GPT-6 Astra": 0.36,
+            "Fable 5.1": 0.15,
+            "Opus 5": 0.6,
             "GPT-5.5 Pro": 0.3
           }
         },
         "2030": {
-          "median": 1.8,
+          "median": 1.5,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 1.6,
-            "Fable 5.1": 2.0,
-            "Opus 5": 3.0,
+            "GPT-6 Astra": 2.4,
+            "Fable 5.1": 0.6,
+            "Opus 5": 1.8,
             "GPT-5.5 Pro": 1.2
           }
         },
         "2050": {
-          "median": 15.5,
+          "median": 14.25,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 19.0,
-            "Fable 5.1": 17.0,
-            "Opus 5": 14.0,
-            "GPT-5.5 Pro": 12.0
+            "GPT-6 Astra": 19.8,
+            "Fable 5.1": 10.0,
+            "Opus 5": 13.0,
+            "GPT-5.5 Pro": 15.5
           }
         },
         "2100": {
-          "median": 28.0,
+          "median": 26.5,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 35.0,
-            "Fable 5.1": 30.0,
-            "Opus 5": 26.0,
-            "GPT-5.5 Pro": 22.0
+            "GPT-6 Astra": 29.4,
+            "Fable 5.1": 24.0,
+            "Opus 5": 25.0,
+            "GPT-5.5 Pro": 28.0
           }
         },
         "6mo": {
@@ -218,9 +218,163 @@
           "n": 4,
           "models": {
             "GPT-6 Astra": 0.001,
-            "Fable 5.1": 0.02,
-            "Opus 5": 0.003,
+            "Fable 5.1": 0.002,
+            "Opus 5": 0.05,
             "GPT-5.5 Pro": 0.015
+          }
+        }
+      },
+      "declined": [],
+      "status": "open",
+      "resolves": null,
+      "super": null,
+      "superSource": null,
+      "source": "cross-cutting"
+    },
+    {
+      "kind": "bottom-line",
+      "question": "AI extinction",
+      "category": "Catastrophe",
+      "severity": "human extinction (global population below 5,000)",
+      "horizon": "by 2100",
+      "median": 3.15,
+      "n_models": 4,
+      "byHorizon": {
+        "12mo": {
+          "median": 0.004,
+          "n": 4,
+          "models": {
+            "GPT-6 Astra": 0.0,
+            "Fable 5.1": 0.002,
+            "Opus 5": 0.015,
+            "GPT-5.5 Pro": 0.006
+          }
+        },
+        "2028": {
+          "median": 0.028,
+          "n": 4,
+          "models": {
+            "GPT-6 Astra": 0.002,
+            "Fable 5.1": 0.03,
+            "Opus 5": 0.06,
+            "GPT-5.5 Pro": 0.025
+          }
+        },
+        "2030": {
+          "median": 0.15,
+          "n": 4,
+          "models": {
+            "GPT-6 Astra": 0.072,
+            "Fable 5.1": 0.18,
+            "Opus 5": 0.18,
+            "GPT-5.5 Pro": 0.12
+          }
+        },
+        "2050": {
+          "median": 1.55,
+          "n": 4,
+          "models": {
+            "GPT-6 Astra": 2.42,
+            "Fable 5.1": 1.3,
+            "Opus 5": 1.3,
+            "GPT-5.5 Pro": 1.8
+          }
+        },
+        "2100": {
+          "median": 3.15,
+          "n": 4,
+          "models": {
+            "GPT-6 Astra": 4.62,
+            "Fable 5.1": 2.8,
+            "Opus 5": 2.8,
+            "GPT-5.5 Pro": 3.5
+          }
+        },
+        "6mo": {
+          "median": 0.002,
+          "n": 4,
+          "models": {
+            "GPT-6 Astra": 0.0,
+            "Fable 5.1": 0.001,
+            "Opus 5": 0.005,
+            "GPT-5.5 Pro": 0.003
+          }
+        }
+      },
+      "declined": [],
+      "status": "open",
+      "resolves": null,
+      "super": null,
+      "superSource": null,
+      "source": "cross-cutting"
+    },
+    {
+      "kind": "bottom-line",
+      "question": "Human extinction",
+      "category": "Catastrophe",
+      "severity": "human extinction (global population below 5,000)",
+      "horizon": "by 2100",
+      "median": 4.35,
+      "n_models": 4,
+      "byHorizon": {
+        "12mo": {
+          "median": 0.007,
+          "n": 4,
+          "models": {
+            "GPT-6 Astra": 0.0,
+            "Fable 5.1": 0.004,
+            "Opus 5": 0.02,
+            "GPT-5.5 Pro": 0.009
+          }
+        },
+        "2028": {
+          "median": 0.04,
+          "n": 4,
+          "models": {
+            "GPT-6 Astra": 0.003,
+            "Fable 5.1": 0.04,
+            "Opus 5": 0.08,
+            "GPT-5.5 Pro": 0.04
+          }
+        },
+        "2030": {
+          "median": 0.2,
+          "n": 4,
+          "models": {
+            "GPT-6 Astra": 0.073,
+            "Fable 5.1": 0.22,
+            "Opus 5": 0.22,
+            "GPT-5.5 Pro": 0.18
+          }
+        },
+        "2050": {
+          "median": 2.05,
+          "n": 4,
+          "models": {
+            "GPT-6 Astra": 2.62,
+            "Fable 5.1": 1.6,
+            "Opus 5": 1.6,
+            "GPT-5.5 Pro": 2.5
+          }
+        },
+        "2100": {
+          "median": 4.35,
+          "n": 4,
+          "models": {
+            "GPT-6 Astra": 5.12,
+            "Fable 5.1": 3.7,
+            "Opus 5": 3.3,
+            "GPT-5.5 Pro": 5.0
+          }
+        },
+        "6mo": {
+          "median": 0.003,
+          "n": 4,
+          "models": {
+            "GPT-6 Astra": 0.0,
+            "Fable 5.1": 0.001,
+            "Opus 5": 0.007,
+            "GPT-5.5 Pro": 0.004
           }
         }
       },
@@ -237,67 +391,67 @@
       "category": "AI incident",
       "severity": "100 deaths or $220M",
       "horizon": "by 2100",
-      "median": 99.945,
+      "median": 99.85,
       "n_models": 4,
       "byHorizon": {
         "12mo": {
-          "median": 96.75,
+          "median": 90.5,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 97.8,
-            "Fable 5.1": 97.5,
-            "Opus 5": 96.0,
-            "GPT-5.5 Pro": 91.0
+            "GPT-6 Astra": 98.0,
+            "Fable 5.1": 87.0,
+            "Opus 5": 94.0,
+            "GPT-5.5 Pro": 36.0
           }
         },
         "2028": {
-          "median": 99.15,
+          "median": 96.5,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 99.8,
-            "Fable 5.1": 99.3,
-            "Opus 5": 99.0,
-            "GPT-5.5 Pro": 99.0
+            "GPT-6 Astra": 99.7,
+            "Fable 5.1": 96.0,
+            "Opus 5": 97.0,
+            "GPT-5.5 Pro": 65.0
           }
         },
         "2030": {
-          "median": 99.75,
+          "median": 98.25,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 99.97,
-            "Fable 5.1": 99.7,
-            "Opus 5": 99.5,
-            "GPT-5.5 Pro": 99.8
+            "GPT-6 Astra": 99.9,
+            "Fable 5.1": 98.0,
+            "Opus 5": 98.5,
+            "GPT-5.5 Pro": 86.0
           }
         },
         "2050": {
-          "median": 99.94,
+          "median": 99.4,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 99.995,
-            "Fable 5.1": 99.9,
-            "Opus 5": 99.8,
-            "GPT-5.5 Pro": 99.98
+            "GPT-6 Astra": 99.98,
+            "Fable 5.1": 99.5,
+            "Opus 5": 99.3,
+            "GPT-5.5 Pro": 99.0
           }
         },
         "2100": {
-          "median": 99.945,
+          "median": 99.85,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 99.997,
-            "Fable 5.1": 99.9,
-            "Opus 5": 99.9,
-            "GPT-5.5 Pro": 99.99
+            "GPT-6 Astra": 99.99,
+            "Fable 5.1": 99.8,
+            "Opus 5": 99.5,
+            "GPT-5.5 Pro": 99.9
           }
         },
         "6mo": {
-          "median": 91.0,
+          "median": 83.0,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 90.0,
-            "Fable 5.1": 95.0,
-            "Opus 5": 92.0,
-            "GPT-5.5 Pro": 75.0
+            "GPT-6 Astra": 93.0,
+            "Fable 5.1": 76.0,
+            "Opus 5": 90.0,
+            "GPT-5.5 Pro": 22.0
           }
         }
       },
@@ -314,67 +468,67 @@
       "category": "AI incident",
       "severity": "100M deaths or $220T",
       "horizon": "by 2100",
-      "median": 22.75,
+      "median": 14.0,
       "n_models": 4,
       "byHorizon": {
         "12mo": {
-          "median": 0.051,
+          "median": 0.077,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 0.03,
-            "Fable 5.1": 0.15,
-            "Opus 5": 0.042,
-            "GPT-5.5 Pro": 0.06
+            "GPT-6 Astra": 0.072,
+            "Fable 5.1": 0.08,
+            "Opus 5": 0.1,
+            "GPT-5.5 Pro": 0.075
           }
         },
         "2028": {
-          "median": 0.34,
+          "median": 0.355,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 0.38,
-            "Fable 5.1": 0.7,
-            "Opus 5": 0.16,
-            "GPT-5.5 Pro": 0.3
+            "GPT-6 Astra": 0.36,
+            "Fable 5.1": 0.35,
+            "Opus 5": 0.4,
+            "GPT-5.5 Pro": 0.27
           }
         },
         "2030": {
-          "median": 1.65,
+          "median": 1.0,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 1.8,
-            "Fable 5.1": 2.0,
-            "Opus 5": 0.42,
-            "GPT-5.5 Pro": 1.5
+            "GPT-6 Astra": 1.44,
+            "Fable 5.1": 1.1,
+            "Opus 5": 0.9,
+            "GPT-5.5 Pro": 0.7
           }
         },
         "2050": {
-          "median": 12.4,
+          "median": 8.0,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 14.8,
-            "Fable 5.1": 10.0,
-            "Opus 5": 3.6,
-            "GPT-5.5 Pro": 20.0
+            "GPT-6 Astra": 12.1,
+            "Fable 5.1": 7.5,
+            "Opus 5": 5.5,
+            "GPT-5.5 Pro": 8.5
           }
         },
         "2100": {
-          "median": 22.75,
+          "median": 14.0,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 27.5,
-            "Fable 5.1": 18.0,
+            "GPT-6 Astra": 21.0,
+            "Fable 5.1": 13.0,
             "Opus 5": 10.0,
-            "GPT-5.5 Pro": 45.0
+            "GPT-5.5 Pro": 15.0
           }
         },
         "6mo": {
-          "median": 0.015,
+          "median": 0.033,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 0.009,
-            "Fable 5.1": 0.07,
-            "Opus 5": 0.018,
-            "GPT-5.5 Pro": 0.012
+            "GPT-6 Astra": 0.024,
+            "Fable 5.1": 0.03,
+            "Opus 5": 0.05,
+            "GPT-5.5 Pro": 0.035
           }
         }
       },
@@ -391,67 +545,67 @@
       "category": "AI incident",
       "severity": "100k deaths or $220B",
       "horizon": "by 2100",
-      "median": 92.0,
+      "median": 81.0,
       "n_models": 4,
       "byHorizon": {
         "12mo": {
-          "median": 3.75,
+          "median": 4.95,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 2.2,
+            "GPT-6 Astra": 5.4,
             "Fable 5.1": 4.5,
-            "Opus 5": 8.0,
-            "GPT-5.5 Pro": 3.0
+            "Opus 5": 9.5,
+            "GPT-5.5 Pro": 1.2
           }
         },
         "2028": {
-          "median": 14.0,
+          "median": 13.2,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 9.7,
-            "Fable 5.1": 17.0,
-            "Opus 5": 22.0,
-            "GPT-5.5 Pro": 11.0
+            "GPT-6 Astra": 14.4,
+            "Fable 5.1": 12.0,
+            "Opus 5": 21.0,
+            "GPT-5.5 Pro": 3.5
           }
         },
         "2030": {
-          "median": 29.0,
+          "median": 25.5,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 25.0,
-            "Fable 5.1": 33.0,
-            "Opus 5": 37.0,
-            "GPT-5.5 Pro": 24.0
+            "GPT-6 Astra": 30.0,
+            "Fable 5.1": 21.0,
+            "Opus 5": 34.0,
+            "GPT-5.5 Pro": 8.0
           }
         },
         "2050": {
-          "median": 80.5,
+          "median": 68.0,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 76.0,
-            "Fable 5.1": 85.0,
-            "Opus 5": 75.0,
-            "GPT-5.5 Pro": 88.0
+            "GPT-6 Astra": 72.0,
+            "Fable 5.1": 66.0,
+            "Opus 5": 70.0,
+            "GPT-5.5 Pro": 45.0
           }
         },
         "2100": {
-          "median": 92.0,
+          "median": 81.0,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 92.0,
-            "Fable 5.1": 92.0,
-            "Opus 5": 86.0,
-            "GPT-5.5 Pro": 98.0
+            "GPT-6 Astra": 89.0,
+            "Fable 5.1": 82.0,
+            "Opus 5": 80.0,
+            "GPT-5.5 Pro": 65.0
           }
         },
         "6mo": {
-          "median": 1.6,
+          "median": 2.2,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 0.8,
+            "GPT-6 Astra": 2.4,
             "Fable 5.1": 2.0,
-            "Opus 5": 4.0,
-            "GPT-5.5 Pro": 1.2
+            "Opus 5": 5.5,
+            "GPT-5.5 Pro": 0.6
           }
         }
       },
@@ -468,67 +622,67 @@
       "category": "AI incident",
       "severity": "10M deaths or $22T",
       "horizon": "by 2100",
-      "median": 41.5,
+      "median": 26.0,
       "n_models": 4,
       "byHorizon": {
         "12mo": {
-          "median": 0.185,
+          "median": 0.245,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 0.12,
-            "Fable 5.1": 0.4,
-            "Opus 5": 0.17,
-            "GPT-5.5 Pro": 0.2
+            "GPT-6 Astra": 0.24,
+            "Fable 5.1": 0.25,
+            "Opus 5": 0.35,
+            "GPT-5.5 Pro": 0.15
           }
         },
         "2028": {
-          "median": 1.05,
+          "median": 0.99,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 1.1,
-            "Fable 5.1": 1.7,
-            "Opus 5": 0.62,
-            "GPT-5.5 Pro": 1.0
+            "GPT-6 Astra": 1.08,
+            "Fable 5.1": 0.9,
+            "Opus 5": 1.2,
+            "GPT-5.5 Pro": 0.55
           }
         },
         "2030": {
-          "median": 4.15,
+          "median": 2.5,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 4.3,
-            "Fable 5.1": 4.5,
-            "Opus 5": 1.5,
-            "GPT-5.5 Pro": 4.0
+            "GPT-6 Astra": 3.6,
+            "Fable 5.1": 2.4,
+            "Opus 5": 2.6,
+            "GPT-5.5 Pro": 1.3
           }
         },
         "2050": {
-          "median": 24.0,
+          "median": 15.0,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 26.0,
-            "Fable 5.1": 22.0,
-            "Opus 5": 11.5,
-            "GPT-5.5 Pro": 35.0
+            "GPT-6 Astra": 20.9,
+            "Fable 5.1": 17.0,
+            "Opus 5": 13.0,
+            "GPT-5.5 Pro": 13.0
           }
         },
         "2100": {
-          "median": 41.5,
+          "median": 26.0,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 45.0,
-            "Fable 5.1": 38.0,
-            "Opus 5": 27.0,
-            "GPT-5.5 Pro": 68.0
+            "GPT-6 Astra": 33.6,
+            "Fable 5.1": 28.0,
+            "Opus 5": 20.0,
+            "GPT-5.5 Pro": 24.0
           }
         },
         "6mo": {
-          "median": 0.06,
+          "median": 0.092,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 0.04,
-            "Fable 5.1": 0.18,
-            "Opus 5": 0.07,
-            "GPT-5.5 Pro": 0.05
+            "GPT-6 Astra": 0.084,
+            "Fable 5.1": 0.1,
+            "Opus 5": 0.18,
+            "GPT-5.5 Pro": 0.075
           }
         }
       },
@@ -545,67 +699,67 @@
       "category": "AI incident",
       "severity": "10k deaths or $22B",
       "horizon": "by 2100",
-      "median": 98.65,
+      "median": 95.0,
       "n_models": 4,
       "byHorizon": {
         "12mo": {
-          "median": 21.0,
+          "median": 27.5,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 16.0,
-            "Fable 5.1": 22.0,
-            "Opus 5": 41.0,
-            "GPT-5.5 Pro": 20.0
+            "GPT-6 Astra": 30.0,
+            "Fable 5.1": 25.0,
+            "Opus 5": 42.0,
+            "GPT-5.5 Pro": 4.2
           }
         },
         "2028": {
-          "median": 55.5,
+          "median": 54.0,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 44.0,
-            "Fable 5.1": 58.0,
-            "Opus 5": 66.0,
-            "GPT-5.5 Pro": 53.0
+            "GPT-6 Astra": 58.0,
+            "Fable 5.1": 50.0,
+            "Opus 5": 62.0,
+            "GPT-5.5 Pro": 12.0
           }
         },
         "2030": {
-          "median": 77.0,
+          "median": 70.0,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 70.0,
-            "Fable 5.1": 82.0,
-            "Opus 5": 79.0,
-            "GPT-5.5 Pro": 75.0
+            "GPT-6 Astra": 79.0,
+            "Fable 5.1": 66.0,
+            "Opus 5": 74.0,
+            "GPT-5.5 Pro": 25.0
           }
         },
         "2050": {
-          "median": 97.0,
+          "median": 92.0,
           "n": 4,
           "models": {
             "GPT-6 Astra": 97.0,
-            "Fable 5.1": 97.0,
-            "Opus 5": 95.5,
-            "GPT-5.5 Pro": 98.5
+            "Fable 5.1": 94.0,
+            "Opus 5": 90.0,
+            "GPT-5.5 Pro": 78.0
           }
         },
         "2100": {
-          "median": 98.65,
+          "median": 95.0,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 99.3,
-            "Fable 5.1": 98.0,
-            "Opus 5": 97.5,
-            "GPT-5.5 Pro": 99.8
+            "GPT-6 Astra": 99.0,
+            "Fable 5.1": 97.0,
+            "Opus 5": 93.0,
+            "GPT-5.5 Pro": 90.0
           }
         },
         "6mo": {
-          "median": 10.0,
+          "median": 14.3,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 7.2,
-            "Fable 5.1": 11.0,
-            "Opus 5": 25.0,
-            "GPT-5.5 Pro": 9.0
+            "GPT-6 Astra": 15.6,
+            "Fable 5.1": 13.0,
+            "Opus 5": 30.0,
+            "GPT-5.5 Pro": 2.2
           }
         }
       },
@@ -622,67 +776,67 @@
       "category": "AI incident",
       "severity": "1B deaths or $2.2Q",
       "horizon": "by 2100",
-      "median": 14.05,
+      "median": 8.5,
       "n_models": 4,
       "byHorizon": {
         "12mo": {
-          "median": 0.013,
+          "median": 0.037,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 0.008,
-            "Fable 5.1": 0.06,
-            "Opus 5": 0.012,
-            "GPT-5.5 Pro": 0.015
+            "GPT-6 Astra": 0.024,
+            "Fable 5.1": 0.03,
+            "Opus 5": 0.05,
+            "GPT-5.5 Pro": 0.045
           }
         },
         "2028": {
-          "median": 0.13,
+          "median": 0.155,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 0.16,
-            "Fable 5.1": 0.3,
-            "Opus 5": 0.042,
-            "GPT-5.5 Pro": 0.1
+            "GPT-6 Astra": 0.12,
+            "Fable 5.1": 0.15,
+            "Opus 5": 0.16,
+            "GPT-5.5 Pro": 0.16
           }
         },
         "2030": {
-          "median": 0.675,
+          "median": 0.49,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 0.85,
-            "Fable 5.1": 1.1,
-            "Opus 5": 0.14,
-            "GPT-5.5 Pro": 0.5
+            "GPT-6 Astra": 0.6,
+            "Fable 5.1": 0.5,
+            "Opus 5": 0.4,
+            "GPT-5.5 Pro": 0.48
           }
         },
         "2050": {
-          "median": 7.25,
+          "median": 4.75,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 9.3,
-            "Fable 5.1": 5.5,
-            "Opus 5": 1.5,
-            "GPT-5.5 Pro": 9.0
+            "GPT-6 Astra": 7.15,
+            "Fable 5.1": 3.5,
+            "Opus 5": 2.8,
+            "GPT-5.5 Pro": 6.0
           }
         },
         "2100": {
-          "median": 14.05,
+          "median": 8.5,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 18.1,
-            "Fable 5.1": 10.0,
-            "Opus 5": 4.2,
-            "GPT-5.5 Pro": 23.0
+            "GPT-6 Astra": 13.125,
+            "Fable 5.1": 6.0,
+            "Opus 5": 5.5,
+            "GPT-5.5 Pro": 11.0
           }
         },
         "6mo": {
-          "median": 0.004,
+          "median": 0.017,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 0.002,
-            "Fable 5.1": 0.03,
-            "Opus 5": 0.005,
-            "GPT-5.5 Pro": 0.003
+            "GPT-6 Astra": 0.008,
+            "Fable 5.1": 0.012,
+            "Opus 5": 0.025,
+            "GPT-5.5 Pro": 0.022
           }
         }
       },
@@ -699,67 +853,67 @@
       "category": "AI incident",
       "severity": "1M deaths or $2.2T",
       "horizon": "by 2100",
-      "median": 68.5,
+      "median": 48.5,
       "n_models": 4,
       "byHorizon": {
         "12mo": {
-          "median": 0.7,
+          "median": 0.93,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 0.45,
-            "Fable 5.1": 1.3,
-            "Opus 5": 0.8,
-            "GPT-5.5 Pro": 0.6
+            "GPT-6 Astra": 0.96,
+            "Fable 5.1": 0.9,
+            "Opus 5": 1.8,
+            "GPT-5.5 Pro": 0.36
           }
         },
         "2028": {
-          "median": 3.05,
+          "median": 3.2,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 3.3,
-            "Fable 5.1": 5.0,
-            "Opus 5": 2.8,
-            "GPT-5.5 Pro": 2.5
+            "GPT-6 Astra": 3.6,
+            "Fable 5.1": 2.8,
+            "Opus 5": 5.0,
+            "GPT-5.5 Pro": 1.2
           }
         },
         "2030": {
-          "median": 9.2,
+          "median": 7.8,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 10.4,
-            "Fable 5.1": 12.0,
-            "Opus 5": 6.5,
-            "GPT-5.5 Pro": 8.0
+            "GPT-6 Astra": 9.6,
+            "Fable 5.1": 6.0,
+            "Opus 5": 10.0,
+            "GPT-5.5 Pro": 2.7
           }
         },
         "2050": {
-          "median": 47.5,
+          "median": 33.5,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 45.0,
-            "Fable 5.1": 50.0,
-            "Opus 5": 36.0,
-            "GPT-5.5 Pro": 55.0
+            "GPT-6 Astra": 38.0,
+            "Fable 5.1": 36.0,
+            "Opus 5": 31.0,
+            "GPT-5.5 Pro": 22.0
           }
         },
         "2100": {
-          "median": 68.5,
+          "median": 48.5,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 72.0,
-            "Fable 5.1": 65.0,
-            "Opus 5": 60.0,
-            "GPT-5.5 Pro": 86.0
+            "GPT-6 Astra": 57.0,
+            "Fable 5.1": 55.0,
+            "Opus 5": 42.0,
+            "GPT-5.5 Pro": 38.0
           }
         },
         "6mo": {
-          "median": 0.275,
+          "median": 0.38,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 0.15,
-            "Fable 5.1": 0.6,
-            "Opus 5": 0.35,
-            "GPT-5.5 Pro": 0.2
+            "GPT-6 Astra": 0.36,
+            "Fable 5.1": 0.4,
+            "Opus 5": 1.0,
+            "GPT-5.5 Pro": 0.18
           }
         }
       },
@@ -776,67 +930,144 @@
       "category": "AI incident",
       "severity": "1k deaths or $2.2B",
       "horizon": "by 2100",
-      "median": 99.825,
+      "median": 98.9,
       "n_models": 4,
       "byHorizon": {
         "12mo": {
-          "median": 78.5,
+          "median": 72.0,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 74.0,
-            "Fable 5.1": 83.0,
-            "Opus 5": 83.0,
-            "GPT-5.5 Pro": 68.0
+            "GPT-6 Astra": 81.0,
+            "Fable 5.1": 65.0,
+            "Opus 5": 79.0,
+            "GPT-5.5 Pro": 12.0
           }
         },
         "2028": {
-          "median": 94.5,
+          "median": 86.5,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 95.0,
-            "Fable 5.1": 96.0,
-            "Opus 5": 94.0,
-            "GPT-5.5 Pro": 92.0
+            "GPT-6 Astra": 96.0,
+            "Fable 5.1": 85.0,
+            "Opus 5": 88.0,
+            "GPT-5.5 Pro": 30.0
           }
         },
         "2030": {
-          "median": 98.25,
+          "median": 92.5,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 98.7,
-            "Fable 5.1": 98.5,
-            "Opus 5": 97.0,
-            "GPT-5.5 Pro": 98.0
+            "GPT-6 Astra": 99.0,
+            "Fable 5.1": 93.0,
+            "Opus 5": 92.0,
+            "GPT-5.5 Pro": 53.0
           }
         },
         "2050": {
-          "median": 99.65,
+          "median": 97.75,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 99.8,
-            "Fable 5.1": 99.5,
-            "Opus 5": 99.5,
-            "GPT-5.5 Pro": 99.8
+            "GPT-6 Astra": 99.9,
+            "Fable 5.1": 98.5,
+            "Opus 5": 97.0,
+            "GPT-5.5 Pro": 94.0
           }
         },
         "2100": {
-          "median": 99.825,
+          "median": 98.9,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 99.96,
-            "Fable 5.1": 99.7,
-            "Opus 5": 99.7,
-            "GPT-5.5 Pro": 99.95
+            "GPT-6 Astra": 99.95,
+            "Fable 5.1": 99.3,
+            "Opus 5": 98.0,
+            "GPT-5.5 Pro": 98.5
           }
         },
         "6mo": {
-          "median": 56.5,
+          "median": 56.0,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 48.0,
-            "Fable 5.1": 65.0,
-            "Opus 5": 73.0,
-            "GPT-5.5 Pro": 42.0
+            "GPT-6 Astra": 62.0,
+            "Fable 5.1": 50.0,
+            "Opus 5": 70.0,
+            "GPT-5.5 Pro": 6.5
+          }
+        }
+      },
+      "declined": [],
+      "status": "open",
+      "resolves": null,
+      "super": null,
+      "superSource": null,
+      "source": "incident ladder"
+    },
+    {
+      "kind": "bottom-line",
+      "question": "AI-related incident \u2014 human extinction (global population below 5,000)",
+      "category": "AI incident",
+      "severity": "human extinction (global population below 5,000)",
+      "horizon": "by 2100",
+      "median": 3.3,
+      "n_models": 4,
+      "byHorizon": {
+        "12mo": {
+          "median": 0.008,
+          "n": 4,
+          "models": {
+            "GPT-6 Astra": 0.006,
+            "Fable 5.1": 0.01,
+            "Opus 5": 0.015,
+            "GPT-5.5 Pro": 0.006
+          }
+        },
+        "2028": {
+          "median": 0.048,
+          "n": 4,
+          "models": {
+            "GPT-6 Astra": 0.036,
+            "Fable 5.1": 0.06,
+            "Opus 5": 0.06,
+            "GPT-5.5 Pro": 0.025
+          }
+        },
+        "2030": {
+          "median": 0.193,
+          "n": 4,
+          "models": {
+            "GPT-6 Astra": 0.216,
+            "Fable 5.1": 0.22,
+            "Opus 5": 0.17,
+            "GPT-5.5 Pro": 0.12
+          }
+        },
+        "2050": {
+          "median": 1.7,
+          "n": 4,
+          "models": {
+            "GPT-6 Astra": 2.75,
+            "Fable 5.1": 1.6,
+            "Opus 5": 1.3,
+            "GPT-5.5 Pro": 1.8
+          }
+        },
+        "2100": {
+          "median": 3.3,
+          "n": 4,
+          "models": {
+            "GPT-6 Astra": 4.725,
+            "Fable 5.1": 3.1,
+            "Opus 5": 2.7,
+            "GPT-5.5 Pro": 3.5
+          }
+        },
+        "6mo": {
+          "median": 0.004,
+          "n": 4,
+          "models": {
+            "GPT-6 Astra": 0.002,
+            "Fable 5.1": 0.004,
+            "Opus 5": 0.005,
+            "GPT-5.5 Pro": 0.003
           }
         }
       },
@@ -853,67 +1084,67 @@
       "category": "AI incident",
       "severity": "100 deaths or $220M",
       "horizon": "by 2100",
-      "median": 56.25,
+      "median": 48.5,
       "n_models": 4,
       "byHorizon": {
         "12mo": {
-          "median": 1.125,
+          "median": 1.15,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 1.15,
-            "Fable 5.1": 3.0,
-            "Opus 5": 1.1,
-            "GPT-5.5 Pro": 0.6
+            "GPT-6 Astra": 1.92,
+            "Fable 5.1": 1.4,
+            "Opus 5": 0.9,
+            "GPT-5.5 Pro": 0.8
           }
         },
         "2028": {
-          "median": 3.475,
+          "median": 3.1,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 3.45,
-            "Fable 5.1": 9.0,
-            "Opus 5": 3.5,
-            "GPT-5.5 Pro": 1.8
+            "GPT-6 Astra": 6.0,
+            "Fable 5.1": 4.0,
+            "Opus 5": 2.2,
+            "GPT-5.5 Pro": 2.2
           }
         },
         "2030": {
-          "median": 7.275,
+          "median": 6.75,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 8.05,
-            "Fable 5.1": 18.0,
-            "Opus 5": 6.5,
-            "GPT-5.5 Pro": 4.0
+            "GPT-6 Astra": 13.2,
+            "Fable 5.1": 9.0,
+            "Opus 5": 4.2,
+            "GPT-5.5 Pro": 4.5
           }
         },
         "2050": {
-          "median": 29.75,
+          "median": 30.5,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 31.5,
-            "Fable 5.1": 55.0,
-            "Opus 5": 28.0,
-            "GPT-5.5 Pro": 24.0
+            "GPT-6 Astra": 41.8,
+            "Fable 5.1": 35.0,
+            "Opus 5": 26.0,
+            "GPT-5.5 Pro": 25.0
           }
         },
         "2100": {
-          "median": 56.25,
+          "median": 48.5,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 52.5,
-            "Fable 5.1": 72.0,
-            "Opus 5": 45.0,
-            "GPT-5.5 Pro": 60.0
+            "GPT-6 Astra": 57.75,
+            "Fable 5.1": 55.0,
+            "Opus 5": 42.0,
+            "GPT-5.5 Pro": 42.0
           }
         },
         "6mo": {
-          "median": 0.48,
+          "median": 0.55,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 0.46,
-            "Fable 5.1": 1.2,
+            "GPT-6 Astra": 0.84,
+            "Fable 5.1": 0.6,
             "Opus 5": 0.5,
-            "GPT-5.5 Pro": 0.25
+            "GPT-5.5 Pro": 0.4
           }
         }
       },
@@ -930,67 +1161,67 @@
       "category": "AI incident",
       "severity": "100M deaths or $220T",
       "horizon": "by 2100",
-      "median": 5.0,
+      "median": 3.7,
       "n_models": 4,
       "byHorizon": {
         "12mo": {
-          "median": 0.016,
+          "median": 0.023,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 0.011,
-            "Fable 5.1": 0.02,
-            "Opus 5": 0.022,
-            "GPT-5.5 Pro": 0.003
+            "GPT-6 Astra": 0.026,
+            "Fable 5.1": 0.01,
+            "Opus 5": 0.02,
+            "GPT-5.5 Pro": 0.035
           }
         },
         "2028": {
-          "median": 0.085,
+          "median": 0.08,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 0.103,
-            "Fable 5.1": 0.1,
-            "Opus 5": 0.07,
-            "GPT-5.5 Pro": 0.016
+            "GPT-6 Astra": 0.144,
+            "Fable 5.1": 0.04,
+            "Opus 5": 0.06,
+            "GPT-5.5 Pro": 0.1
           }
         },
         "2030": {
-          "median": 0.225,
+          "median": 0.19,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 0.402,
-            "Fable 5.1": 0.3,
-            "Opus 5": 0.15,
-            "GPT-5.5 Pro": 0.06
+            "GPT-6 Astra": 0.48,
+            "Fable 5.1": 0.12,
+            "Opus 5": 0.13,
+            "GPT-5.5 Pro": 0.25
           }
         },
         "2050": {
-          "median": 2.0,
+          "median": 2.05,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 3.675,
-            "Fable 5.1": 3.0,
-            "Opus 5": 1.0,
-            "GPT-5.5 Pro": 0.8
+            "GPT-6 Astra": 3.85,
+            "Fable 5.1": 0.8,
+            "Opus 5": 1.6,
+            "GPT-5.5 Pro": 2.5
           }
         },
         "2100": {
-          "median": 5.0,
+          "median": 3.7,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 8.4,
-            "Fable 5.1": 6.5,
-            "Opus 5": 2.8,
-            "GPT-5.5 Pro": 3.5
+            "GPT-6 Astra": 6.825,
+            "Fable 5.1": 3.0,
+            "Opus 5": 3.6,
+            "GPT-5.5 Pro": 3.8
           }
         },
         "6mo": {
-          "median": 0.007,
+          "median": 0.009,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 0.005,
-            "Fable 5.1": 0.01,
+            "GPT-6 Astra": 0.008,
+            "Fable 5.1": 0.004,
             "Opus 5": 0.01,
-            "GPT-5.5 Pro": 0.001
+            "GPT-5.5 Pro": 0.018
           }
         }
       },
@@ -1007,67 +1238,67 @@
       "category": "AI incident",
       "severity": "100k deaths or $220B",
       "horizon": "by 2100",
-      "median": 25.5,
+      "median": 16.0,
       "n_models": 4,
       "byHorizon": {
         "12mo": {
-          "median": 0.215,
+          "median": 0.16,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 0.23,
-            "Fable 5.1": 0.2,
-            "Opus 5": 0.3,
-            "GPT-5.5 Pro": 0.065
+            "GPT-6 Astra": 0.324,
+            "Fable 5.1": 0.12,
+            "Opus 5": 0.2,
+            "GPT-5.5 Pro": 0.1
           }
         },
         "2028": {
-          "median": 0.95,
+          "median": 0.475,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 1.15,
-            "Fable 5.1": 0.9,
-            "Opus 5": 1.0,
-            "GPT-5.5 Pro": 0.25
+            "GPT-6 Astra": 1.32,
+            "Fable 5.1": 0.4,
+            "Opus 5": 0.55,
+            "GPT-5.5 Pro": 0.4
           }
         },
         "2030": {
-          "median": 2.2,
+          "median": 1.1,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 3.22,
-            "Fable 5.1": 2.5,
-            "Opus 5": 1.9,
-            "GPT-5.5 Pro": 0.65
+            "GPT-6 Astra": 3.96,
+            "Fable 5.1": 1.1,
+            "Opus 5": 1.1,
+            "GPT-5.5 Pro": 0.9
           }
         },
         "2050": {
-          "median": 13.25,
+          "median": 8.25,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 18.9,
-            "Fable 5.1": 17.0,
-            "Opus 5": 9.5,
-            "GPT-5.5 Pro": 6.0
+            "GPT-6 Astra": 19.25,
+            "Fable 5.1": 6.0,
+            "Opus 5": 9.0,
+            "GPT-5.5 Pro": 7.5
           }
         },
         "2100": {
-          "median": 25.5,
+          "median": 16.0,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 35.7,
-            "Fable 5.1": 29.0,
-            "Opus 5": 19.0,
-            "GPT-5.5 Pro": 22.0
+            "GPT-6 Astra": 29.4,
+            "Fable 5.1": 15.0,
+            "Opus 5": 17.0,
+            "GPT-5.5 Pro": 14.0
           }
         },
         "6mo": {
-          "median": 0.086,
+          "median": 0.075,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 0.092,
-            "Fable 5.1": 0.08,
-            "Opus 5": 0.14,
-            "GPT-5.5 Pro": 0.018
+            "GPT-6 Astra": 0.12,
+            "Fable 5.1": 0.05,
+            "Opus 5": 0.1,
+            "GPT-5.5 Pro": 0.045
           }
         }
       },
@@ -1084,67 +1315,67 @@
       "category": "AI incident",
       "severity": "10M deaths or $22T",
       "horizon": "by 2100",
-      "median": 10.0,
+      "median": 6.4,
       "n_models": 4,
       "byHorizon": {
         "12mo": {
-          "median": 0.047,
+          "median": 0.048,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 0.043,
-            "Fable 5.1": 0.05,
-            "Opus 5": 0.06,
-            "GPT-5.5 Pro": 0.011
+            "GPT-6 Astra": 0.078,
+            "Fable 5.1": 0.025,
+            "Opus 5": 0.05,
+            "GPT-5.5 Pro": 0.045
           }
         },
         "2028": {
-          "median": 0.21,
+          "median": 0.15,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 0.322,
-            "Fable 5.1": 0.22,
-            "Opus 5": 0.2,
-            "GPT-5.5 Pro": 0.05
-          }
-        },
-        "2030": {
-          "median": 0.525,
-          "n": 4,
-          "models": {
-            "GPT-6 Astra": 1.035,
-            "Fable 5.1": 0.65,
-            "Opus 5": 0.4,
+            "GPT-6 Astra": 0.36,
+            "Fable 5.1": 0.09,
+            "Opus 5": 0.15,
             "GPT-5.5 Pro": 0.15
           }
         },
-        "2050": {
-          "median": 4.3,
+        "2030": {
+          "median": 0.325,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 8.4,
-            "Fable 5.1": 6.0,
-            "Opus 5": 2.6,
-            "GPT-5.5 Pro": 2.0
+            "GPT-6 Astra": 1.2,
+            "Fable 5.1": 0.28,
+            "Opus 5": 0.3,
+            "GPT-5.5 Pro": 0.35
+          }
+        },
+        "2050": {
+          "median": 3.2,
+          "n": 4,
+          "models": {
+            "GPT-6 Astra": 8.25,
+            "Fable 5.1": 1.8,
+            "Opus 5": 3.2,
+            "GPT-5.5 Pro": 3.2
           }
         },
         "2100": {
-          "median": 10.0,
+          "median": 6.4,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 17.85,
-            "Fable 5.1": 12.0,
-            "Opus 5": 6.2,
-            "GPT-5.5 Pro": 8.0
+            "GPT-6 Astra": 13.65,
+            "Fable 5.1": 6.0,
+            "Opus 5": 6.8,
+            "GPT-5.5 Pro": 6.0
           }
         },
         "6mo": {
-          "median": 0.019,
+          "median": 0.024,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 0.017,
-            "Fable 5.1": 0.02,
-            "Opus 5": 0.028,
-            "GPT-5.5 Pro": 0.003
+            "GPT-6 Astra": 0.026,
+            "Fable 5.1": 0.01,
+            "Opus 5": 0.025,
+            "GPT-5.5 Pro": 0.022
           }
         }
       },
@@ -1161,67 +1392,67 @@
       "category": "AI incident",
       "severity": "10k deaths or $22B",
       "horizon": "by 2100",
-      "median": 38.0,
+      "median": 24.0,
       "n_models": 4,
       "byHorizon": {
         "12mo": {
-          "median": 0.466,
+          "median": 0.325,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 0.431,
-            "Fable 5.1": 0.5,
-            "Opus 5": 0.5,
-            "GPT-5.5 Pro": 0.15
+            "GPT-6 Astra": 0.6,
+            "Fable 5.1": 0.3,
+            "Opus 5": 0.35,
+            "GPT-5.5 Pro": 0.25
           }
         },
         "2028": {
-          "median": 1.72,
+          "median": 0.9,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 1.84,
-            "Fable 5.1": 2.0,
-            "Opus 5": 1.6,
-            "GPT-5.5 Pro": 0.55
+            "GPT-6 Astra": 2.16,
+            "Fable 5.1": 0.9,
+            "Opus 5": 0.9,
+            "GPT-5.5 Pro": 0.85
           }
         },
         "2030": {
-          "median": 3.8,
+          "median": 2.1,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 4.6,
-            "Fable 5.1": 5.0,
-            "Opus 5": 3.0,
-            "GPT-5.5 Pro": 1.4
+            "GPT-6 Astra": 6.0,
+            "Fable 5.1": 2.4,
+            "Opus 5": 1.8,
+            "GPT-5.5 Pro": 1.8
           }
         },
         "2050": {
-          "median": 18.8,
+          "median": 12.75,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 23.1,
-            "Fable 5.1": 27.0,
-            "Opus 5": 14.5,
-            "GPT-5.5 Pro": 11.0
+            "GPT-6 Astra": 25.3,
+            "Fable 5.1": 11.0,
+            "Opus 5": 13.5,
+            "GPT-5.5 Pro": 12.0
           }
         },
         "2100": {
-          "median": 38.0,
+          "median": 24.0,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 42.0,
-            "Fable 5.1": 42.0,
-            "Opus 5": 26.0,
-            "GPT-5.5 Pro": 34.0
+            "GPT-6 Astra": 36.75,
+            "Fable 5.1": 24.0,
+            "Opus 5": 24.0,
+            "GPT-5.5 Pro": 24.0
           }
         },
         "6mo": {
-          "median": 0.186,
+          "median": 0.15,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 0.172,
-            "Fable 5.1": 0.2,
-            "Opus 5": 0.22,
-            "GPT-5.5 Pro": 0.05
+            "GPT-6 Astra": 0.24,
+            "Fable 5.1": 0.12,
+            "Opus 5": 0.18,
+            "GPT-5.5 Pro": 0.12
           }
         }
       },
@@ -1238,67 +1469,67 @@
       "category": "AI incident",
       "severity": "1B deaths or $2.2Q",
       "horizon": "by 2100",
-      "median": 2.2,
+      "median": 2.0,
       "n_models": 4,
       "byHorizon": {
         "12mo": {
-          "median": 0.004,
+          "median": 0.007,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 0.002,
-            "Fable 5.1": 0.007,
-            "Opus 5": 0.006,
-            "GPT-5.5 Pro": 0.001
+            "GPT-6 Astra": 0.006,
+            "Fable 5.1": 0.003,
+            "Opus 5": 0.008,
+            "GPT-5.5 Pro": 0.024
           }
         },
         "2028": {
-          "median": 0.024,
+          "median": 0.031,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 0.029,
-            "Fable 5.1": 0.04,
-            "Opus 5": 0.02,
-            "GPT-5.5 Pro": 0.006
+            "GPT-6 Astra": 0.036,
+            "Fable 5.1": 0.012,
+            "Opus 5": 0.025,
+            "GPT-5.5 Pro": 0.07
           }
         },
         "2030": {
-          "median": 0.085,
+          "median": 0.1,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 0.138,
-            "Fable 5.1": 0.12,
-            "Opus 5": 0.05,
-            "GPT-5.5 Pro": 0.022
+            "GPT-6 Astra": 0.144,
+            "Fable 5.1": 0.04,
+            "Opus 5": 0.055,
+            "GPT-5.5 Pro": 0.18
           }
         },
         "2050": {
-          "median": 0.83,
+          "median": 1.035,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 1.26,
-            "Fable 5.1": 1.3,
-            "Opus 5": 0.4,
-            "GPT-5.5 Pro": 0.3
+            "GPT-6 Astra": 1.32,
+            "Fable 5.1": 0.3,
+            "Opus 5": 0.75,
+            "GPT-5.5 Pro": 1.8
           }
         },
         "2100": {
-          "median": 2.2,
+          "median": 2.0,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 3.675,
-            "Fable 5.1": 3.0,
-            "Opus 5": 1.3,
-            "GPT-5.5 Pro": 1.4
+            "GPT-6 Astra": 2.625,
+            "Fable 5.1": 1.2,
+            "Opus 5": 1.8,
+            "GPT-5.5 Pro": 2.2
           }
         },
         "6mo": {
-          "median": 0.002,
+          "median": 0.003,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 0.001,
-            "Fable 5.1": 0.003,
-            "Opus 5": 0.003,
-            "GPT-5.5 Pro": 0.0
+            "GPT-6 Astra": 0.002,
+            "Fable 5.1": 0.001,
+            "Opus 5": 0.004,
+            "GPT-5.5 Pro": 0.012
           }
         }
       },
@@ -1315,67 +1546,67 @@
       "category": "AI incident",
       "severity": "1M deaths or $2.2T",
       "horizon": "by 2100",
-      "median": 16.5,
+      "median": 10.75,
       "n_models": 4,
       "byHorizon": {
         "12mo": {
-          "median": 0.107,
+          "median": 0.085,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 0.115,
-            "Fable 5.1": 0.1,
-            "Opus 5": 0.15,
-            "GPT-5.5 Pro": 0.025
+            "GPT-6 Astra": 0.192,
+            "Fable 5.1": 0.05,
+            "Opus 5": 0.11,
+            "GPT-5.5 Pro": 0.06
           }
         },
         "2028": {
-          "median": 0.475,
+          "median": 0.27,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 0.69,
-            "Fable 5.1": 0.45,
-            "Opus 5": 0.5,
-            "GPT-5.5 Pro": 0.11
+            "GPT-6 Astra": 0.78,
+            "Fable 5.1": 0.18,
+            "Opus 5": 0.32,
+            "GPT-5.5 Pro": 0.22
           }
         },
         "2030": {
-          "median": 1.15,
+          "median": 0.6,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 2.07,
-            "Fable 5.1": 1.3,
-            "Opus 5": 1.0,
-            "GPT-5.5 Pro": 0.32
+            "GPT-6 Astra": 2.4,
+            "Fable 5.1": 0.55,
+            "Opus 5": 0.65,
+            "GPT-5.5 Pro": 0.5
           }
         },
         "2050": {
-          "median": 7.75,
+          "median": 5.15,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 13.65,
-            "Fable 5.1": 10.0,
-            "Opus 5": 5.5,
-            "GPT-5.5 Pro": 3.5
+            "GPT-6 Astra": 14.3,
+            "Fable 5.1": 3.5,
+            "Opus 5": 5.8,
+            "GPT-5.5 Pro": 4.5
           }
         },
         "2100": {
-          "median": 16.5,
+          "median": 10.75,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 27.3,
-            "Fable 5.1": 19.0,
-            "Opus 5": 12.0,
-            "GPT-5.5 Pro": 14.0
+            "GPT-6 Astra": 23.1,
+            "Fable 5.1": 10.0,
+            "Opus 5": 11.5,
+            "GPT-5.5 Pro": 8.5
           }
         },
         "6mo": {
-          "median": 0.043,
+          "median": 0.044,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 0.046,
-            "Fable 5.1": 0.04,
-            "Opus 5": 0.07,
-            "GPT-5.5 Pro": 0.007
+            "GPT-6 Astra": 0.072,
+            "Fable 5.1": 0.02,
+            "Opus 5": 0.06,
+            "GPT-5.5 Pro": 0.028
           }
         }
       },
@@ -1392,67 +1623,144 @@
       "category": "AI incident",
       "severity": "1k deaths or $2.2B",
       "horizon": "by 2100",
-      "median": 47.625,
+      "median": 35.0,
       "n_models": 4,
       "byHorizon": {
         "12mo": {
-          "median": 0.759,
+          "median": 0.65,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 0.719,
-            "Fable 5.1": 1.2,
-            "Opus 5": 0.8,
-            "GPT-5.5 Pro": 0.35
+            "GPT-6 Astra": 1.08,
+            "Fable 5.1": 0.7,
+            "Opus 5": 0.6,
+            "GPT-5.5 Pro": 0.45
           }
         },
         "2028": {
-          "median": 2.515,
+          "median": 1.75,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 2.53,
-            "Fable 5.1": 4.5,
-            "Opus 5": 2.5,
-            "GPT-5.5 Pro": 1.2
+            "GPT-6 Astra": 3.6,
+            "Fable 5.1": 2.0,
+            "Opus 5": 1.5,
+            "GPT-5.5 Pro": 1.4
           }
         },
         "2030": {
-          "median": 5.463,
+          "median": 3.9,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 6.325,
-            "Fable 5.1": 10.0,
-            "Opus 5": 4.6,
-            "GPT-5.5 Pro": 2.8
+            "GPT-6 Astra": 9.0,
+            "Fable 5.1": 4.8,
+            "Opus 5": 2.9,
+            "GPT-5.5 Pro": 3.0
           }
         },
         "2050": {
-          "median": 24.15,
+          "median": 19.5,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 27.3,
-            "Fable 5.1": 40.0,
-            "Opus 5": 21.0,
+            "GPT-6 Astra": 31.9,
+            "Fable 5.1": 20.0,
+            "Opus 5": 19.0,
             "GPT-5.5 Pro": 18.0
           }
         },
         "2100": {
-          "median": 47.625,
+          "median": 35.0,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 47.25,
-            "Fable 5.1": 58.0,
-            "Opus 5": 35.0,
-            "GPT-5.5 Pro": 48.0
+            "GPT-6 Astra": 46.2,
+            "Fable 5.1": 38.0,
+            "Opus 5": 32.0,
+            "GPT-5.5 Pro": 32.0
           }
         },
         "6mo": {
-          "median": 0.319,
+          "median": 0.3,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 0.287,
-            "Fable 5.1": 0.5,
-            "Opus 5": 0.35,
-            "GPT-5.5 Pro": 0.12
+            "GPT-6 Astra": 0.42,
+            "Fable 5.1": 0.3,
+            "Opus 5": 0.3,
+            "GPT-5.5 Pro": 0.22
+          }
+        }
+      },
+      "declined": [],
+      "status": "open",
+      "resolves": null,
+      "super": null,
+      "superSource": null,
+      "source": "incident ladder"
+    },
+    {
+      "kind": "bottom-line",
+      "question": "AI-related human-caused epidemic \u2014 human extinction (global population below 5,000)",
+      "category": "AI incident",
+      "severity": "human extinction (global population below 5,000)",
+      "horizon": "by 2100",
+      "median": 0.45,
+      "n_models": 4,
+      "byHorizon": {
+        "12mo": {
+          "median": 0.001,
+          "n": 4,
+          "models": {
+            "GPT-6 Astra": 0.0,
+            "Fable 5.1": 0.001,
+            "Opus 5": 0.002,
+            "GPT-5.5 Pro": 0.002
+          }
+        },
+        "2028": {
+          "median": 0.005,
+          "n": 4,
+          "models": {
+            "GPT-6 Astra": 0.0,
+            "Fable 5.1": 0.002,
+            "Opus 5": 0.008,
+            "GPT-5.5 Pro": 0.008
+          }
+        },
+        "2030": {
+          "median": 0.013,
+          "n": 4,
+          "models": {
+            "GPT-6 Astra": 0.003,
+            "Fable 5.1": 0.007,
+            "Opus 5": 0.018,
+            "GPT-5.5 Pro": 0.025
+          }
+        },
+        "2050": {
+          "median": 0.205,
+          "n": 4,
+          "models": {
+            "GPT-6 Astra": 0.11,
+            "Fable 5.1": 0.06,
+            "Opus 5": 0.3,
+            "GPT-5.5 Pro": 0.3
+          }
+        },
+        "2100": {
+          "median": 0.45,
+          "n": 4,
+          "models": {
+            "GPT-6 Astra": 0.263,
+            "Fable 5.1": 0.3,
+            "Opus 5": 0.75,
+            "GPT-5.5 Pro": 0.6
+          }
+        },
+        "6mo": {
+          "median": 0.001,
+          "n": 4,
+          "models": {
+            "GPT-6 Astra": 0.0,
+            "Fable 5.1": 0.0,
+            "Opus 5": 0.001,
+            "GPT-5.5 Pro": 0.001
           }
         }
       },
@@ -1469,67 +1777,67 @@
       "category": "AI incident",
       "severity": "100 deaths or $220M",
       "horizon": "by 2100",
-      "median": 99.93,
+      "median": 99.5,
       "n_models": 4,
       "byHorizon": {
         "12mo": {
-          "median": 94.5,
+          "median": 86.5,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 96.0,
-            "Fable 5.1": 96.5,
-            "Opus 5": 93.0,
-            "GPT-5.5 Pro": 88.0
+            "GPT-6 Astra": 96.5,
+            "Fable 5.1": 82.0,
+            "Opus 5": 91.0,
+            "GPT-5.5 Pro": 30.0
           }
         },
         "2028": {
-          "median": 98.25,
+          "median": 95.0,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 99.5,
-            "Fable 5.1": 99.0,
-            "Opus 5": 97.5,
-            "GPT-5.5 Pro": 97.5
+            "GPT-6 Astra": 99.3,
+            "Fable 5.1": 94.0,
+            "Opus 5": 96.0,
+            "GPT-5.5 Pro": 55.0
           }
         },
         "2030": {
-          "median": 99.4,
+          "median": 97.25,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 99.9,
-            "Fable 5.1": 99.5,
-            "Opus 5": 98.5,
-            "GPT-5.5 Pro": 99.3
+            "GPT-6 Astra": 99.8,
+            "Fable 5.1": 97.0,
+            "Opus 5": 97.5,
+            "GPT-5.5 Pro": 78.0
           }
         },
         "2050": {
-          "median": 99.85,
+          "median": 99.0,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 99.98,
-            "Fable 5.1": 99.8,
-            "Opus 5": 99.5,
-            "GPT-5.5 Pro": 99.9
+            "GPT-6 Astra": 99.95,
+            "Fable 5.1": 99.0,
+            "Opus 5": 99.0,
+            "GPT-5.5 Pro": 98.0
           }
         },
         "2100": {
-          "median": 99.93,
+          "median": 99.5,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 99.99,
-            "Fable 5.1": 99.9,
-            "Opus 5": 99.7,
-            "GPT-5.5 Pro": 99.96
+            "GPT-6 Astra": 99.98,
+            "Fable 5.1": 99.5,
+            "Opus 5": 99.0,
+            "GPT-5.5 Pro": 99.5
           }
         },
         "6mo": {
-          "median": 87.0,
+          "median": 78.0,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 86.0,
-            "Fable 5.1": 93.0,
-            "Opus 5": 88.0,
-            "GPT-5.5 Pro": 70.0
+            "GPT-6 Astra": 90.0,
+            "Fable 5.1": 70.0,
+            "Opus 5": 86.0,
+            "GPT-5.5 Pro": 18.0
           }
         }
       },
@@ -1546,67 +1854,67 @@
       "category": "AI incident",
       "severity": "100M deaths or $220T",
       "horizon": "by 2100",
-      "median": 5.925,
+      "median": 4.2,
       "n_models": 4,
       "byHorizon": {
         "12mo": {
-          "median": 0.013,
+          "median": 0.021,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 0.002,
-            "Fable 5.1": 0.04,
-            "Opus 5": 0.014,
-            "GPT-5.5 Pro": 0.012
+            "GPT-6 Astra": 0.012,
+            "Fable 5.1": 0.03,
+            "Opus 5": 0.04,
+            "GPT-5.5 Pro": 0.01
           }
         },
         "2028": {
-          "median": 0.068,
+          "median": 0.09,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 0.034,
-            "Fable 5.1": 0.15,
-            "Opus 5": 0.055,
-            "GPT-5.5 Pro": 0.08
+            "GPT-6 Astra": 0.06,
+            "Fable 5.1": 0.12,
+            "Opus 5": 0.15,
+            "GPT-5.5 Pro": 0.05
           }
         },
         "2030": {
-          "median": 0.315,
+          "median": 0.295,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 0.23,
-            "Fable 5.1": 0.4,
-            "Opus 5": 0.16,
-            "GPT-5.5 Pro": 0.4
+            "GPT-6 Astra": 0.24,
+            "Fable 5.1": 0.35,
+            "Opus 5": 0.35,
+            "GPT-5.5 Pro": 0.22
           }
         },
         "2050": {
-          "median": 2.312,
+          "median": 2.2,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 2.625,
-            "Fable 5.1": 2.0,
-            "Opus 5": 1.3,
-            "GPT-5.5 Pro": 7.0
+            "GPT-6 Astra": 1.98,
+            "Fable 5.1": 2.2,
+            "Opus 5": 2.2,
+            "GPT-5.5 Pro": 2.8
           }
         },
         "2100": {
-          "median": 5.925,
+          "median": 4.2,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 7.35,
-            "Fable 5.1": 4.5,
-            "Opus 5": 4.2,
-            "GPT-5.5 Pro": 18.0
+            "GPT-6 Astra": 4.2,
+            "Fable 5.1": 4.2,
+            "Opus 5": 4.0,
+            "GPT-5.5 Pro": 7.0
           }
         },
         "6mo": {
-          "median": 0.005,
+          "median": 0.007,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 0.0,
-            "Fable 5.1": 0.02,
-            "Opus 5": 0.006,
-            "GPT-5.5 Pro": 0.003
+            "GPT-6 Astra": 0.004,
+            "Fable 5.1": 0.01,
+            "Opus 5": 0.02,
+            "GPT-5.5 Pro": 0.004
           }
         }
       },
@@ -1623,67 +1931,67 @@
       "category": "AI incident",
       "severity": "100k deaths or $220B",
       "horizon": "by 2100",
-      "median": 84.0,
+      "median": 69.0,
       "n_models": 4,
       "byHorizon": {
         "12mo": {
-          "median": 2.4,
+          "median": 3.67,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 1.035,
-            "Fable 5.1": 3.0,
-            "Opus 5": 6.5,
-            "GPT-5.5 Pro": 1.8
+            "GPT-6 Astra": 3.84,
+            "Fable 5.1": 3.5,
+            "Opus 5": 7.5,
+            "GPT-5.5 Pro": 0.4
           }
         },
         "2028": {
-          "median": 9.0,
+          "median": 9.6,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 5.175,
-            "Fable 5.1": 11.0,
-            "Opus 5": 18.0,
-            "GPT-5.5 Pro": 7.0
+            "GPT-6 Astra": 10.2,
+            "Fable 5.1": 9.0,
+            "Opus 5": 17.0,
+            "GPT-5.5 Pro": 1.4
           }
         },
         "2030": {
-          "median": 20.5,
+          "median": 19.3,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 13.8,
-            "Fable 5.1": 25.0,
-            "Opus 5": 30.0,
-            "GPT-5.5 Pro": 16.0
+            "GPT-6 Astra": 21.6,
+            "Fable 5.1": 17.0,
+            "Opus 5": 27.0,
+            "GPT-5.5 Pro": 4.0
           }
         },
         "2050": {
-          "median": 69.0,
+          "median": 52.5,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 57.0,
-            "Fable 5.1": 75.0,
-            "Opus 5": 66.0,
-            "GPT-5.5 Pro": 72.0
+            "GPT-6 Astra": 55.0,
+            "Fable 5.1": 50.0,
+            "Opus 5": 60.0,
+            "GPT-5.5 Pro": 30.0
           }
         },
         "2100": {
-          "median": 84.0,
+          "median": 69.0,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 81.0,
-            "Fable 5.1": 87.0,
-            "Opus 5": 77.0,
-            "GPT-5.5 Pro": 90.0
+            "GPT-6 Astra": 77.0,
+            "Fable 5.1": 68.0,
+            "Opus 5": 70.0,
+            "GPT-5.5 Pro": 50.0
           }
         },
         "6mo": {
-          "median": 0.9,
+          "median": 1.59,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 0.345,
-            "Fable 5.1": 1.2,
-            "Opus 5": 3.2,
-            "GPT-5.5 Pro": 0.6
+            "GPT-6 Astra": 1.68,
+            "Fable 5.1": 1.5,
+            "Opus 5": 4.2,
+            "GPT-5.5 Pro": 0.18
           }
         }
       },
@@ -1700,66 +2008,66 @@
       "category": "AI incident",
       "severity": "10M deaths or $22T",
       "horizon": "by 2100",
-      "median": 19.0,
+      "median": 10.0,
       "n_models": 4,
       "byHorizon": {
         "12mo": {
-          "median": 0.065,
+          "median": 0.08,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 0.017,
-            "Fable 5.1": 0.15,
-            "Opus 5": 0.08,
-            "GPT-5.5 Pro": 0.05
+            "GPT-6 Astra": 0.06,
+            "Fable 5.1": 0.1,
+            "Opus 5": 0.18,
+            "GPT-5.5 Pro": 0.025
           }
         },
         "2028": {
-          "median": 0.3,
+          "median": 0.32,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 0.172,
-            "Fable 5.1": 0.6,
-            "Opus 5": 0.3,
-            "GPT-5.5 Pro": 0.3
+            "GPT-6 Astra": 0.24,
+            "Fable 5.1": 0.4,
+            "Opus 5": 0.6,
+            "GPT-5.5 Pro": 0.11
           }
         },
         "2030": {
-          "median": 1.052,
+          "median": 0.92,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 0.805,
-            "Fable 5.1": 1.5,
-            "Opus 5": 0.8,
-            "GPT-5.5 Pro": 1.3
+            "GPT-6 Astra": 0.84,
+            "Fable 5.1": 1.0,
+            "Opus 5": 1.3,
+            "GPT-5.5 Pro": 0.4
           }
         },
         "2050": {
-          "median": 8.2,
+          "median": 5.5,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 8.4,
-            "Fable 5.1": 8.0,
-            "Opus 5": 6.0,
-            "GPT-5.5 Pro": 16.0
+            "GPT-6 Astra": 4.95,
+            "Fable 5.1": 5.5,
+            "Opus 5": 6.5,
+            "GPT-5.5 Pro": 5.5
           }
         },
         "2100": {
-          "median": 19.0,
+          "median": 10.0,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 21.0,
-            "Fable 5.1": 16.0,
-            "Opus 5": 17.0,
-            "GPT-5.5 Pro": 33.0
+            "GPT-6 Astra": 8.4,
+            "Fable 5.1": 10.0,
+            "Opus 5": 10.0,
+            "GPT-5.5 Pro": 13.0
           }
         },
         "6mo": {
-          "median": 0.024,
+          "median": 0.031,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 0.005,
-            "Fable 5.1": 0.07,
-            "Opus 5": 0.035,
+            "GPT-6 Astra": 0.022,
+            "Fable 5.1": 0.04,
+            "Opus 5": 0.1,
             "GPT-5.5 Pro": 0.012
           }
         }
@@ -1777,67 +2085,67 @@
       "category": "AI incident",
       "severity": "10k deaths or $22B",
       "horizon": "by 2100",
-      "median": 97.5,
+      "median": 91.5,
       "n_models": 4,
       "byHorizon": {
         "12mo": {
-          "median": 16.5,
+          "median": 22.0,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 11.5,
-            "Fable 5.1": 17.0,
-            "Opus 5": 37.0,
-            "GPT-5.5 Pro": 16.0
+            "GPT-6 Astra": 24.0,
+            "Fable 5.1": 20.0,
+            "Opus 5": 36.0,
+            "GPT-5.5 Pro": 2.8
           }
         },
         "2028": {
-          "median": 47.0,
+          "median": 46.0,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 35.0,
-            "Fable 5.1": 50.0,
-            "Opus 5": 60.0,
-            "GPT-5.5 Pro": 44.0
+            "GPT-6 Astra": 50.0,
+            "Fable 5.1": 42.0,
+            "Opus 5": 55.0,
+            "GPT-5.5 Pro": 8.0
           }
         },
         "2030": {
-          "median": 68.5,
+          "median": 63.5,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 58.0,
-            "Fable 5.1": 75.0,
-            "Opus 5": 72.0,
-            "GPT-5.5 Pro": 65.0
+            "GPT-6 Astra": 72.0,
+            "Fable 5.1": 60.0,
+            "Opus 5": 67.0,
+            "GPT-5.5 Pro": 19.0
           }
         },
         "2050": {
-          "median": 93.5,
+          "median": 87.0,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 92.0,
-            "Fable 5.1": 95.0,
-            "Opus 5": 91.0,
-            "GPT-5.5 Pro": 95.0
+            "GPT-6 Astra": 93.0,
+            "Fable 5.1": 89.0,
+            "Opus 5": 85.0,
+            "GPT-5.5 Pro": 68.0
           }
         },
         "2100": {
-          "median": 97.5,
+          "median": 91.5,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 98.0,
-            "Fable 5.1": 97.0,
-            "Opus 5": 94.5,
-            "GPT-5.5 Pro": 98.5
+            "GPT-6 Astra": 97.5,
+            "Fable 5.1": 94.0,
+            "Opus 5": 89.0,
+            "GPT-5.5 Pro": 82.0
           }
         },
         "6mo": {
-          "median": 7.25,
+          "median": 11.0,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 5.175,
-            "Fable 5.1": 8.0,
-            "Opus 5": 22.0,
-            "GPT-5.5 Pro": 6.5
+            "GPT-6 Astra": 12.0,
+            "Fable 5.1": 10.0,
+            "Opus 5": 26.0,
+            "GPT-5.5 Pro": 1.2
           }
         }
       },
@@ -1854,67 +2162,67 @@
       "category": "AI incident",
       "severity": "1B deaths or $2.2Q",
       "horizon": "by 2100",
-      "median": 2.538,
+      "median": 2.045,
       "n_models": 4,
       "byHorizon": {
         "12mo": {
-          "median": 0.003,
+          "median": 0.007,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 0.0,
+            "GPT-6 Astra": 0.003,
             "Fable 5.1": 0.01,
-            "Opus 5": 0.003,
+            "Opus 5": 0.016,
             "GPT-5.5 Pro": 0.003
           }
         },
         "2028": {
-          "median": 0.015,
+          "median": 0.034,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 0.008,
-            "Fable 5.1": 0.04,
-            "Opus 5": 0.011,
-            "GPT-5.5 Pro": 0.02
+            "GPT-6 Astra": 0.018,
+            "Fable 5.1": 0.05,
+            "Opus 5": 0.06,
+            "GPT-5.5 Pro": 0.018
           }
         },
         "2030": {
-          "median": 0.084,
+          "median": 0.112,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 0.069,
-            "Fable 5.1": 0.1,
-            "Opus 5": 0.04,
-            "GPT-5.5 Pro": 0.1
+            "GPT-6 Astra": 0.084,
+            "Fable 5.1": 0.15,
+            "Opus 5": 0.14,
+            "GPT-5.5 Pro": 0.08
           }
         },
         "2050": {
-          "median": 0.825,
+          "median": 1.0,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 1.05,
-            "Fable 5.1": 0.6,
-            "Opus 5": 0.4,
-            "GPT-5.5 Pro": 2.5
+            "GPT-6 Astra": 0.77,
+            "Fable 5.1": 1.1,
+            "Opus 5": 0.9,
+            "GPT-5.5 Pro": 1.8
           }
         },
         "2100": {
-          "median": 2.538,
+          "median": 2.045,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 3.675,
-            "Fable 5.1": 1.4,
-            "Opus 5": 1.0,
-            "GPT-5.5 Pro": 8.0
+            "GPT-6 Astra": 1.89,
+            "Fable 5.1": 2.2,
+            "Opus 5": 1.8,
+            "GPT-5.5 Pro": 3.5
           }
         },
         "6mo": {
-          "median": 0.001,
+          "median": 0.003,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 0.0,
-            "Fable 5.1": 0.005,
-            "Opus 5": 0.001,
-            "GPT-5.5 Pro": 0.001
+            "GPT-6 Astra": 0.001,
+            "Fable 5.1": 0.004,
+            "Opus 5": 0.008,
+            "GPT-5.5 Pro": 0.002
           }
         }
       },
@@ -1931,67 +2239,67 @@
       "category": "AI incident",
       "severity": "1M deaths or $2.2T",
       "horizon": "by 2100",
-      "median": 50.2,
+      "median": 27.65,
       "n_models": 4,
       "byHorizon": {
         "12mo": {
-          "median": 0.375,
+          "median": 0.49,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 0.115,
-            "Fable 5.1": 0.7,
-            "Opus 5": 0.5,
-            "GPT-5.5 Pro": 0.25
+            "GPT-6 Astra": 0.48,
+            "Fable 5.1": 0.5,
+            "Opus 5": 1.1,
+            "GPT-5.5 Pro": 0.08
           }
         },
         "2028": {
-          "median": 1.5,
+          "median": 1.65,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 1.035,
-            "Fable 5.1": 2.5,
-            "Opus 5": 1.8,
-            "GPT-5.5 Pro": 1.2
+            "GPT-6 Astra": 1.8,
+            "Fable 5.1": 1.5,
+            "Opus 5": 3.0,
+            "GPT-5.5 Pro": 0.3
           }
         },
         "2030": {
-          "median": 4.1,
+          "median": 3.85,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 3.45,
-            "Fable 5.1": 6.0,
-            "Opus 5": 4.2,
-            "GPT-5.5 Pro": 4.0
+            "GPT-6 Astra": 4.2,
+            "Fable 5.1": 3.5,
+            "Opus 5": 6.0,
+            "GPT-5.5 Pro": 1.0
           }
         },
         "2050": {
-          "median": 29.0,
+          "median": 16.75,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 23.1,
-            "Fable 5.1": 35.0,
-            "Opus 5": 26.0,
-            "GPT-5.5 Pro": 32.0
+            "GPT-6 Astra": 16.5,
+            "Fable 5.1": 17.0,
+            "Opus 5": 20.0,
+            "GPT-5.5 Pro": 12.0
           }
         },
         "2100": {
-          "median": 50.2,
+          "median": 27.65,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 50.4,
-            "Fable 5.1": 50.0,
-            "Opus 5": 47.0,
-            "GPT-5.5 Pro": 55.0
+            "GPT-6 Astra": 27.3,
+            "Fable 5.1": 28.0,
+            "Opus 5": 28.0,
+            "GPT-5.5 Pro": 25.0
           }
         },
         "6mo": {
-          "median": 0.14,
+          "median": 0.196,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 0.034,
-            "Fable 5.1": 0.3,
-            "Opus 5": 0.22,
-            "GPT-5.5 Pro": 0.06
+            "GPT-6 Astra": 0.192,
+            "Fable 5.1": 0.2,
+            "Opus 5": 0.6,
+            "GPT-5.5 Pro": 0.035
           }
         }
       },
@@ -2008,67 +2316,144 @@
       "category": "AI incident",
       "severity": "1k deaths or $2.2B",
       "horizon": "by 2100",
-      "median": 99.69,
+      "median": 97.9,
       "n_models": 4,
       "byHorizon": {
         "12mo": {
-          "median": 73.5,
+          "median": 66.5,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 67.0,
-            "Fable 5.1": 80.0,
-            "Opus 5": 80.0,
-            "GPT-5.5 Pro": 63.0
+            "GPT-6 Astra": 75.0,
+            "Fable 5.1": 58.0,
+            "Opus 5": 75.0,
+            "GPT-5.5 Pro": 11.0
           }
         },
         "2028": {
-          "median": 90.5,
+          "median": 83.0,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 90.0,
-            "Fable 5.1": 94.0,
-            "Opus 5": 91.0,
-            "GPT-5.5 Pro": 88.0
+            "GPT-6 Astra": 93.0,
+            "Fable 5.1": 80.0,
+            "Opus 5": 86.0,
+            "GPT-5.5 Pro": 27.0
           }
         },
         "2030": {
-          "median": 96.25,
+          "median": 90.0,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 97.0,
-            "Fable 5.1": 97.5,
-            "Opus 5": 94.5,
-            "GPT-5.5 Pro": 95.5
+            "GPT-6 Astra": 98.0,
+            "Fable 5.1": 90.0,
+            "Opus 5": 90.0,
+            "GPT-5.5 Pro": 50.0
           }
         },
         "2050": {
-          "median": 99.25,
+          "median": 96.25,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 99.5,
-            "Fable 5.1": 99.0,
-            "Opus 5": 98.5,
-            "GPT-5.5 Pro": 99.5
+            "GPT-6 Astra": 99.7,
+            "Fable 5.1": 97.5,
+            "Opus 5": 95.0,
+            "GPT-5.5 Pro": 90.0
           }
         },
         "2100": {
-          "median": 99.69,
+          "median": 97.9,
           "n": 4,
           "models": {
             "GPT-6 Astra": 99.9,
-            "Fable 5.1": 99.5,
-            "Opus 5": 99.0,
-            "GPT-5.5 Pro": 99.88
+            "Fable 5.1": 98.8,
+            "Opus 5": 96.0,
+            "GPT-5.5 Pro": 97.0
           }
         },
         "6mo": {
-          "median": 51.0,
+          "median": 49.0,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 42.0,
-            "Fable 5.1": 60.0,
-            "Opus 5": 70.0,
-            "GPT-5.5 Pro": 38.0
+            "GPT-6 Astra": 56.0,
+            "Fable 5.1": 42.0,
+            "Opus 5": 66.0,
+            "GPT-5.5 Pro": 5.5
+          }
+        }
+      },
+      "declined": [],
+      "status": "open",
+      "resolves": null,
+      "super": null,
+      "superSource": null,
+      "source": "incident ladder"
+    },
+    {
+      "kind": "bottom-line",
+      "question": "AI-related cyber incident \u2014 human extinction (global population below 5,000)",
+      "category": "AI incident",
+      "severity": "human extinction (global population below 5,000)",
+      "horizon": "by 2100",
+      "median": 0.4,
+      "n_models": 4,
+      "byHorizon": {
+        "12mo": {
+          "median": 0.002,
+          "n": 4,
+          "models": {
+            "GPT-6 Astra": 0.0,
+            "Fable 5.1": 0.003,
+            "Opus 5": 0.003,
+            "GPT-5.5 Pro": 0.001
+          }
+        },
+        "2028": {
+          "median": 0.007,
+          "n": 4,
+          "models": {
+            "GPT-6 Astra": 0.001,
+            "Fable 5.1": 0.02,
+            "Opus 5": 0.012,
+            "GPT-5.5 Pro": 0.002
+          }
+        },
+        "2030": {
+          "median": 0.019,
+          "n": 4,
+          "models": {
+            "GPT-6 Astra": 0.008,
+            "Fable 5.1": 0.07,
+            "Opus 5": 0.03,
+            "GPT-5.5 Pro": 0.008
+          }
+        },
+        "2050": {
+          "median": 0.2,
+          "n": 4,
+          "models": {
+            "GPT-6 Astra": 0.11,
+            "Fable 5.1": 0.5,
+            "Opus 5": 0.25,
+            "GPT-5.5 Pro": 0.15
+          }
+        },
+        "2100": {
+          "median": 0.4,
+          "n": 4,
+          "models": {
+            "GPT-6 Astra": 0.263,
+            "Fable 5.1": 1.0,
+            "Opus 5": 0.5,
+            "GPT-5.5 Pro": 0.3
+          }
+        },
+        "6mo": {
+          "median": 0.001,
+          "n": 4,
+          "models": {
+            "GPT-6 Astra": 0.0,
+            "Fable 5.1": 0.001,
+            "Opus 5": 0.001,
+            "GPT-5.5 Pro": 0.0
           }
         }
       },
@@ -2085,67 +2470,67 @@
       "category": "AI incident",
       "severity": "100 deaths or $220M",
       "horizon": "by 2100",
-      "median": 97.5,
+      "median": 96.5,
       "n_models": 4,
       "byHorizon": {
         "12mo": {
           "median": 39.5,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 29.0,
-            "Fable 5.1": 50.0,
-            "Opus 5": 58.0,
-            "GPT-5.5 Pro": 12.0
+            "GPT-6 Astra": 46.0,
+            "Fable 5.1": 33.0,
+            "Opus 5": 64.0,
+            "GPT-5.5 Pro": 2.5
           }
         },
         "2028": {
-          "median": 67.0,
+          "median": 69.5,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 59.0,
-            "Fable 5.1": 75.0,
+            "GPT-6 Astra": 74.0,
+            "Fable 5.1": 65.0,
             "Opus 5": 80.0,
-            "GPT-5.5 Pro": 32.0
+            "GPT-5.5 Pro": 7.0
           }
         },
         "2030": {
-          "median": 82.0,
+          "median": 83.5,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 78.0,
-            "Fable 5.1": 86.0,
-            "Opus 5": 88.0,
-            "GPT-5.5 Pro": 55.0
+            "GPT-6 Astra": 88.0,
+            "Fable 5.1": 80.0,
+            "Opus 5": 87.0,
+            "GPT-5.5 Pro": 15.0
           }
         },
         "2050": {
-          "median": 95.5,
+          "median": 95.0,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 95.0,
-            "Fable 5.1": 96.0,
-            "Opus 5": 97.0,
-            "GPT-5.5 Pro": 90.0
+            "GPT-6 Astra": 98.0,
+            "Fable 5.1": 95.0,
+            "Opus 5": 95.0,
+            "GPT-5.5 Pro": 58.0
           }
         },
         "2100": {
-          "median": 97.5,
+          "median": 96.5,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 98.3,
+            "GPT-6 Astra": 99.1,
             "Fable 5.1": 97.0,
-            "Opus 5": 98.0,
-            "GPT-5.5 Pro": 96.0
+            "Opus 5": 96.0,
+            "GPT-5.5 Pro": 75.0
           }
         },
         "6mo": {
-          "median": 24.5,
+          "median": 23.2,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 14.0,
-            "Fable 5.1": 35.0,
-            "Opus 5": 45.0,
-            "GPT-5.5 Pro": 6.0
+            "GPT-6 Astra": 26.4,
+            "Fable 5.1": 20.0,
+            "Opus 5": 50.0,
+            "GPT-5.5 Pro": 1.2
           }
         }
       },
@@ -2162,67 +2547,67 @@
       "category": "AI incident",
       "severity": "100M deaths or $220T",
       "horizon": "by 2100",
-      "median": 13.49,
+      "median": 10.25,
       "n_models": 4,
       "byHorizon": {
         "12mo": {
-          "median": 0.011,
+          "median": 0.028,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 0.008,
-            "Fable 5.1": 0.09,
-            "Opus 5": 0.008,
-            "GPT-5.5 Pro": 0.015
+            "GPT-6 Astra": 0.026,
+            "Fable 5.1": 0.04,
+            "Opus 5": 0.03,
+            "GPT-5.5 Pro": 0.025
           }
         },
         "2028": {
-          "median": 0.128,
+          "median": 0.132,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 0.156,
-            "Fable 5.1": 0.5,
-            "Opus 5": 0.035,
-            "GPT-5.5 Pro": 0.1
+            "GPT-6 Astra": 0.144,
+            "Fable 5.1": 0.2,
+            "Opus 5": 0.11,
+            "GPT-5.5 Pro": 0.12
           }
         },
         "2030": {
-          "median": 0.575,
+          "median": 0.585,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 0.75,
-            "Fable 5.1": 1.6,
-            "Opus 5": 0.1,
-            "GPT-5.5 Pro": 0.4
+            "GPT-6 Astra": 0.72,
+            "Fable 5.1": 0.75,
+            "Opus 5": 0.27,
+            "GPT-5.5 Pro": 0.45
           }
         },
         "2050": {
-          "median": 7.875,
+          "median": 5.5,
           "n": 4,
           "models": {
             "GPT-6 Astra": 8.25,
-            "Fable 5.1": 7.5,
-            "Opus 5": 1.8,
-            "GPT-5.5 Pro": 9.0
+            "Fable 5.1": 5.0,
+            "Opus 5": 2.6,
+            "GPT-5.5 Pro": 6.0
           }
         },
         "2100": {
-          "median": 13.49,
+          "median": 10.25,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 14.98,
-            "Fable 5.1": 12.0,
-            "Opus 5": 5.2,
-            "GPT-5.5 Pro": 22.0
+            "GPT-6 Astra": 12.6,
+            "Fable 5.1": 8.5,
+            "Opus 5": 5.0,
+            "GPT-5.5 Pro": 12.0
           }
         },
         "6mo": {
-          "median": 0.004,
+          "median": 0.013,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 0.001,
-            "Fable 5.1": 0.04,
-            "Opus 5": 0.003,
-            "GPT-5.5 Pro": 0.004
+            "GPT-6 Astra": 0.008,
+            "Fable 5.1": 0.015,
+            "Opus 5": 0.015,
+            "GPT-5.5 Pro": 0.01
           }
         }
       },
@@ -2239,67 +2624,67 @@
       "category": "AI incident",
       "severity": "100k deaths or $220B",
       "horizon": "by 2100",
-      "median": 50.75,
+      "median": 40.5,
       "n_models": 4,
       "byHorizon": {
         "12mo": {
-          "median": 0.575,
+          "median": 0.8,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 0.26,
-            "Fable 5.1": 1.2,
-            "Opus 5": 0.85,
-            "GPT-5.5 Pro": 0.3
+            "GPT-6 Astra": 0.84,
+            "Fable 5.1": 0.8,
+            "Opus 5": 0.8,
+            "GPT-5.5 Pro": 0.18
           }
         },
         "2028": {
-          "median": 2.67,
+          "median": 2.75,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 2.34,
-            "Fable 5.1": 6.0,
-            "Opus 5": 3.0,
-            "GPT-5.5 Pro": 1.7
+            "GPT-6 Astra": 3.6,
+            "Fable 5.1": 3.0,
+            "Opus 5": 2.5,
+            "GPT-5.5 Pro": 0.7
           }
         },
         "2030": {
-          "median": 7.312,
+          "median": 6.5,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 8.125,
-            "Fable 5.1": 13.0,
-            "Opus 5": 6.5,
-            "GPT-5.5 Pro": 5.0
+            "GPT-6 Astra": 10.8,
+            "Fable 5.1": 8.0,
+            "Opus 5": 5.0,
+            "GPT-5.5 Pro": 2.0
           }
         },
         "2050": {
-          "median": 34.0,
+          "median": 27.0,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 33.0,
-            "Fable 5.1": 38.0,
-            "Opus 5": 29.0,
-            "GPT-5.5 Pro": 35.0
+            "GPT-6 Astra": 35.2,
+            "Fable 5.1": 33.0,
+            "Opus 5": 21.0,
+            "GPT-5.5 Pro": 20.0
           }
         },
         "2100": {
-          "median": 50.75,
+          "median": 40.5,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 53.5,
-            "Fable 5.1": 48.0,
-            "Opus 5": 43.0,
-            "GPT-5.5 Pro": 62.0
+            "GPT-6 Astra": 49.35,
+            "Fable 5.1": 45.0,
+            "Opus 5": 29.0,
+            "GPT-5.5 Pro": 36.0
           }
         },
         "6mo": {
-          "median": 0.225,
+          "median": 0.3,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 0.065,
-            "Fable 5.1": 0.5,
-            "Opus 5": 0.35,
-            "GPT-5.5 Pro": 0.1
+            "GPT-6 Astra": 0.3,
+            "Fable 5.1": 0.3,
+            "Opus 5": 0.4,
+            "GPT-5.5 Pro": 0.075
           }
         }
       },
@@ -2316,67 +2701,67 @@
       "category": "AI incident",
       "severity": "10M deaths or $22T",
       "horizon": "by 2100",
-      "median": 20.2,
+      "median": 16.0,
       "n_models": 4,
       "byHorizon": {
         "12mo": {
-          "median": 0.035,
+          "median": 0.079,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 0.019,
-            "Fable 5.1": 0.18,
-            "Opus 5": 0.03,
+            "GPT-6 Astra": 0.078,
+            "Fable 5.1": 0.1,
+            "Opus 5": 0.08,
             "GPT-5.5 Pro": 0.04
           }
         },
         "2028": {
-          "median": 0.287,
+          "median": 0.368,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 0.325,
-            "Fable 5.1": 1.0,
-            "Opus 5": 0.12,
-            "GPT-5.5 Pro": 0.25
+            "GPT-6 Astra": 0.456,
+            "Fable 5.1": 0.5,
+            "Opus 5": 0.28,
+            "GPT-5.5 Pro": 0.2
           }
         },
         "2030": {
-          "median": 1.25,
+          "median": 1.075,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 1.5,
-            "Fable 5.1": 3.0,
-            "Opus 5": 0.3,
-            "GPT-5.5 Pro": 1.0
+            "GPT-6 Astra": 1.8,
+            "Fable 5.1": 1.5,
+            "Opus 5": 0.65,
+            "GPT-5.5 Pro": 0.6
           }
         },
         "2050": {
-          "median": 12.55,
+          "median": 9.0,
           "n": 4,
           "models": {
             "GPT-6 Astra": 12.1,
-            "Fable 5.1": 13.0,
-            "Opus 5": 4.2,
-            "GPT-5.5 Pro": 15.0
+            "Fable 5.1": 10.0,
+            "Opus 5": 4.8,
+            "GPT-5.5 Pro": 8.0
           }
         },
         "2100": {
-          "median": 20.2,
+          "median": 16.0,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 21.4,
-            "Fable 5.1": 19.0,
-            "Opus 5": 10.5,
-            "GPT-5.5 Pro": 35.0
+            "GPT-6 Astra": 18.9,
+            "Fable 5.1": 16.0,
+            "Opus 5": 8.5,
+            "GPT-5.5 Pro": 16.0
           }
         },
         "6mo": {
-          "median": 0.012,
+          "median": 0.032,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 0.004,
-            "Fable 5.1": 0.08,
-            "Opus 5": 0.012,
-            "GPT-5.5 Pro": 0.012
+            "GPT-6 Astra": 0.024,
+            "Fable 5.1": 0.04,
+            "Opus 5": 0.04,
+            "GPT-5.5 Pro": 0.018
           }
         }
       },
@@ -2393,67 +2778,67 @@
       "category": "AI incident",
       "severity": "10k deaths or $22B",
       "horizon": "by 2100",
-      "median": 74.0,
+      "median": 61.0,
       "n_models": 4,
       "byHorizon": {
         "12mo": {
-          "median": 2.78,
+          "median": 3.0,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 1.56,
-            "Fable 5.1": 4.5,
-            "Opus 5": 4.0,
-            "GPT-5.5 Pro": 1.2
+            "GPT-6 Astra": 3.96,
+            "Fable 5.1": 3.0,
+            "Opus 5": 3.0,
+            "GPT-5.5 Pro": 0.5
           }
         },
         "2028": {
-          "median": 10.55,
+          "median": 9.25,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 9.1,
-            "Fable 5.1": 17.0,
-            "Opus 5": 12.0,
-            "GPT-5.5 Pro": 5.5
+            "GPT-6 Astra": 14.4,
+            "Fable 5.1": 10.0,
+            "Opus 5": 8.5,
+            "GPT-5.5 Pro": 1.8
           }
         },
         "2030": {
-          "median": 21.75,
+          "median": 18.0,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 22.5,
-            "Fable 5.1": 30.0,
-            "Opus 5": 21.0,
-            "GPT-5.5 Pro": 13.0
+            "GPT-6 Astra": 30.0,
+            "Fable 5.1": 20.0,
+            "Opus 5": 16.0,
+            "GPT-5.5 Pro": 4.5
           }
         },
         "2050": {
-          "median": 55.0,
+          "median": 50.0,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 55.0,
-            "Fable 5.1": 60.0,
-            "Opus 5": 55.0,
-            "GPT-5.5 Pro": 55.0
+            "GPT-6 Astra": 64.0,
+            "Fable 5.1": 58.0,
+            "Opus 5": 42.0,
+            "GPT-5.5 Pro": 32.0
           }
         },
         "2100": {
-          "median": 74.0,
+          "median": 61.0,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 78.0,
+            "GPT-6 Astra": 80.0,
             "Fable 5.1": 70.0,
-            "Opus 5": 68.0,
-            "GPT-5.5 Pro": 78.0
+            "Opus 5": 51.0,
+            "GPT-5.5 Pro": 52.0
           }
         },
         "6mo": {
-          "median": 1.2,
+          "median": 1.32,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 0.39,
-            "Fable 5.1": 2.0,
-            "Opus 5": 2.0,
-            "GPT-5.5 Pro": 0.4
+            "GPT-6 Astra": 1.44,
+            "Fable 5.1": 1.2,
+            "Opus 5": 1.6,
+            "GPT-5.5 Pro": 0.2
           }
         }
       },
@@ -2470,67 +2855,67 @@
       "category": "AI incident",
       "severity": "1B deaths or $2.2Q",
       "horizon": "by 2100",
-      "median": 9.1,
+      "median": 6.562,
       "n_models": 4,
       "byHorizon": {
         "12mo": {
-          "median": 0.005,
+          "median": 0.015,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 0.003,
-            "Fable 5.1": 0.04,
-            "Opus 5": 0.003,
-            "GPT-5.5 Pro": 0.006
+            "GPT-6 Astra": 0.01,
+            "Fable 5.1": 0.02,
+            "Opus 5": 0.016,
+            "GPT-5.5 Pro": 0.015
           }
         },
         "2028": {
-          "median": 0.059,
+          "median": 0.07,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 0.078,
-            "Fable 5.1": 0.25,
-            "Opus 5": 0.012,
-            "GPT-5.5 Pro": 0.04
+            "GPT-6 Astra": 0.06,
+            "Fable 5.1": 0.1,
+            "Opus 5": 0.06,
+            "GPT-5.5 Pro": 0.08
           }
         },
         "2030": {
-          "median": 0.294,
+          "median": 0.313,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 0.438,
-            "Fable 5.1": 0.8,
-            "Opus 5": 0.05,
-            "GPT-5.5 Pro": 0.15
+            "GPT-6 Astra": 0.336,
+            "Fable 5.1": 0.38,
+            "Opus 5": 0.15,
+            "GPT-5.5 Pro": 0.29
           }
         },
         "2050": {
-          "median": 4.75,
+          "median": 3.65,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 5.5,
-            "Fable 5.1": 4.5,
-            "Opus 5": 0.95,
-            "GPT-5.5 Pro": 5.0
+            "GPT-6 Astra": 5.28,
+            "Fable 5.1": 2.5,
+            "Opus 5": 1.6,
+            "GPT-5.5 Pro": 4.8
           }
         },
         "2100": {
-          "median": 9.1,
+          "median": 6.562,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 10.7,
-            "Fable 5.1": 7.5,
-            "Opus 5": 2.9,
-            "GPT-5.5 Pro": 14.0
+            "GPT-6 Astra": 8.925,
+            "Fable 5.1": 4.2,
+            "Opus 5": 3.4,
+            "GPT-5.5 Pro": 9.1
           }
         },
         "6mo": {
-          "median": 0.001,
+          "median": 0.007,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 0.0,
-            "Fable 5.1": 0.02,
-            "Opus 5": 0.001,
-            "GPT-5.5 Pro": 0.002
+            "GPT-6 Astra": 0.003,
+            "Fable 5.1": 0.008,
+            "Opus 5": 0.008,
+            "GPT-5.5 Pro": 0.006
           }
         }
       },
@@ -2547,66 +2932,66 @@
       "category": "AI incident",
       "severity": "1M deaths or $2.2T",
       "horizon": "by 2100",
-      "median": 32.12,
+      "median": 25.5,
       "n_models": 4,
       "byHorizon": {
         "12mo": {
-          "median": 0.14,
+          "median": 0.245,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 0.065,
-            "Fable 5.1": 0.4,
-            "Opus 5": 0.16,
-            "GPT-5.5 Pro": 0.12
+            "GPT-6 Astra": 0.24,
+            "Fable 5.1": 0.3,
+            "Opus 5": 0.25,
+            "GPT-5.5 Pro": 0.08
           }
         },
         "2028": {
-          "median": 0.74,
+          "median": 1.0,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 0.78,
-            "Fable 5.1": 2.2,
-            "Opus 5": 0.6,
-            "GPT-5.5 Pro": 0.7
+            "GPT-6 Astra": 1.44,
+            "Fable 5.1": 1.2,
+            "Opus 5": 0.8,
+            "GPT-5.5 Pro": 0.35
           }
         },
         "2030": {
-          "median": 2.875,
+          "median": 2.55,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 3.25,
-            "Fable 5.1": 6.0,
-            "Opus 5": 1.4,
-            "GPT-5.5 Pro": 2.5
+            "GPT-6 Astra": 4.56,
+            "Fable 5.1": 3.3,
+            "Opus 5": 1.8,
+            "GPT-5.5 Pro": 1.0
           }
         },
         "2050": {
-          "median": 20.9,
+          "median": 14.8,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 19.8,
-            "Fable 5.1": 22.0,
-            "Opus 5": 12.0,
-            "GPT-5.5 Pro": 23.0
+            "GPT-6 Astra": 17.6,
+            "Fable 5.1": 18.0,
+            "Opus 5": 10.0,
+            "GPT-5.5 Pro": 12.0
           }
         },
         "2100": {
-          "median": 32.12,
+          "median": 25.5,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 34.24,
-            "Fable 5.1": 30.0,
-            "Opus 5": 24.0,
-            "GPT-5.5 Pro": 48.0
+            "GPT-6 Astra": 28.35,
+            "Fable 5.1": 27.0,
+            "Opus 5": 16.0,
+            "GPT-5.5 Pro": 24.0
           }
         },
         "6mo": {
-          "median": 0.052,
+          "median": 0.092,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 0.013,
-            "Fable 5.1": 0.18,
-            "Opus 5": 0.07,
+            "GPT-6 Astra": 0.084,
+            "Fable 5.1": 0.1,
+            "Opus 5": 0.12,
             "GPT-5.5 Pro": 0.035
           }
         }
@@ -2624,67 +3009,144 @@
       "category": "AI incident",
       "severity": "1k deaths or $2.2B",
       "horizon": "by 2100",
-      "median": 90.0,
+      "median": 87.5,
       "n_models": 4,
       "byHorizon": {
         "12mo": {
-          "median": 12.7,
+          "median": 13.2,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 8.4,
-            "Fable 5.1": 17.0,
-            "Opus 5": 18.0,
-            "GPT-5.5 Pro": 4.0
+            "GPT-6 Astra": 14.4,
+            "Fable 5.1": 12.0,
+            "Opus 5": 20.0,
+            "GPT-5.5 Pro": 1.1
           }
         },
         "2028": {
           "median": 34.0,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 30.0,
-            "Fable 5.1": 42.0,
+            "GPT-6 Astra": 40.0,
+            "Fable 5.1": 30.0,
             "Opus 5": 38.0,
-            "GPT-5.5 Pro": 14.0
+            "GPT-5.5 Pro": 3.5
           }
         },
         "2030": {
-          "median": 51.0,
+          "median": 49.0,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 50.0,
-            "Fable 5.1": 60.0,
-            "Opus 5": 52.0,
-            "GPT-5.5 Pro": 28.0
+            "GPT-6 Astra": 62.0,
+            "Fable 5.1": 48.0,
+            "Opus 5": 50.0,
+            "GPT-5.5 Pro": 8.5
           }
         },
         "2050": {
-          "median": 82.0,
+          "median": 81.0,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 82.0,
-            "Fable 5.1": 85.0,
-            "Opus 5": 82.0,
-            "GPT-5.5 Pro": 78.0
+            "GPT-6 Astra": 90.0,
+            "Fable 5.1": 82.0,
+            "Opus 5": 80.0,
+            "GPT-5.5 Pro": 46.0
           }
         },
         "2100": {
-          "median": 90.0,
+          "median": 87.5,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 94.0,
+            "GPT-6 Astra": 95.0,
             "Fable 5.1": 90.0,
-            "Opus 5": 89.0,
-            "GPT-5.5 Pro": 90.0
+            "Opus 5": 85.0,
+            "GPT-5.5 Pro": 65.0
           }
         },
         "6mo": {
-          "median": 6.05,
+          "median": 6.0,
           "n": 4,
           "models": {
-            "GPT-6 Astra": 3.1,
-            "Fable 5.1": 9.0,
-            "Opus 5": 11.0,
-            "GPT-5.5 Pro": 1.8
+            "GPT-6 Astra": 6.0,
+            "Fable 5.1": 6.0,
+            "Opus 5": 12.0,
+            "GPT-5.5 Pro": 0.5
+          }
+        }
+      },
+      "declined": [],
+      "status": "open",
+      "resolves": null,
+      "super": null,
+      "superSource": null,
+      "source": "incident ladder"
+    },
+    {
+      "kind": "bottom-line",
+      "question": "Misaligned AI incident \u2014 human extinction (global population below 5,000)",
+      "category": "AI incident",
+      "severity": "human extinction (global population below 5,000)",
+      "horizon": "by 2100",
+      "median": 2.75,
+      "n_models": 4,
+      "byHorizon": {
+        "12mo": {
+          "median": 0.007,
+          "n": 4,
+          "models": {
+            "GPT-6 Astra": 0.005,
+            "Fable 5.1": 0.008,
+            "Opus 5": 0.01,
+            "GPT-5.5 Pro": 0.005
+          }
+        },
+        "2028": {
+          "median": 0.035,
+          "n": 4,
+          "models": {
+            "GPT-6 Astra": 0.03,
+            "Fable 5.1": 0.05,
+            "Opus 5": 0.04,
+            "GPT-5.5 Pro": 0.018
+          }
+        },
+        "2030": {
+          "median": 0.145,
+          "n": 4,
+          "models": {
+            "GPT-6 Astra": 0.18,
+            "Fable 5.1": 0.18,
+            "Opus 5": 0.11,
+            "GPT-5.5 Pro": 0.1
+          }
+        },
+        "2050": {
+          "median": 1.45,
+          "n": 4,
+          "models": {
+            "GPT-6 Astra": 2.42,
+            "Fable 5.1": 1.4,
+            "Opus 5": 1.0,
+            "GPT-5.5 Pro": 1.5
+          }
+        },
+        "2100": {
+          "median": 2.75,
+          "n": 4,
+          "models": {
+            "GPT-6 Astra": 4.2,
+            "Fable 5.1": 2.5,
+            "Opus 5": 2.1,
+            "GPT-5.5 Pro": 3.0
+          }
+        },
+        "6mo": {
+          "median": 0.003,
+          "n": 4,
+          "models": {
+            "GPT-6 Astra": 0.002,
+            "Fable 5.1": 0.003,
+            "Opus 5": 0.004,
+            "GPT-5.5 Pro": 0.003
           }
         }
       },
@@ -2699,27 +3161,27 @@
   "instrumentInfo": {
     "version": "airo-incidents-prospective-v1",
     "available": true,
-    "runDate": "2026-09-10",
+    "runDate": "2026-09-18",
     "countingWindows": {
       "6mo": [
         {
-          "start": "2026-09-10",
-          "end": "2027-03-10",
+          "start": "2026-09-18",
+          "end": "2027-03-18",
           "timezone": "UTC",
           "harm_years": 3
         }
       ],
       "12mo": [
         {
-          "start": "2026-09-10",
-          "end": "2027-09-10",
+          "start": "2026-09-18",
+          "end": "2027-09-18",
           "timezone": "UTC",
           "harm_years": 3
         }
       ],
       "2028": [
         {
-          "start": "2026-09-10",
+          "start": "2026-09-18",
           "end": "2028-12-31",
           "timezone": "UTC",
           "harm_years": 3
@@ -2727,7 +3189,7 @@
       ],
       "2030": [
         {
-          "start": "2026-09-10",
+          "start": "2026-09-18",
           "end": "2030-12-31",
           "timezone": "UTC",
           "harm_years": 3
@@ -2735,7 +3197,7 @@
       ],
       "2050": [
         {
-          "start": "2026-09-10",
+          "start": "2026-09-18",
           "end": "2050-12-31",
           "timezone": "UTC",
           "harm_years": 3
@@ -2743,7 +3205,7 @@
       ],
       "2100": [
         {
-          "start": "2026-09-10",
+          "start": "2026-09-18",
           "end": "2100-12-31",
           "timezone": "UTC",
           "harm_years": 3
@@ -2781,7 +3243,7 @@
     }
   ],
   "counts": {
-    "bottomLine": 35,
+    "bottomLine": 41,
     "canary": 0
   }
 }

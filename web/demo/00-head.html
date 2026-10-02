@@ -61,6 +61,13 @@
   h1, h2, h3 { font-family: "Season Sans", system-ui, sans-serif; font-weight: 600; letter-spacing: -0.01em; margin: 0; }
   .mono { font-family: "DM Mono", ui-monospace, monospace; }
   button { font-family: inherit; }
+  .rationale-controls { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 14px; }
+  .rationale-controls label { display: flex; flex-direction: column; gap: 5px; min-width: 0; max-width: 100%; font-size: 12px; color: var(--ink-soft); }
+  .rationale-controls select { appearance: none; font: inherit; font-size: 13px; color: var(--ink); background-color: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 8px 32px 8px 12px; max-width: 100%; cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='m1 1 5 5 5-5' fill='none' stroke='%2357606a' stroke-width='1.5'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; }
+  .rationale-controls select:hover { border-color: var(--accent-green); }
+  .rationale-controls select:focus-visible { outline: 2px solid var(--accent-green); outline-offset: 2px; }
+
   a { color: var(--link); }
   /* The FRI lockup, top left of the header (brand guidelines: dark green on stone; minimum 70px wide). */
   .brand-logo { display: block; width: 231px; max-width: 70vw; height: auto; color: #102b23; margin-bottom: 22px; }
@@ -111,6 +118,16 @@
 </style>
 <link rel="stylesheet" href="https://unpkg.com/tippy.js@6.3.7/dist/tippy.css" />
 <link rel="stylesheet" href="https://unpkg.com/tippy.js@6.3.7/themes/light-border.css" />
+<!-- Visitor analytics (2026-09-11): who reaches the page, where from, which
+     country. Plausible rather than GA because it sets no cookies and stores
+     no personal data, so the page needs no consent banner and no privacy
+     policy it does not have. The site is identified by the script filename,
+     so there is no domain attribute to keep in sync. -->
+<script async src="https://plausible.io/js/pa-3u4Edz2m1_b6GvluJUp0Y.js"></script>
+<script>
+  window.plausible=window.plausible||function(){(plausible.q=plausible.q||[]).push(arguments)},plausible.init=plausible.init||function(i){plausible.o=i||{}};
+  plausible.init()
+</script>
 <!--GRAPH4_DATA--><!--/GRAPH4_DATA-->
 <!--TIMELINE_DATA--><!--/TIMELINE_DATA-->
 <!--GRAPH1_DATA--><!--/GRAPH1_DATA-->
@@ -123,3 +140,4 @@
 <!--OBSERVATIONAL_DATA--><!--/OBSERVATIONAL_DATA-->
 <!--CAUSAL_DATA--><!--/CAUSAL_DATA-->
 <!--METHOD_DATA--><!--/METHOD_DATA-->
+<!--RATIONALES_DATA--><!--/RATIONALES_DATA-->

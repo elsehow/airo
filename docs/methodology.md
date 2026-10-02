@@ -288,7 +288,15 @@ is not offered until that many searches or page reads have returned, and a
 premature call is answered with the count remaining. The floor exists because
 the prompt alone did nothing: the first smoke of the new prompt (Fable 5,
 2026-09-02) searched four times, read no page and submitted, exactly as under
-the old prompt. Reasoning runs at each provider's top rung
+the old prompt. Since 2026-09-11 the loop also enforces **coverage**:
+`web_search` takes a `cause` (the question group, an enum drawn from the
+batch), and submission is withheld until every group has had a `recent_days`
+search tagged with it, a premature call naming the groups still missing. The
+floor counts calls; coverage says what they must span. It came from comparing
+three GPT-6 Astra draws of the same instrument: the one that ran no
+misalignment search put its loss-of-control forecasts at half the other two's,
+which had each read a loss-of-control incident report. The turn guard still
+wins, with a warning in the run log naming what went uncovered. Reasoning runs at each provider's top rung
 (`redlines.llm.REASONING`: Anthropic `max`, OpenAI `xhigh`; Anthropic's effort
 level also governs how many tool calls the model makes), and the loop carries
 Anthropic's signed thinking blocks across tool turns, which the API requires.

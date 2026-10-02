@@ -29,6 +29,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 from redlines.conditional import summarize          # noqa: E402
 from redlines.views.capability import _trend        # noqa: E402
+from redlines.logs import log_exists, log_files  # noqa: E402
 
 R = os.path.join(ROOT, "results")
 SETS = {
@@ -57,9 +58,9 @@ def load(name, day):
     set_path, proto, paths = SETS[name]
     rows = []
     for p in paths:
-        if not os.path.exists(p):
+        if not log_exists(p):
             continue
-        with open(p) as f:
+        for f in (open(fp) for fp in log_files(p)):
             for line in f:
                 if not line.strip():
                     continue

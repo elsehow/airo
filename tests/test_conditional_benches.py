@@ -84,10 +84,10 @@ class TestCausalLockedDataset(unittest.TestCase):
         fable = next(m for m in b["models"] if m["id"] == "anthropic/claude-fable-5")
         self.assertEqual(fable["recovered"], 0.6684)
         self.assertEqual(fable["eci"], 162.49)
-        # inPanel follows the registry's panel of the day; a member draws in
-        # its registry color, everyone else in the one retired gray.
-        from redlines.registry import MODELS, RETIRED_COLOR, panel
-        panel_ids = {row["litellm_id"] for row, _ in panel()}
+        # inPanel follows the dashboard's panel (the newest run's); a member
+        # draws in its registry color, everyone else in the one retired gray.
+        from redlines.registry import MODELS, RETIRED_COLOR, published_panel
+        panel_ids = {row["litellm_id"] for row, _ in published_panel()}
         by_id = {m["litellm_id"]: m for m in MODELS}
         for m in b["models"]:
             self.assertEqual(m["inPanel"], m["id"] in panel_ids, m["id"])

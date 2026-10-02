@@ -55,7 +55,7 @@ from .pages import hydrate_page
 # Canonical build order. --views may name a subset but not reorder it -- the
 # views are independent (no view reads another's output) so order only
 # affects print order, but we keep it fixed for predictable output.
-VIEW_ORDER = ["g1", "g2", "g3", "g4", "observational", "causal", "databank", "timeline", "conditional", "capability", "axes", "method", "csv"]
+VIEW_ORDER = ["g1", "g2", "g3", "g4", "observational", "causal", "databank", "timeline", "conditional", "capability", "axes", "method", "rationales", "csv"]
 
 
 def _build_g1():
@@ -220,7 +220,8 @@ def _build_csv():
     # Not a view: the dataset itself (redlines/export.py), the target of the
     # page's "Download forecasts" button. Built here so one command refreshes
     # the panels and the download they summarise from the same log.
-    from .export import BUNDLE_OUT, OUT, RATIONALES_OUT, bundle_zip, forecasts_csv, rationales_csv
+    from .export import (BUNDLE_OUT, DEBRIEFS_OUT, OUT, RATIONALES_OUT, bundle_zip,
+                         debriefs_csv, forecasts_csv, rationales_csv)
 
     n = forecasts_csv()
     print(f"csv: {n} forecasts -> {OUT}")
@@ -228,6 +229,9 @@ def _build_csv():
     # joined on call_id + question_id + condition.
     m = rationales_csv()
     print(f"csv: {m} rationales -> {RATIONALES_OUT}")
+    # And the debriefs (2026-09-15): one line per (call, question group).
+    d = debriefs_csv()
+    print(f"csv: {d} debriefs -> {DEBRIEFS_OUT}")
     # And the bundle: both CSVs, the raw logs, questions, conditions, README.
     k = bundle_zip()
     print(f"csv: {k} files -> {BUNDLE_OUT} ({BUNDLE_OUT.stat().st_size / 1e6:.1f} MB)")
@@ -240,6 +244,18 @@ def _build_method():
     path = inject("METHOD", blob, json_out="results/method_data.json")
     print(f"method: prompt as of {blob['today']} ({blob['nQuestions']} questions, {blob['cells']} cells x "
           f"{blob['k']} conditions, {blob['chars']} chars), panel of {len(blob['panel'].get('members', []))} -> {path.name}")
+
+
+def _build_rationales():
+    # The explanations behind the current charts' calls (the "Why these
+    # forecasts?" panels). Run-log-driven like g1/g2/timeline, so the box's
+    # publish must rebuild it after every run or the panels go stale: they
+    # show only calls dated the chart's latest reading.
+    from .views import rationales
+
+    blob = rationales.build()
+    path = inject("RATIONALES", blob, json_out="results/rationales_data.json")
+    print(f"rationales: {len(blob['calls'])} call(s) across {len(blob['questions'])} question(s) -> {path.name}")
 
 
 BUILDERS = {
@@ -255,6 +271,7 @@ BUILDERS = {
     "capability": _build_capability,
     "axes": _build_axes,
     "method": _build_method,
+    "rationales": _build_rationales,
     "csv": _build_csv,
 }
 
@@ -316,7 +333,7 @@ def _blobs_for_demo():
     same graph4 final=True) as the `build` command's g4/g1/g2/databank/g3
     builders, just not mirrored to results/ or inject()-ed to disk here."""
     from .views import (axes, capability, causal, conditional, databank, graph1, graph2,
-                        method, observational, timeline)
+                        method, observational, timeline, rationales)
 
     return {
         "GRAPH4": g4_blob()[0],
@@ -331,6 +348,7 @@ def _blobs_for_demo():
         "OBSERVATIONAL": observational.build(),
         "CAUSAL": causal.build(),
         "METHOD": method.build(),
+        "RATIONALES": rationales.build(),
     }
 
 

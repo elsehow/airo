@@ -12,7 +12,8 @@
     "AXES",
     "OBSERVATIONAL",
     "CAUSAL",
-    "METHOD"
+    "METHOD",
+    "RATIONALES"
   ],
   "chunks": [
     "00-head.html",
@@ -26,6 +27,7 @@
     "45-conditional-benches.jsx",
     "50-live-databank.jsx",
     "60-atoms.jsx",
+    "65-rationales.jsx",
     "../shared/responsive.jsx",
     "../shared/question-rail.jsx",
     "70-modal.jsx",

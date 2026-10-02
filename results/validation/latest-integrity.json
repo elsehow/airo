@@ -1,0 +1,1219 @@
+{
+  "date": "2026-09-16",
+  "instrument_version": "airo-incidents-prospective-v1",
+  "models": [
+    "Fable 5.1",
+    "GPT-5.5 Pro",
+    "GPT-6 Astra",
+    "Opus 5"
+  ],
+  "instruments": {
+    "combined": {
+      "file_sha256": "2dd7d8631c409a59fac995fee65b5fe9f6c110742bb5c2d989167b6048dea6ed",
+      "prompt_sha256": "cd988a0db7de161fe0b885c21b84d197844ef6811653cb94761eee01c1a508aa",
+      "rows": 2296,
+      "probabilities": 13776,
+      "expected_probabilities": 13776,
+      "calls": [
+        {
+          "call_id": "2026-09-16T1645Z:combined:joint#1:GPT-6 Astra",
+          "label": "GPT-6 Astra",
+          "rows": 574,
+          "evidence": 35,
+          "usage": {
+            "turns": 20,
+            "reasoning_effort": "xhigh",
+            "reasoning_requested": "xhigh",
+            "cost_usd": 8.843886,
+            "input_tokens": 1781774,
+            "output_tokens": 72126,
+            "reasoning_tokens": 17567,
+            "cached_tokens": 1481199
+          },
+          "submission": {
+            "cells_calls": 8,
+            "cells_in_pieces": 216,
+            "cells_in_final": 30
+          }
+        },
+        {
+          "call_id": "2026-09-16T1645Z:combined:joint#1:GPT-5.5 Pro",
+          "label": "GPT-5.5 Pro",
+          "rows": 574,
+          "evidence": 30,
+          "usage": {
+            "turns": 10,
+            "reasoning_effort": "xhigh",
+            "reasoning_requested": "xhigh",
+            "cost_usd": 45.24567,
+            "input_tokens": 869621,
+            "output_tokens": 106428,
+            "reasoning_tokens": 58088
+          },
+          "submission": {
+            "cells_calls": 5,
+            "cells_in_pieces": 246,
+            "cells_in_final": 0
+          }
+        },
+        {
+          "call_id": "2026-09-16T1824Z:combined:joint#1:Opus 5",
+          "label": "Opus 5",
+          "rows": 574,
+          "evidence": 19,
+          "usage": {
+            "turns": 22,
+            "reasoning_effort": "max",
+            "reasoning_requested": "max",
+            "cost_usd": 19.631465,
+            "input_tokens": 3182258,
+            "output_tokens": 148807
+          },
+          "submission": {
+            "cells_calls": 9,
+            "cells_in_pieces": 246,
+            "cells_in_final": 0
+          }
+        },
+        {
+          "call_id": "2026-09-16T1824Z:combined:joint#1:Fable 5.1",
+          "label": "Fable 5.1",
+          "rows": 574,
+          "evidence": 18,
+          "usage": {
+            "turns": 34,
+            "reasoning_effort": "max",
+            "reasoning_requested": "max",
+            "cost_usd": 62.4258,
+            "input_tokens": 4868315,
+            "output_tokens": 274853
+          },
+          "submission": {
+            "cells_calls": 9,
+            "cells_in_pieces": 246,
+            "cells_in_final": 0
+          }
+        }
+      ]
+    }
+  },
+  "errors": [],
+  "coherence_warnings": [
+    {
+      "set": "combined",
+      "check": "horizon",
+      "left": [
+        "Opus 5",
+        "ladder:cyber:1k",
+        "p1",
+        "2050"
+      ],
+      "right": [
+        "Opus 5",
+        "ladder:cyber:1k",
+        "p1",
+        "2100"
+      ],
+      "values": [
+        0.9906,
+        0.9905
+      ],
+      "excess_pp": 0.009999999999998899
+    },
+    {
+      "set": "combined",
+      "check": "horizon",
+      "left": [
+        "Opus 5",
+        "ladder:cyber:100",
+        "sq",
+        "2050"
+      ],
+      "right": [
+        "Opus 5",
+        "ladder:cyber:100",
+        "sq",
+        "2100"
+      ],
+      "values": [
+        0.9973,
+        0.9972
+      ],
+      "excess_pp": 0.009999999999998899
+    },
+    {
+      "set": "combined",
+      "check": "horizon",
+      "left": [
+        "Opus 5",
+        "ladder:cyber:1k",
+        "sq",
+        "2050"
+      ],
+      "right": [
+        "Opus 5",
+        "ladder:cyber:1k",
+        "sq",
+        "2100"
+      ],
+      "values": [
+        0.991,
+        0.9907
+      ],
+      "excess_pp": 0.029999999999996696
+    },
+    {
+      "set": "combined",
+      "check": "horizon",
+      "left": [
+        "GPT-5.5 Pro",
+        "ladder:ai:100",
+        "p5",
+        "2028"
+      ],
+      "right": [
+        "GPT-5.5 Pro",
+        "ladder:ai:100",
+        "p5",
+        "2030"
+      ],
+      "values": [
+        0.369,
+        0.32
+      ],
+      "excess_pp": 4.899999999999999
+    },
+    {
+      "set": "combined",
+      "check": "horizon",
+      "left": [
+        "GPT-5.5 Pro",
+        "ladder:ai:1k",
+        "p5",
+        "2028"
+      ],
+      "right": [
+        "GPT-5.5 Pro",
+        "ladder:ai:1k",
+        "p5",
+        "2030"
+      ],
+      "values": [
+        0.306,
+        0.292
+      ],
+      "excess_pp": 1.4000000000000012
+    },
+    {
+      "set": "combined",
+      "check": "horizon",
+      "left": [
+        "GPT-5.5 Pro",
+        "ladder:cyber:100",
+        "p5",
+        "2028"
+      ],
+      "right": [
+        "GPT-5.5 Pro",
+        "ladder:cyber:100",
+        "p5",
+        "2030"
+      ],
+      "values": [
+        0.324,
+        0.2924
+      ],
+      "excess_pp": 3.160000000000002
+    },
+    {
+      "set": "combined",
+      "check": "horizon",
+      "left": [
+        "GPT-5.5 Pro",
+        "ladder:cyber:1k",
+        "p5",
+        "2028"
+      ],
+      "right": [
+        "GPT-5.5 Pro",
+        "ladder:cyber:1k",
+        "p5",
+        "2030"
+      ],
+      "values": [
+        0.279,
+        0.2652
+      ],
+      "excess_pp": 1.3800000000000034
+    },
+    {
+      "set": "combined",
+      "check": "horizon",
+      "left": [
+        "GPT-5.5 Pro",
+        "ladder:ai:100",
+        "p2a",
+        "2030"
+      ],
+      "right": [
+        "GPT-5.5 Pro",
+        "ladder:ai:100",
+        "p2a",
+        "2050"
+      ],
+      "values": [
+        0.808,
+        0.796
+      ],
+      "excess_pp": 1.200000000000001
+    },
+    {
+      "set": "combined",
+      "check": "horizon",
+      "left": [
+        "GPT-5.5 Pro",
+        "ladder:ai:100",
+        "p3a",
+        "2030"
+      ],
+      "right": [
+        "GPT-5.5 Pro",
+        "ladder:ai:100",
+        "p3a",
+        "2050"
+      ],
+      "values": [
+        0.714,
+        0.697
+      ],
+      "excess_pp": 1.7000000000000015
+    },
+    {
+      "set": "combined",
+      "check": "horizon",
+      "left": [
+        "GPT-5.5 Pro",
+        "ladder:ai:100",
+        "p4",
+        "2030"
+      ],
+      "right": [
+        "GPT-5.5 Pro",
+        "ladder:ai:100",
+        "p4",
+        "2050"
+      ],
+      "values": [
+        0.677,
+        0.647
+      ],
+      "excess_pp": 3.0000000000000027
+    },
+    {
+      "set": "combined",
+      "check": "horizon",
+      "left": [
+        "GPT-5.5 Pro",
+        "ladder:ai:100",
+        "p3b",
+        "2028"
+      ],
+      "right": [
+        "GPT-5.5 Pro",
+        "ladder:ai:100",
+        "p3b",
+        "2030"
+      ],
+      "values": [
+        0.533,
+        0.526
+      ],
+      "excess_pp": 0.7000000000000006
+    },
+    {
+      "set": "combined",
+      "check": "horizon",
+      "left": [
+        "GPT-5.5 Pro",
+        "ladder:bio:1B",
+        "eci_p90",
+        "2050"
+      ],
+      "right": [
+        "GPT-5.5 Pro",
+        "ladder:bio:1B",
+        "eci_p90",
+        "2100"
+      ],
+      "values": [
+        0.0342,
+        0.0319
+      ],
+      "excess_pp": 0.23000000000000034
+    },
+    {
+      "set": "combined",
+      "check": "subtype_within_ai",
+      "left": [
+        "Fable 5.1",
+        "ladder:bio:100M",
+        null,
+        "6mo"
+      ],
+      "right": [
+        "Fable 5.1",
+        "ladder:ai:100M",
+        null,
+        "6mo"
+      ],
+      "values": [
+        8e-05,
+        5e-05
+      ],
+      "excess_pp": 0.0030000000000000005
+    },
+    {
+      "set": "combined",
+      "check": "subtype_within_ai",
+      "left": [
+        "Fable 5.1",
+        "ladder:cyber:1M",
+        "eci_p10",
+        "6mo"
+      ],
+      "right": [
+        "Fable 5.1",
+        "ladder:ai:1M",
+        "eci_p10",
+        "6mo"
+      ],
+      "values": [
+        0.0017,
+        0.0014
+      ],
+      "excess_pp": 0.029999999999999992
+    },
+    {
+      "set": "combined",
+      "check": "subtype_within_ai",
+      "left": [
+        "Fable 5.1",
+        "ladder:cyber:100M",
+        "eci_p10",
+        "6mo"
+      ],
+      "right": [
+        "Fable 5.1",
+        "ladder:ai:100M",
+        "eci_p10",
+        "6mo"
+      ],
+      "values": [
+        4.25e-05,
+        3.5e-05
+      ],
+      "excess_pp": 0.0007500000000000007
+    },
+    {
+      "set": "combined",
+      "check": "subtype_within_ai",
+      "left": [
+        "Fable 5.1",
+        "ladder:bio:100M",
+        "eci_p10",
+        "6mo"
+      ],
+      "right": [
+        "Fable 5.1",
+        "ladder:ai:100M",
+        "eci_p10",
+        "6mo"
+      ],
+      "values": [
+        6.2e-05,
+        3.5e-05
+      ],
+      "excess_pp": 0.0027000000000000006
+    },
+    {
+      "set": "combined",
+      "check": "subtype_within_ai",
+      "left": [
+        "Fable 5.1",
+        "ladder:bio:1B",
+        "eci_p10",
+        "6mo"
+      ],
+      "right": [
+        "Fable 5.1",
+        "ladder:ai:1B",
+        "eci_p10",
+        "6mo"
+      ],
+      "values": [
+        1.55e-05,
+        1.4e-05
+      ],
+      "excess_pp": 0.0001500000000000001
+    },
+    {
+      "set": "combined",
+      "check": "subtype_within_ai",
+      "left": [
+        "Fable 5.1",
+        "ladder:bio:100M",
+        "eci_p10",
+        "12mo"
+      ],
+      "right": [
+        "Fable 5.1",
+        "ladder:ai:100M",
+        "eci_p10",
+        "12mo"
+      ],
+      "values": [
+        0.000115,
+        0.000105
+      ],
+      "excess_pp": 0.001
+    },
+    {
+      "set": "combined",
+      "check": "subtype_within_ai",
+      "left": [
+        "Fable 5.1",
+        "ladder:bio:100M",
+        "p1",
+        "6mo"
+      ],
+      "right": [
+        "Fable 5.1",
+        "ladder:ai:100M",
+        "p1",
+        "6mo"
+      ],
+      "values": [
+        8e-05,
+        5e-05
+      ],
+      "excess_pp": 0.0030000000000000005
+    },
+    {
+      "set": "combined",
+      "check": "subtype_within_ai",
+      "left": [
+        "Fable 5.1",
+        "ladder:bio:100M",
+        "p5",
+        "6mo"
+      ],
+      "right": [
+        "Fable 5.1",
+        "ladder:ai:100M",
+        "p5",
+        "6mo"
+      ],
+      "values": [
+        7.04e-05,
+        4.4e-05
+      ],
+      "excess_pp": 0.0026400000000000004
+    },
+    {
+      "set": "combined",
+      "check": "subtype_within_ai",
+      "left": [
+        "Fable 5.1",
+        "ladder:bio:100M",
+        "p5",
+        "12mo"
+      ],
+      "right": [
+        "Fable 5.1",
+        "ladder:ai:100M",
+        "p5",
+        "12mo"
+      ],
+      "values": [
+        0.000119,
+        0.000117
+      ],
+      "excess_pp": 0.0002000000000000008
+    },
+    {
+      "set": "combined",
+      "check": "subtype_within_ai",
+      "left": [
+        "Fable 5.1",
+        "ladder:cyber:1M",
+        "p5",
+        "2030"
+      ],
+      "right": [
+        "Fable 5.1",
+        "ladder:ai:1M",
+        "p5",
+        "2030"
+      ],
+      "values": [
+        0.0375,
+        0.0363
+      ],
+      "excess_pp": 0.11999999999999997
+    },
+    {
+      "set": "combined",
+      "check": "subtype_within_ai",
+      "left": [
+        "Fable 5.1",
+        "ladder:cyber:1M",
+        "p2a",
+        "6mo"
+      ],
+      "right": [
+        "Fable 5.1",
+        "ladder:ai:1M",
+        "p2a",
+        "6mo"
+      ],
+      "values": [
+        0.00198,
+        0.00194
+      ],
+      "excess_pp": 0.003999999999999989
+    },
+    {
+      "set": "combined",
+      "check": "subtype_within_ai",
+      "left": [
+        "Fable 5.1",
+        "ladder:cyber:100M",
+        "p2a",
+        "6mo"
+      ],
+      "right": [
+        "Fable 5.1",
+        "ladder:ai:100M",
+        "p2a",
+        "6mo"
+      ],
+      "values": [
+        4.95e-05,
+        4.85e-05
+      ],
+      "excess_pp": 9.999999999999972e-05
+    },
+    {
+      "set": "combined",
+      "check": "subtype_within_ai",
+      "left": [
+        "Fable 5.1",
+        "ladder:bio:100M",
+        "p2a",
+        "6mo"
+      ],
+      "right": [
+        "Fable 5.1",
+        "ladder:ai:100M",
+        "p2a",
+        "6mo"
+      ],
+      "values": [
+        7.84e-05,
+        4.85e-05
+      ],
+      "excess_pp": 0.0029899999999999996
+    },
+    {
+      "set": "combined",
+      "check": "subtype_within_ai",
+      "left": [
+        "Fable 5.1",
+        "ladder:bio:1B",
+        "p2a",
+        "6mo"
+      ],
+      "right": [
+        "Fable 5.1",
+        "ladder:ai:1B",
+        "p2a",
+        "6mo"
+      ],
+      "values": [
+        1.96e-05,
+        1.94e-05
+      ],
+      "excess_pp": 1.999999999999981e-05
+    },
+    {
+      "set": "combined",
+      "check": "subtype_within_ai",
+      "left": [
+        "Fable 5.1",
+        "ladder:bio:100M",
+        "p2a",
+        "12mo"
+      ],
+      "right": [
+        "Fable 5.1",
+        "ladder:ai:100M",
+        "p2a",
+        "12mo"
+      ],
+      "values": [
+        0.000143,
+        0.00014
+      ],
+      "excess_pp": 0.00030000000000000187
+    },
+    {
+      "set": "combined",
+      "check": "subtype_within_ai",
+      "left": [
+        "Fable 5.1",
+        "ladder:cyber:1M",
+        "eci_p50",
+        "6mo"
+      ],
+      "right": [
+        "Fable 5.1",
+        "ladder:ai:1M",
+        "eci_p50",
+        "6mo"
+      ],
+      "values": [
+        0.00198,
+        0.00196
+      ],
+      "excess_pp": 0.0020000000000000052
+    },
+    {
+      "set": "combined",
+      "check": "subtype_within_ai",
+      "left": [
+        "Fable 5.1",
+        "ladder:cyber:100M",
+        "eci_p50",
+        "6mo"
+      ],
+      "right": [
+        "Fable 5.1",
+        "ladder:ai:100M",
+        "eci_p50",
+        "6mo"
+      ],
+      "values": [
+        4.95e-05,
+        4.9e-05
+      ],
+      "excess_pp": 4.999999999999986e-05
+    },
+    {
+      "set": "combined",
+      "check": "subtype_within_ai",
+      "left": [
+        "Fable 5.1",
+        "ladder:bio:100M",
+        "eci_p50",
+        "6mo"
+      ],
+      "right": [
+        "Fable 5.1",
+        "ladder:ai:100M",
+        "eci_p50",
+        "6mo"
+      ],
+      "values": [
+        7.88e-05,
+        4.9e-05
+      ],
+      "excess_pp": 0.0029800000000000004
+    },
+    {
+      "set": "combined",
+      "check": "subtype_within_ai",
+      "left": [
+        "Fable 5.1",
+        "ladder:bio:1B",
+        "eci_p50",
+        "6mo"
+      ],
+      "right": [
+        "Fable 5.1",
+        "ladder:ai:1B",
+        "eci_p50",
+        "6mo"
+      ],
+      "values": [
+        1.97e-05,
+        1.96e-05
+      ],
+      "excess_pp": 1.0000000000000243e-05
+    },
+    {
+      "set": "combined",
+      "check": "subtype_within_ai",
+      "left": [
+        "Fable 5.1",
+        "ladder:bio:100M",
+        "eci_p50",
+        "12mo"
+      ],
+      "right": [
+        "Fable 5.1",
+        "ladder:ai:100M",
+        "eci_p50",
+        "12mo"
+      ],
+      "values": [
+        0.000148,
+        0.000147
+      ],
+      "excess_pp": 9.999999999999972e-05
+    },
+    {
+      "set": "combined",
+      "check": "subtype_within_ai",
+      "left": [
+        "Fable 5.1",
+        "ladder:bio:100M",
+        "p3a",
+        "6mo"
+      ],
+      "right": [
+        "Fable 5.1",
+        "ladder:ai:100M",
+        "p3a",
+        "6mo"
+      ],
+      "values": [
+        7.2e-05,
+        4.65e-05
+      ],
+      "excess_pp": 0.00255
+    },
+    {
+      "set": "combined",
+      "check": "subtype_within_ai",
+      "left": [
+        "Fable 5.1",
+        "ladder:cyber:1M",
+        "p4",
+        "6mo"
+      ],
+      "right": [
+        "Fable 5.1",
+        "ladder:ai:1M",
+        "p4",
+        "6mo"
+      ],
+      "values": [
+        0.00192,
+        0.0019
+      ],
+      "excess_pp": 0.0020000000000000052
+    },
+    {
+      "set": "combined",
+      "check": "subtype_within_ai",
+      "left": [
+        "Fable 5.1",
+        "ladder:cyber:100M",
+        "p4",
+        "6mo"
+      ],
+      "right": [
+        "Fable 5.1",
+        "ladder:ai:100M",
+        "p4",
+        "6mo"
+      ],
+      "values": [
+        4.8e-05,
+        4.75e-05
+      ],
+      "excess_pp": 4.999999999999986e-05
+    },
+    {
+      "set": "combined",
+      "check": "subtype_within_ai",
+      "left": [
+        "Fable 5.1",
+        "ladder:bio:100M",
+        "p4",
+        "6mo"
+      ],
+      "right": [
+        "Fable 5.1",
+        "ladder:ai:100M",
+        "p4",
+        "6mo"
+      ],
+      "values": [
+        7.64e-05,
+        4.75e-05
+      ],
+      "excess_pp": 0.0028899999999999998
+    },
+    {
+      "set": "combined",
+      "check": "subtype_within_ai",
+      "left": [
+        "Fable 5.1",
+        "ladder:bio:1B",
+        "p4",
+        "6mo"
+      ],
+      "right": [
+        "Fable 5.1",
+        "ladder:ai:1B",
+        "p4",
+        "6mo"
+      ],
+      "values": [
+        1.91e-05,
+        1.9e-05
+      ],
+      "excess_pp": 9.999999999999904e-06
+    },
+    {
+      "set": "combined",
+      "check": "subtype_within_ai",
+      "left": [
+        "Fable 5.1",
+        "ladder:bio:100M",
+        "p4",
+        "12mo"
+      ],
+      "right": [
+        "Fable 5.1",
+        "ladder:ai:100M",
+        "p4",
+        "12mo"
+      ],
+      "values": [
+        0.000137,
+        0.000135
+      ],
+      "excess_pp": 0.00019999999999999944
+    },
+    {
+      "set": "combined",
+      "check": "subtype_within_ai",
+      "left": [
+        "Fable 5.1",
+        "ladder:bio:100M",
+        "p3b",
+        "6mo"
+      ],
+      "right": [
+        "Fable 5.1",
+        "ladder:ai:100M",
+        "p3b",
+        "6mo"
+      ],
+      "values": [
+        7.04e-05,
+        4.6e-05
+      ],
+      "excess_pp": 0.0024400000000000003
+    },
+    {
+      "set": "combined",
+      "check": "subtype_within_ai",
+      "left": [
+        "Fable 5.1",
+        "ladder:bio:100M",
+        "eci_p90",
+        "6mo"
+      ],
+      "right": [
+        "Fable 5.1",
+        "ladder:ai:100M",
+        "eci_p90",
+        "6mo"
+      ],
+      "values": [
+        0.000108,
+        7.5e-05
+      ],
+      "excess_pp": 0.0033000000000000004
+    },
+    {
+      "set": "combined",
+      "check": "subtype_within_ai",
+      "left": [
+        "Fable 5.1",
+        "ladder:bio:100M",
+        "sq",
+        "6mo"
+      ],
+      "right": [
+        "Fable 5.1",
+        "ladder:ai:100M",
+        "sq",
+        "6mo"
+      ],
+      "values": [
+        8e-05,
+        5e-05
+      ],
+      "excess_pp": 0.0030000000000000005
+    },
+    {
+      "set": "combined",
+      "check": "subtype_within_ai",
+      "left": [
+        "Fable 5.1",
+        "ladder:cyber:1M",
+        "p2b",
+        "6mo"
+      ],
+      "right": [
+        "Fable 5.1",
+        "ladder:ai:1M",
+        "p2b",
+        "6mo"
+      ],
+      "values": [
+        0.00196,
+        0.0019
+      ],
+      "excess_pp": 0.005999999999999994
+    },
+    {
+      "set": "combined",
+      "check": "subtype_within_ai",
+      "left": [
+        "Fable 5.1",
+        "ladder:cyber:100M",
+        "p2b",
+        "6mo"
+      ],
+      "right": [
+        "Fable 5.1",
+        "ladder:ai:100M",
+        "p2b",
+        "6mo"
+      ],
+      "values": [
+        4.9e-05,
+        4.75e-05
+      ],
+      "excess_pp": 0.00014999999999999958
+    },
+    {
+      "set": "combined",
+      "check": "subtype_within_ai",
+      "left": [
+        "Fable 5.1",
+        "ladder:bio:100M",
+        "p2b",
+        "6mo"
+      ],
+      "right": [
+        "Fable 5.1",
+        "ladder:ai:100M",
+        "p2b",
+        "6mo"
+      ],
+      "values": [
+        7.72e-05,
+        4.75e-05
+      ],
+      "excess_pp": 0.0029700000000000004
+    },
+    {
+      "set": "combined",
+      "check": "subtype_within_ai",
+      "left": [
+        "Fable 5.1",
+        "ladder:bio:1B",
+        "p2b",
+        "6mo"
+      ],
+      "right": [
+        "Fable 5.1",
+        "ladder:ai:1B",
+        "p2b",
+        "6mo"
+      ],
+      "values": [
+        1.93e-05,
+        1.9e-05
+      ],
+      "excess_pp": 3.000000000000005e-05
+    },
+    {
+      "set": "combined",
+      "check": "subtype_within_ai",
+      "left": [
+        "Fable 5.1",
+        "ladder:bio:100M",
+        "p2b",
+        "12mo"
+      ],
+      "right": [
+        "Fable 5.1",
+        "ladder:ai:100M",
+        "p2b",
+        "12mo"
+      ],
+      "values": [
+        0.000139,
+        0.000135
+      ],
+      "excess_pp": 0.0003999999999999989
+    },
+    {
+      "set": "combined",
+      "check": "subtype_within_ai",
+      "left": [
+        "Fable 5.1",
+        "ladder:cyber:1M",
+        "p2b",
+        "2030"
+      ],
+      "right": [
+        "Fable 5.1",
+        "ladder:ai:1M",
+        "p2b",
+        "2030"
+      ],
+      "values": [
+        0.0497,
+        0.0466
+      ],
+      "excess_pp": 0.30999999999999983
+    },
+    {
+      "set": "combined",
+      "check": "subtype_within_ai",
+      "left": [
+        "Fable 5.1",
+        "ladder:bio:100M",
+        "eci_p75",
+        "6mo"
+      ],
+      "right": [
+        "Fable 5.1",
+        "ladder:ai:100M",
+        "eci_p75",
+        "6mo"
+      ],
+      "values": [
+        9.12e-05,
+        6e-05
+      ],
+      "excess_pp": 0.003119999999999999
+    },
+    {
+      "set": "combined",
+      "check": "subtype_within_ai",
+      "left": [
+        "Fable 5.1",
+        "ladder:cyber:1M",
+        "eci_p25",
+        "6mo"
+      ],
+      "right": [
+        "Fable 5.1",
+        "ladder:ai:1M",
+        "eci_p25",
+        "6mo"
+      ],
+      "values": [
+        0.00186,
+        0.0017
+      ],
+      "excess_pp": 0.01600000000000002
+    },
+    {
+      "set": "combined",
+      "check": "subtype_within_ai",
+      "left": [
+        "Fable 5.1",
+        "ladder:cyber:100M",
+        "eci_p25",
+        "6mo"
+      ],
+      "right": [
+        "Fable 5.1",
+        "ladder:ai:100M",
+        "eci_p25",
+        "6mo"
+      ],
+      "values": [
+        4.65e-05,
+        4.25e-05
+      ],
+      "excess_pp": 0.00039999999999999953
+    },
+    {
+      "set": "combined",
+      "check": "subtype_within_ai",
+      "left": [
+        "Fable 5.1",
+        "ladder:bio:100M",
+        "eci_p25",
+        "6mo"
+      ],
+      "right": [
+        "Fable 5.1",
+        "ladder:ai:100M",
+        "eci_p25",
+        "6mo"
+      ],
+      "values": [
+        7.12e-05,
+        4.25e-05
+      ],
+      "excess_pp": 0.0028699999999999993
+    },
+    {
+      "set": "combined",
+      "check": "subtype_within_ai",
+      "left": [
+        "Fable 5.1",
+        "ladder:bio:1B",
+        "eci_p25",
+        "6mo"
+      ],
+      "right": [
+        "Fable 5.1",
+        "ladder:ai:1B",
+        "eci_p25",
+        "6mo"
+      ],
+      "values": [
+        1.78e-05,
+        1.7e-05
+      ],
+      "excess_pp": 7.999999999999991e-05
+    },
+    {
+      "set": "combined",
+      "check": "subtype_within_ai",
+      "left": [
+        "Fable 5.1",
+        "ladder:bio:100M",
+        "eci_p25",
+        "12mo"
+      ],
+      "right": [
+        "Fable 5.1",
+        "ladder:ai:100M",
+        "eci_p25",
+        "12mo"
+      ],
+      "values": [
+        0.000133,
+        0.000128
+      ],
+      "excess_pp": 0.0005000000000000013
+    }
+  ],
+  "debrief_warnings": [],
+  "passed_integrity_checks": true,
+  "recorded_cost_usd": 136.146821
+}

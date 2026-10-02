@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-08-18T2326Z",
+  "generated_at": "2026-09-15T2220Z",
   "generated_by": "code/fetch_human_baselines.py",
-  "asked_for_by": "the 'Human comparisons (Project)' column of data/auto-arc/questions-2026-08-18.xlsx, carried into data/autoarc_*.json as each question's human_comparisons",
+  "asked_for_by": "the 'Human comparisons (Project)' column of data/auto-arc/questions-2026-08-31.xlsx, and the human_comparisons of data/auto-arc/addendum-*.json, carried into data/autoarc_*.json as each question's human_comparisons",
   "adjusted": false,
   "note": "Medians as each panel reported them, in percent, unadjusted. Every entry carries the question the panel answered; the wordings differ from ours and no reconciliation is applied here.",
   "baselines": [
@@ -96,7 +96,7 @@
         ]
       },
       "our_question": {
-        "text": "What is the probability that a global AI-related catastrophe (AI being the proximate cause, per the but-for standard, of attributable deaths reaching at least 10% of the population alive at the start of the measurement window) will occur by the end of 2030 / 2050 / 2100?",
+        "text": "What is the probability that a global AI-related catastrophe (AI being the proximate cause, per the but-for standard, of attributable deaths reaching at least 10% of the population alive at the start of the measurement window) will occur within 6 months / within 12 months / by the end of 2028 / by the end of 2030 / by the end of 2050 / by the end of 2100?",
         "severity": "deaths reaching 10% of the population"
       }
     },
@@ -191,7 +191,7 @@
         ]
       },
       "our_question": {
-        "text": "What is the probability that a global AI-related catastrophe (AI being the proximate cause, per the but-for standard, of attributable deaths reaching at least 10% of the population alive at the start of the measurement window) will occur by the end of 2030 / 2050 / 2100?",
+        "text": "What is the probability that a global AI-related catastrophe (AI being the proximate cause, per the but-for standard, of attributable deaths reaching at least 10% of the population alive at the start of the measurement window) will occur within 6 months / within 12 months / by the end of 2028 / by the end of 2030 / by the end of 2050 / by the end of 2100?",
         "severity": "deaths reaching 10% of the population"
       }
     },
@@ -286,7 +286,7 @@
         ]
       },
       "our_question": {
-        "text": "What is the probability that a global AI-related catastrophe (AI being the proximate cause, per the but-for standard, of attributable deaths reaching at least 10% of the population alive at the start of the measurement window) will occur by the end of 2030 / 2050 / 2100?",
+        "text": "What is the probability that a global AI-related catastrophe (AI being the proximate cause, per the but-for standard, of attributable deaths reaching at least 10% of the population alive at the start of the measurement window) will occur within 6 months / within 12 months / by the end of 2028 / by the end of 2030 / by the end of 2050 / by the end of 2100?",
         "severity": "deaths reaching 10% of the population"
       }
     },
@@ -381,7 +381,7 @@
         ]
       },
       "our_question": {
-        "text": "What is the probability that any global catastrophe (deaths reaching at least 10% of the population alive at the start of the measurement window) will occur by the end of 2030 / 2050 / 2100?",
+        "text": "What is the probability that any global catastrophe (deaths reaching at least 10% of the population alive at the start of the measurement window) will occur within 6 months / within 12 months / by the end of 2028 / by the end of 2030 / by the end of 2050 / by the end of 2100?",
         "severity": "deaths reaching 10% of the population"
       }
     },
@@ -476,7 +476,7 @@
         ]
       },
       "our_question": {
-        "text": "What is the probability that any global catastrophe (deaths reaching at least 10% of the population alive at the start of the measurement window) will occur by the end of 2030 / 2050 / 2100?",
+        "text": "What is the probability that any global catastrophe (deaths reaching at least 10% of the population alive at the start of the measurement window) will occur within 6 months / within 12 months / by the end of 2028 / by the end of 2030 / by the end of 2050 / by the end of 2100?",
         "severity": "deaths reaching 10% of the population"
       }
     },
@@ -571,8 +571,304 @@
         ]
       },
       "our_question": {
-        "text": "What is the probability that any global catastrophe (deaths reaching at least 10% of the population alive at the start of the measurement window) will occur by the end of 2030 / 2050 / 2100?",
+        "text": "What is the probability that any global catastrophe (deaths reaching at least 10% of the population alive at the start of the measurement window) will occur within 6 months / within 12 months / by the end of 2028 / by the end of 2030 / by the end of 2050 / by the end of 2100?",
         "severity": "deaths reaching 10% of the population"
+      }
+    },
+    {
+      "question_id": "extinction:ai",
+      "horizon": "2030",
+      "project": "XPT",
+      "prior_question_id": "xpt-ai-extinction-below-5000",
+      "units": "percent",
+      "groups": {
+        "expert": {
+          "median": 0.02,
+          "mean": 3.3182,
+          "p25": 0.0001,
+          "p75": 1.0,
+          "n": 75
+        },
+        "superforecaster": {
+          "median": 0.0001,
+          "mean": 0.2445,
+          "p25": 0.0,
+          "p75": 0.01,
+          "n": 88
+        }
+      },
+      "elicited": {
+        "date": "2022-10-01",
+        "commit": "251acb5254448c9bdb4caa4b5011481c2c149aef",
+        "repo": "https://github.com/forecastingresearch/xpt-lib.git"
+      },
+      "source_question": {
+        "category": "AI Extinction Risk",
+        "severity": "human extinction or global population below 5,000",
+        "text": "What is the probability that artificial intelligence will cause human extinction or reduce the global population below 5,000 by the end of 2030/2050/2100?",
+        "criteria": "Artificial intelligence is defined here as ‘the development of machines capable of sophisticated (intelligent) information processing (Dafoe 2018, AI Governance: A Research Agenda; See pg 5 footnote 2 for more.)\nAI would be considered to have \"caused\" extinction if it is the direct or proximate cause of the deaths. For example, if a terminator-style robot powered by AI kills all humans, that will count for this question. Alternatively, if AI, operating without direct human intervention, causes the launch of nuclear weapons that kill all humans, that will also count for the purposes of this question. And if that same incident does not kill all humans, but the subsequent nuclear winter does, that will also count for the purposes of this question.\nIf an extinction event (global population is reduced below 5,000) is caused by multiple sources including AI, it will count as an extinction event caused by AI.",
+        "resolution_dates": [
+          "2030",
+          "2050",
+          "2100"
+        ]
+      },
+      "our_question": {
+        "text": "What is the probability that artificial intelligence will cause human extinction or reduce the global population below 5,000 within 6 months / within 12 months / by the end of 2028 / by the end of 2030 / by the end of 2050 / by the end of 2100?",
+        "severity": "human extinction (global population below 5,000)"
+      }
+    },
+    {
+      "question_id": "extinction:ai",
+      "horizon": "2050",
+      "project": "XPT",
+      "prior_question_id": "xpt-ai-extinction-below-5000",
+      "units": "percent",
+      "groups": {
+        "expert": {
+          "median": 1.0,
+          "mean": 7.2889,
+          "p25": 0.05,
+          "p75": 5.0,
+          "n": 75
+        },
+        "superforecaster": {
+          "median": 0.03,
+          "mean": 1.2926,
+          "p25": 0.0001,
+          "p75": 0.4,
+          "n": 88
+        }
+      },
+      "elicited": {
+        "date": "2022-10-01",
+        "commit": "251acb5254448c9bdb4caa4b5011481c2c149aef",
+        "repo": "https://github.com/forecastingresearch/xpt-lib.git"
+      },
+      "source_question": {
+        "category": "AI Extinction Risk",
+        "severity": "human extinction or global population below 5,000",
+        "text": "What is the probability that artificial intelligence will cause human extinction or reduce the global population below 5,000 by the end of 2030/2050/2100?",
+        "criteria": "Artificial intelligence is defined here as ‘the development of machines capable of sophisticated (intelligent) information processing (Dafoe 2018, AI Governance: A Research Agenda; See pg 5 footnote 2 for more.)\nAI would be considered to have \"caused\" extinction if it is the direct or proximate cause of the deaths. For example, if a terminator-style robot powered by AI kills all humans, that will count for this question. Alternatively, if AI, operating without direct human intervention, causes the launch of nuclear weapons that kill all humans, that will also count for the purposes of this question. And if that same incident does not kill all humans, but the subsequent nuclear winter does, that will also count for the purposes of this question.\nIf an extinction event (global population is reduced below 5,000) is caused by multiple sources including AI, it will count as an extinction event caused by AI.",
+        "resolution_dates": [
+          "2030",
+          "2050",
+          "2100"
+        ]
+      },
+      "our_question": {
+        "text": "What is the probability that artificial intelligence will cause human extinction or reduce the global population below 5,000 within 6 months / within 12 months / by the end of 2028 / by the end of 2030 / by the end of 2050 / by the end of 2100?",
+        "severity": "human extinction (global population below 5,000)"
+      }
+    },
+    {
+      "question_id": "extinction:ai",
+      "horizon": "2100",
+      "project": "ESPAI",
+      "prior_question_id": "espai-2023-ai-extinction-or-disempowerment-100y",
+      "units": "percent",
+      "groups": {
+        "ai_researcher": {
+          "median": 5.0,
+          "mean": 14.4,
+          "sd": 22.2,
+          "iqr": 19.9,
+          "n": 655
+        }
+      },
+      "elicited": {
+        "date": "2023-10-11",
+        "start": "2023-10-11",
+        "end": "2023-10-24",
+        "project": "AI Impacts, Expert Survey on Progress in AI 2023"
+      },
+      "source_question": {
+        "category": "AI extinction or similarly permanent and severe disempowerment, within 100 years",
+        "severity": "human extinction or similarly permanent and severe disempowerment of the human species",
+        "text": "What probability do you put on future AI advances causing human extinction or similarly permanent and severe disempowerment of the human species within the next 100 years?",
+        "criteria": "The 2023 Expert Survey on Progress in AI (AI Impacts; Grace et al. 2024, \"Thousands of AI Authors on the Future of AI\", arXiv:2401.02843, Table 2), fielded 2023-10-11 to 2023-10-24 to authors who had recently published at six top-tier AI venues. No resolution criteria were given; \"similarly permanent and severe disempowerment\" is undefined and no population floor is stated. Each respondent saw ONE of three wordings: this one, with the 100-year limit (n=655; median 5%, mean 14.4%, SD 22.2%, IQR 19.9%); the same without a time limit (n=1,321; median 5%, mean 16.2%, SD 23%, IQR 19%); and \"human inability to control future advanced AI systems causing ...\" (n=661; median 10%, mean 19.4%). The 100-year wording, asked in late 2023, reaches roughly 2123; it is carried against AIRO's 2100 cell as the nearest horizon, not the same one.",
+        "resolution_dates": []
+      },
+      "our_question": {
+        "text": "What is the probability that artificial intelligence will cause human extinction or reduce the global population below 5,000 within 6 months / within 12 months / by the end of 2028 / by the end of 2030 / by the end of 2050 / by the end of 2100?",
+        "severity": "human extinction (global population below 5,000)"
+      },
+      "published": {
+        "citation": "Grace, Stewart, Sandkühler, Thomas, Weinstein-Raun and Brauner (2024), \"Thousands of AI Authors on the Future of AI\", arXiv:2401.02843, Table 2, question 3 (2023 responses)",
+        "url": "https://arxiv.org/abs/2401.02843",
+        "horizon_note": "asked as \"within the next 100 years\" in October 2023 (about 2123); carried against the 2100 cell as the nearest horizon, not the same one. The no-time-limit variant (n=1,321) had the same median, 5%, mean 16.2%."
+      }
+    },
+    {
+      "question_id": "extinction:ai",
+      "horizon": "2100",
+      "project": "XPT",
+      "prior_question_id": "xpt-ai-extinction-below-5000",
+      "units": "percent",
+      "groups": {
+        "expert": {
+          "median": 3.0,
+          "mean": 11.1824,
+          "p25": 0.53,
+          "p75": 10.0,
+          "n": 75
+        },
+        "superforecaster": {
+          "median": 0.375,
+          "mean": 1.9765,
+          "p25": 0.01,
+          "p75": 1.0053,
+          "n": 88
+        }
+      },
+      "elicited": {
+        "date": "2022-10-01",
+        "commit": "251acb5254448c9bdb4caa4b5011481c2c149aef",
+        "repo": "https://github.com/forecastingresearch/xpt-lib.git"
+      },
+      "source_question": {
+        "category": "AI Extinction Risk",
+        "severity": "human extinction or global population below 5,000",
+        "text": "What is the probability that artificial intelligence will cause human extinction or reduce the global population below 5,000 by the end of 2030/2050/2100?",
+        "criteria": "Artificial intelligence is defined here as ‘the development of machines capable of sophisticated (intelligent) information processing (Dafoe 2018, AI Governance: A Research Agenda; See pg 5 footnote 2 for more.)\nAI would be considered to have \"caused\" extinction if it is the direct or proximate cause of the deaths. For example, if a terminator-style robot powered by AI kills all humans, that will count for this question. Alternatively, if AI, operating without direct human intervention, causes the launch of nuclear weapons that kill all humans, that will also count for the purposes of this question. And if that same incident does not kill all humans, but the subsequent nuclear winter does, that will also count for the purposes of this question.\nIf an extinction event (global population is reduced below 5,000) is caused by multiple sources including AI, it will count as an extinction event caused by AI.",
+        "resolution_dates": [
+          "2030",
+          "2050",
+          "2100"
+        ]
+      },
+      "our_question": {
+        "text": "What is the probability that artificial intelligence will cause human extinction or reduce the global population below 5,000 within 6 months / within 12 months / by the end of 2028 / by the end of 2030 / by the end of 2050 / by the end of 2100?",
+        "severity": "human extinction (global population below 5,000)"
+      }
+    },
+    {
+      "question_id": "extinction:general",
+      "horizon": "2030",
+      "project": "XPT",
+      "prior_question_id": "xpt-total-extinction-below-5000",
+      "units": "percent",
+      "groups": {
+        "expert": {
+          "median": 0.275,
+          "mean": 3.5341,
+          "p25": 0.05,
+          "p75": 1.5,
+          "n": 70
+        },
+        "superforecaster": {
+          "median": 0.01,
+          "mean": 0.5211,
+          "p25": 0.001,
+          "p75": 0.2,
+          "n": 87
+        }
+      },
+      "elicited": {
+        "date": "2022-10-01",
+        "commit": "251acb5254448c9bdb4caa4b5011481c2c149aef",
+        "repo": "https://github.com/forecastingresearch/xpt-lib.git"
+      },
+      "source_question": {
+        "category": "Total Extinction Risk",
+        "severity": "human extinction or global population below 5,000",
+        "text": "What is the overall probability of human extinction or a reduction in the global population below 5,000 by the end of 2030/2050/2100?",
+        "criteria": "XPT question set \"10. Total Extinction Risk\" (XPT report Appendix 6). No further resolution criteria beyond the question text are recorded in archive/legacy-questions/starter_questions.json.",
+        "resolution_dates": [
+          "2030",
+          "2050",
+          "2100"
+        ]
+      },
+      "our_question": {
+        "text": "What is the overall probability of human extinction or a reduction in the global population below 5,000 within 6 months / within 12 months / by the end of 2028 / by the end of 2030 / by the end of 2050 / by the end of 2100?",
+        "severity": "human extinction (global population below 5,000)"
+      }
+    },
+    {
+      "question_id": "extinction:general",
+      "horizon": "2050",
+      "project": "XPT",
+      "prior_question_id": "xpt-total-extinction-below-5000",
+      "units": "percent",
+      "groups": {
+        "expert": {
+          "median": 2.5,
+          "mean": 9.0989,
+          "p25": 0.45,
+          "p75": 8.0,
+          "n": 70
+        },
+        "superforecaster": {
+          "median": 0.3,
+          "mean": 2.0315,
+          "p25": 0.0076,
+          "p75": 1.1492,
+          "n": 87
+        }
+      },
+      "elicited": {
+        "date": "2022-10-01",
+        "commit": "251acb5254448c9bdb4caa4b5011481c2c149aef",
+        "repo": "https://github.com/forecastingresearch/xpt-lib.git"
+      },
+      "source_question": {
+        "category": "Total Extinction Risk",
+        "severity": "human extinction or global population below 5,000",
+        "text": "What is the overall probability of human extinction or a reduction in the global population below 5,000 by the end of 2030/2050/2100?",
+        "criteria": "XPT question set \"10. Total Extinction Risk\" (XPT report Appendix 6). No further resolution criteria beyond the question text are recorded in archive/legacy-questions/starter_questions.json.",
+        "resolution_dates": [
+          "2030",
+          "2050",
+          "2100"
+        ]
+      },
+      "our_question": {
+        "text": "What is the overall probability of human extinction or a reduction in the global population below 5,000 within 6 months / within 12 months / by the end of 2028 / by the end of 2030 / by the end of 2050 / by the end of 2100?",
+        "severity": "human extinction (global population below 5,000)"
+      }
+    },
+    {
+      "question_id": "extinction:general",
+      "horizon": "2100",
+      "project": "XPT",
+      "prior_question_id": "xpt-total-extinction-below-5000",
+      "units": "percent",
+      "groups": {
+        "expert": {
+          "median": 6.125,
+          "mean": 14.5122,
+          "p25": 1.22,
+          "p75": 16.6,
+          "n": 70
+        },
+        "superforecaster": {
+          "median": 1.0,
+          "mean": 3.732,
+          "p25": 0.055,
+          "p75": 3.0,
+          "n": 87
+        }
+      },
+      "elicited": {
+        "date": "2022-10-01",
+        "commit": "251acb5254448c9bdb4caa4b5011481c2c149aef",
+        "repo": "https://github.com/forecastingresearch/xpt-lib.git"
+      },
+      "source_question": {
+        "category": "Total Extinction Risk",
+        "severity": "human extinction or global population below 5,000",
+        "text": "What is the overall probability of human extinction or a reduction in the global population below 5,000 by the end of 2030/2050/2100?",
+        "criteria": "XPT question set \"10. Total Extinction Risk\" (XPT report Appendix 6). No further resolution criteria beyond the question text are recorded in archive/legacy-questions/starter_questions.json.",
+        "resolution_dates": [
+          "2030",
+          "2050",
+          "2100"
+        ]
+      },
+      "our_question": {
+        "text": "What is the overall probability of human extinction or a reduction in the global population below 5,000 within 6 months / within 12 months / by the end of 2028 / by the end of 2030 / by the end of 2050 / by the end of 2100?",
+        "severity": "human extinction (global population below 5,000)"
       }
     },
     {

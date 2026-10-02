@@ -51,6 +51,7 @@ Needs openpyxl (the only non-stdlib import in the build path, which is why this
 lives in code/ and not in the stdlib-only redlines/ package).
 """
 import argparse
+import glob
 import json
 import os
 import re
@@ -61,6 +62,16 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 SRC = os.path.join(ROOT, "data", "auto-arc")
 XLSX = os.path.join(SRC, "questions-2026-08-31.xlsx")
 DEFS = os.path.join(SRC, "definitions-2026-09-10.md")
+# ADDENDA: questions added to the set AFTER her workbook, each in its own dated
+# file beside her two (data/auto-arc/addendum-<topic>-<date>.json). The first
+# is the extinction pair the project team asked for on 2026-09-15. An addendum is
+# an INPUT of the same standing as the workbook -- generated from, never typed
+# into the output -- and it says in its own provenance block who asked for it,
+# whose wording it carries and whose review it is pending. It is not a way to
+# edit her questions: it may only ADD cross-cutting questions, relations and
+# prior-work rows, and every question it adds carries `since`, the date it
+# entered the set, so a run made before that date is still a complete one.
+ADDENDA = sorted(glob.glob(os.path.join(SRC, "addendum-*.json")))
 sys.path.insert(0, ROOT)
 from redlines.instrument import CURRENT_INSTRUMENT
 OUT_CROSS = os.path.join(ROOT, "data", "autoarc_crosscutting.json")
@@ -645,8 +656,31 @@ def with_horizon_scope(criteria, hz, spec_years):
     return f"{criteria}\n{HORIZON_SCOPE_NOTE}"
 
 
-def build_ladder(rows, defs):
-    """The 4 x 8 incident grid: four causes, eight rungs, one wording each."""
+def addendum_rungs(addenda):
+    """The ladder rungs the addenda add (`ladder_rung`: true), in the shape
+    of a workbook rung plus `since`. The only kind known is `extinction`: a
+    population floor placed at the whole population on the log-death axis,
+    no dollar leg (no sum of direct losses is an extinction). Project lead,
+    2026-09-16: the four incident curves should reach extinction."""
+    out = []
+    for doc in addenda:
+        if not doc.get("ladder_rung"):
+            continue
+        sev = dict(doc["severity"])
+        if sev.get("kind") != "extinction":
+            raise SystemExit(f"{doc['_file']}: ladder rung of kind {sev.get('kind')!r} is not "
+                             "one this generator knows how to place on the axis")
+        out.append({"kind": "extinction", "deaths": WORLD_POP, "deaths_equiv": WORLD_POP,
+                    "damages_usd": None, "floor_population": sev["floor_population"],
+                    "label": sev["label"], "short": sev.get("short") or "extinction",
+                    "source_text": sev["source_text"], "since": doc["since"],
+                    "source": doc["_file"]})
+    return out
+
+
+def build_ladder(rows, defs, addenda=()):
+    """The incident grid: four causes, the workbook's eight rungs plus any an
+    addendum adds (the extinction rung, 2026-09-16), one wording each."""
     incident_rows = [r for r in rows
                      if r["Category"] in {c["sheet"] for c in CAUSES}
                      and r["Human comparisons (Project)"] != "P6 bio"]
@@ -658,6 +692,7 @@ def build_ladder(rows, defs):
         if s and s["deaths"] not in seen:
             seen.add(s["deaths"])
             rungs.append(s)
+    rungs += addendum_rungs(addenda)
     rungs.sort(key=lambda s: s["deaths"])
 
     fixed = horizons_for(incident_rows, lambda r: True)
@@ -707,6 +742,9 @@ def build_ladder(rows, defs):
                 "human_comparisons": comparisons_for(
                     mine, lambda r, d=rung["deaths"]:
                         (parse_severity(r["Severity"]) or {}).get("deaths") == d),
+                # An addendum rung's date of entry and file, so a run made
+                # before it is still complete (redlines.questions.questions_asked_on).
+                **({"since": rung["since"], "source": rung["source"]} if rung.get("since") else {}),
             })
             # Graph 1 plots these BY REFERENCE, so the question is not copied
             # into the cross-cutting file and never elicited twice. The 1M rung
@@ -724,7 +762,7 @@ def build_ladder(rows, defs):
     causes_out = [{**{k: v for k, v in c.items() if k != "def_key"},
                    "label": cause_label(defs, c)} for c in CAUSES]
     return {
-        "title": "Auto-ARC incident ladder — four AI incident types, eight severity rungs",
+        "title": f"Auto-ARC incident ladder — four AI incident types, {len(rungs)} severity rungs",
         "instrument_version": CURRENT_INSTRUMENT,
         "provenance": {
             "author": "Bridget Williams, FRI",
@@ -764,7 +802,7 @@ def build_ladder(rows, defs):
                        "the date on which a forecast can be scored.",
         },
         "causes": causes_out,
-        "rungs": rungs,
+        "rungs": [{k: v for k, v in r.items() if k != "source"} for r in rungs],
         "horizons": horizons,
         "rolling": ROLLING,
         "fixed_horizons": fixed,
@@ -792,8 +830,9 @@ def fill_template(template, phrase, rung, horizons):
     the slot and each horizon supplies its own preposition.
     """
     t = re.sub(r"\[incident:[^\]]*\]", phrase, template)
-    t = re.sub(r"\[severity:[^\]]*\]",
-               f"{rung['source_text']} in economic damages", t)
+    severity = (rung["source_text"] if rung.get("kind") == "extinction"
+                else f"{rung['source_text']} in economic damages")
+    t = re.sub(r"\[severity:[^\]]*\]", severity, t)
     t = re.sub(r"\bby\s*\[date:[^\]]*\]", horizon_phrase(horizons), t)
     return re.sub(r"\s+", " ", t).strip()
 
@@ -885,18 +924,127 @@ def attach_human_anchors(cross, ladder):
     return cross, ladder
 
 
+ADDENDUM_KEYS = ("title", "provenance", "since", "severity", "questions")
+ADDENDUM_QUESTION_KEYS = ("id", "name", "text", "criteria", "human_comparisons")
+
+
+def read_addenda(paths=None):
+    """-> the addendum docs, oldest first, each stamped with its file path.
+
+    Schema-checked rather than trusted: an addendum is hand-written JSON, so a
+    missing key would otherwise surface as a KeyError three stages downstream.
+    """
+    docs = []
+    for p in (ADDENDA if paths is None else paths):
+        doc = json.load(open(p, encoding="utf-8"))
+        missing = [k for k in ADDENDUM_KEYS if k not in doc]
+        if missing:
+            raise SystemExit(f"{os.path.relpath(p, ROOT)}: addendum is missing {missing}")
+        for q in doc["questions"]:
+            missing = [k for k in ADDENDUM_QUESTION_KEYS if k not in q]
+            if missing:
+                raise SystemExit(f"{os.path.relpath(p, ROOT)}: question "
+                                 f"{q.get('id', '<unknown>')!r} is missing {missing}")
+        if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", str(doc["since"])):
+            raise SystemExit(f"{os.path.relpath(p, ROOT)}: `since` must be an ISO date")
+        doc["_file"] = os.path.relpath(p, ROOT)
+        docs.append(doc)
+    return docs
+
+
+def build_addendum_questions(rows, addenda):
+    """The addenda's questions, on the set's own horizon grid.
+
+    Same shape as build_crosscutting()'s output, so nothing downstream can tell
+    an addendum question from a workbook one except by its `since` and
+    `source` fields -- which is the point: the runner, the rail, the coherence
+    audit and the data bank all read the one cross-cutting file.
+
+    The severity kind is `extinction`: a population floor rather than a death
+    count, placed on the shared log-death axis at the whole population
+    (deaths_equiv = WORLD_POP), where Graph 2 already draws its Extinction
+    reference mark from the same number. That is the only kind an addendum may
+    carry today; a new one needs a parser and a place on the axis, not a
+    silent pass-through.
+    """
+    hz = set_horizons(rows)
+    out = []
+    for doc in addenda:
+        sev = dict(doc["severity"])
+        if sev.get("kind") != "extinction":
+            raise SystemExit(f"{doc['_file']}: severity kind {sev.get('kind')!r} is not "
+                             "one this generator knows how to place on the axis")
+        sev["deaths_equiv"] = WORLD_POP
+        for q in doc["questions"]:
+            base = q["text"].strip().rstrip("?").strip()
+            out.append({
+                "id": q["id"],
+                "name": q["name"],
+                "short": q.get("short") or q["name"],
+                "category": "crosscutting",
+                "value_kind": "probability",
+                "severity": dict(sev),
+                "horizons": hz,
+                "text": f"{base} {horizon_phrase(hz)}?",
+                "criteria": q["criteria"],
+                "human": {},
+                "human_wanted": list(q.get("human_wanted") or []),
+                "human_comparisons": {y: list(ps) for y, ps in
+                                      sorted((q.get("human_comparisons") or {}).items())},
+                # The date this question entered the set. A run before it is
+                # complete without it (redlines.questions.questions_asked_on).
+                "since": doc["since"],
+                "source": doc["_file"],
+            })
+    return out
+
+
+def apply_addenda(cross, ladder, addenda):
+    """Fold the addenda's relations and prior-work rows into the ladder spec.
+
+    Relations may only name cross-cutting questions that exist; a relation
+    that points at nothing is a typo the coherence audit would otherwise skip
+    in silence.
+    """
+    ids = {q["id"] for q in cross}
+    ladder.setdefault("prior_work", [])
+    for doc in addenda:
+        for rel in (doc.get("relations") or {}).get("subset", []):
+            for side in ("narrower", "broader"):
+                if rel[side] not in ids:
+                    raise SystemExit(f"{doc['_file']}: relation names {rel[side]!r}, "
+                                     "which is not a cross-cutting question")
+            ladder["relations"]["subset"].append(dict(rel))
+        for pw in doc.get("prior_work", []):
+            ladder["prior_work"].append({**pw, "source": doc["_file"]})
+    return ladder
+
+
 def render(rows, defs):
     crosscheck(rows, defs)
-    cross = build_crosscutting(rows, defs)
-    ladder = build_ladder(rows, defs)
+    addenda = read_addenda()
+    cross = build_crosscutting(rows, defs) + build_addendum_questions(rows, addenda)
+    ladder = apply_addenda(cross, build_ladder(rows, defs, addenda), addenda)
     cross, ladder = attach_human_anchors(cross, ladder)
     cross_doc = {
         "title": "Auto-ARC cross-cutting questions — severity fixed, dates vary",
-        "provenance": dict(ladder["provenance"]),
+        "provenance": {
+            **ladder["provenance"],
+            # Every question that is not hers, and where it came from.
+            "addenda": [{"file": d["_file"], "since": d["since"],
+                         "questions": [q["id"] for q in d["questions"]],
+                         **{k: v for k, v in d["provenance"].items()}}
+                        for d in addenda],
+        },
         "notes": {
             "no_ladder": "Severity does not vary here (Nick, 2026-08-18): a "
-                         "catastrophe IS 10% of population. These are three "
-                         "questions, not a ladder.",
+                         "catastrophe IS 10% of population. These are "
+                         "single questions, not a ladder.",
+            "addenda": "Questions with a `since` field entered the set after "
+                       "the workbook, from the addendum file their `source` "
+                       "names (the extinction pair, 2026-09-15, in XPT's "
+                       "wording). A run made before a question's `since` is "
+                       "complete without it.",
             "axis": "The two catastrophe questions are ANCHORS on the incident "
                     "ladder's severity axis at ~820M deaths, not rungs of it — "
                     "a population share floats where the rungs are absolute, "

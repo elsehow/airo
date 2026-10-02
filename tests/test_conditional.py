@@ -44,8 +44,9 @@ from redlines.conditional import expected_loss, summarize, table  # noqa: E402
 # prompt asks for. Written out rather than recomputed, because the point of the
 # assertion is that the prompt asks for the number of cells we MEANT to ask for.
 # 201 -> 210 on 2026-08-28, when the three cross-cutting questions moved onto
-# the ladder's six-horizon grid (3 questions x 3 added horizons).
-QUESTIONS, CELLS = 35, 210
+# the ladder's six-horizon grid (3 questions x 3 added horizons); 210 -> 222 on
+# 2026-09-15, when the extinction pair joined (2 questions x 6 horizons).
+QUESTIONS, CELLS = 41, 246
 
 # Our framing (the CONDITION_BLOCK literal) may state neither a relation
 # between the questions -- the same ban tests/test_coherence.py puts on the
@@ -96,7 +97,7 @@ class TestConditionBlock(unittest.TestCase):
         self.assertNotIn("{condition}", p)
         # The slot sits between the date line and the question header, and
         # renders to exactly the blank line that was always there.
-        self.assertIn("Today is 2026-08-27.\n\nBelow are 35 forecasting", p)
+        self.assertIn("Today is 2026-08-27.\n\nBelow are 41 forecasting", p)
         self.assertEqual((n, cells), (QUESTIONS, CELLS))
 
     def test_every_condition_renders_with_leap_instruction(self):
@@ -110,7 +111,7 @@ class TestConditionBlock(unittest.TestCase):
             self.assertIn(c["assume"], p)
             self.assertIn(self.policies["conditioning"]["frontier_model"], p)
             # The questions follow the block unchanged.
-            self.assertIn("Below are 35 forecasting questions", p)
+            self.assertIn("Below are 41 forecasting questions", p)
             self.assertTrue(p.index("=====\n\nBelow are") < p.index("===== AI-RELATED INCIDENT"))
 
     def test_condition_text_states_no_relation_or_direction(self):
@@ -262,7 +263,7 @@ class TestProtocolTransition(unittest.TestCase):
 
     def test_newest_protocol_on_the_latest_day_wins_and_the_other_is_dropped(self):
         from redlines.views.conditional import PROTOCOLS
-        self.assertEqual(PROTOCOLS[0], "unified-joint-v3")
+        self.assertEqual(PROTOCOLS[0], "unified-joint-v6")
         self.assertIn("unified-joint-v1", PROTOCOLS)
         rows = self._rows(("unified-joint-v1", "2026-08-28"),
                           ("unified-joint-v2", "2026-08-28"))
@@ -433,7 +434,32 @@ class TestConditionSets(unittest.TestCase):
     LEAP_PROMPT_SHA_2026_09_02 = "49bf81839161af1449da291549d001c71a671d2e24906e34d5eacfd912fea876"
     # September 10: approved prospective incident windows/campaign boundaries;
     # the unchanged LEAP condition block is still pinned separately above.
-    LEAP_PROMPT_SHA_CURRENT = "581693c3278bb7515ed335d7f738b529c31ad8f507b259155856d47b2f47a28e"
+    LEAP_PROMPT_SHA_2026_09_10 = "581693c3278bb7515ed335d7f738b529c31ad8f507b259155856d47b2f47a28e"
+    # 2026-09-15: the debrief turn (redlines.llm.call_tools `debrief`) -- the
+    # closing paragraph now tells the model it will be asked, per question
+    # group, what drove its numbers. Project lead, 2026-09-11: harness changes
+    # between runs do not bump the protocol tag; the pin moves with a dated
+    # line here, and every row's prompt_sha256 still tells the prompts apart.
+    LEAP_PROMPT_SHA_2026_09_15 = "d81b3791ae3dbc7a9fdf501761370a882bc49b1a8200d29228d35bdf03d842e8"
+    # 2026-09-15, later the same day: the extinction pair (35 -> 37 questions,
+    # 210 -> 222 cells), with the tag bumped to unified-joint-v4 / combined-v6.
+    LEAP_PROMPT_SHA_2026_09_15_EXTINCTION = "ce234d7918b369899cd64fa71fb55b9aa557a040219d1aee4b09b6c0022d61d0"
+    # 2026-09-16: the debrief asked PER QUESTION (project lead: the standard
+    # elicitation plus a rationale per rung per outcome) -- the closing
+    # paragraph's priming sentence changed. Harness change, tag unchanged.
+    LEAP_PROMPT_SHA_2026_09_16_DEBRIEF = "e0fd7f850d00a4733f738a7b00620258937497806cf46479713b399751ac0e38"
+    # 2026-09-16, later: the extinction RUNG on every incident ladder
+    # (data/auto-arc/addendum-extinction-rung-2026-09-16.json): 37 -> 41
+    # questions, 222 -> 246 cells, tag unified-joint-v5 / combined-v7.
+    LEAP_PROMPT_SHA_2026_09_16_RUNG = "cbe9b29179d740e3f2860242d3c9e8d5e42b1bd570852c451aa73e048794f6aa"
+    # 2026-10-01: the extinction pair's criteria stop naming their source
+    # (XPT, AIRO); same rules, same cells. Tag unified-joint-v6 / combined-v8.
+    LEAP_PROMPT_SHA_CURRENT = "5f9f47b8c3c25dec3e6f35b255e9494bc9fdac4debe05c4b9225e28d9dc4fef0"
+    # The archived 2026-08-31 definitions rendered by the CURRENT template
+    # (test_archived_definitions_reproduce_the_old_prompt): stable while the
+    # archive is untouched; moves whenever the template does, as on 2026-09-15
+    # and 2026-09-16.
+    LEAP_PROMPT_SHA_ARCHIVED = "b705585878ec49a2d202490cf0225dda2a04b049f8e285c4e6d76f5053a9b3d4"
 
     @classmethod
     def setUpClass(cls):
@@ -450,7 +476,12 @@ class TestConditionSets(unittest.TestCase):
         p, _, _ = self.ru.build_prompt_joint(groups, by_group, horizons, spec,
                                              self.leap["conditions"], self.leap, date(2026, 8, 28))
         self.assertEqual(hashlib.sha256(p.encode()).hexdigest(), self.LEAP_PROMPT_SHA_CURRENT)
-        self.assertNotIn(self.LEAP_PROMPT_SHA_CURRENT, (self.LEAP_PROMPT_SHA_V1, self.LEAP_PROMPT_SHA_2026_08_28))
+        self.assertNotIn(self.LEAP_PROMPT_SHA_CURRENT, (self.LEAP_PROMPT_SHA_V1, self.LEAP_PROMPT_SHA_2026_08_28,
+                                                        self.LEAP_PROMPT_SHA_2026_09_02, self.LEAP_PROMPT_SHA_2026_09_10,
+                                                        self.LEAP_PROMPT_SHA_2026_09_15,
+                                                        self.LEAP_PROMPT_SHA_2026_09_15_EXTINCTION,
+                                                        self.LEAP_PROMPT_SHA_2026_09_16_DEBRIEF,
+                                                        self.LEAP_PROMPT_SHA_2026_09_16_RUNG))
 
     def test_archived_definitions_reproduce_the_old_prompt(self):
         import hashlib
@@ -459,8 +490,11 @@ class TestConditionSets(unittest.TestCase):
             archive / "autoarc_ladder.json", archive / "autoarc_crosscutting.json", self.ru.UNBATCHED)
         prompt, _, _ = self.ru.build_prompt_joint(
             groups, by_group, horizons, spec, self.leap["conditions"], self.leap, date(2026, 8, 28))
-        self.assertEqual(hashlib.sha256(prompt.encode()).hexdigest(), self.LEAP_PROMPT_SHA_2026_09_02)
-        self.assertEqual(self.ru.PROTOCOL_JOINT, "unified-joint-v3")
+        # The archive's definitions under today's template: a stable prompt
+        # that differs from the current one only by the definitions.
+        self.assertEqual(hashlib.sha256(prompt.encode()).hexdigest(), self.LEAP_PROMPT_SHA_ARCHIVED)
+        self.assertNotEqual(self.LEAP_PROMPT_SHA_ARCHIVED, self.LEAP_PROMPT_SHA_CURRENT)
+        self.assertEqual(self.ru.PROTOCOL_JOINT, "unified-joint-v6")
         self.assertEqual(self.ru.set_protocol(self.leap), self.ru.PROTOCOL_JOINT)
         self.assertEqual(self.ru.set_slug(self.leap), "leap")
 
@@ -537,7 +571,11 @@ class TestSelfElicitedSet(unittest.TestCase):
 
     @staticmethod
     def live_frontier():
-        return json.load(open(REPO / "data" / "live_metr_eci_frontier.json"))["frontier"]
+        """The frontier the generator quotes: the newest Epoch snapshot's
+        (redlines.eci.frontier_history), in the shape history_line reads."""
+        sys.path.insert(0, str(REPO))
+        from redlines import eci
+        return [{"date": d, "score": sc, "model": m} for d, sc, m in eci.frontier_history()]
 
     @staticmethod
     def history_line(entry):
@@ -557,8 +595,8 @@ class TestSelfElicitedSet(unittest.TestCase):
         self.assertEqual([c["field"] for c in self.es["conditions"]], ["p10", "p25", "p50", "p75", "p90"])
         self.assertEqual(self.ru.set_protocol(self.es), "unified-joint-eciself-v2")
         self.assertEqual(self.ru.set_slug(self.es), "eciself")
-        # Since 2026-09-10 the history is the live METR frontier snapshot
-        # (data/live_metr_eci_frontier.json), not the vendored Epoch CSV, and
+        # Since 2026-10-01 the history is the newest FETCHED Epoch snapshot
+        # (2026-09-10 to then a METR scrape, before that a vendored CSV), and
         # the trend is computed at analysis time rather than baked in.
         live = self.live_frontier()
         self.assertEqual(self.es["history"][0]["model"], live[0]["model"])
@@ -712,7 +750,7 @@ class TestCombinedSet(unittest.TestCase):
                          [c["id"] for c in self.leap["conditions"]] + [c["id"] for c in self.es["conditions"]])
         self.assertEqual([g["key"] for g in cb["groups"]], ["policy", "capability"])
         self.assertEqual([c["group"] for c in cb["conditions"]], ["policy"] * 8 + ["capability"] * 5)
-        self.assertEqual(self.ru.set_protocol(cb), "unified-joint-combined-v5")   # September 10: incident counting version
+        self.assertEqual(self.ru.set_protocol(cb), "unified-joint-combined-v8")   # October 1: the pair unnamed; September 15: the extinction pair (v5 = September 10 counting version)
         self.assertEqual(self.ru.set_slug(cb), "combined")
         self.assertNotIn(self.ru.set_protocol(cb), (self.ru.PROTOCOL_JOINT, self.ru.set_protocol(self.es)))
         self.assertEqual(cb["elicit"], self.es["elicit"])
@@ -842,7 +880,7 @@ class TestGroupedSetOnTheTabs(unittest.TestCase):
         self.assertEqual(pol["source"]["panel"], "LEAP")
         self.assertIn("eci_p50", pol["conditioning"]["assumption"])
         self.assertEqual(pol["slug"], "combined")                       # the log is still the combined one
-        self.assertEqual(pol["protocol"], "unified-joint-combined-v5")
+        self.assertEqual(pol["protocol"], "unified-joint-combined-v8")
         cap = group_view(self.cb, "capability")
         self.assertEqual([c["field"] for c in cap["conditions"]], ["p10", "p25", "p50", "p75", "p90"])
         self.assertEqual(cap["conditioning"]["instruction"], self.es["conditioning"]["instruction"])
@@ -874,7 +912,7 @@ class TestGroupedSetOnTheTabs(unittest.TestCase):
                 self.assertEqual(view["questions"], [])
                 self.assertEqual(view["models"], [])
                 self.assertFalse(view["instrumentInfo"]["available"])
-                self.assertEqual(view["protocol"], "unified-joint-combined-v5")
+                self.assertEqual(view["protocol"], "unified-joint-combined-v8")
             return
         # Separate provider retries may have distinct run IDs but share the
         # single explicitly recorded elicitation date and incident windows.
@@ -1013,7 +1051,7 @@ class TestAxesSets(unittest.TestCase):
         self.assertEqual(hz, ["2030", "2050", "2100"])
         p, n, cells = self.ru.build_prompt_joint(groups, by_group, hz, spec, self.dash["conditions"],
                                                  self.dash, date(2026, 9, 4))
-        self.assertEqual((n, cells), (QUESTIONS, 105))
+        self.assertEqual((n, cells), (QUESTIONS, 3 * QUESTIONS))
         self.assertIn("Horizons: 2030 (by 2030), 2050 (by 2050), 2100 (by 2100).", p)
         self.assertNotIn("6mo", p)
         cond = p[p.index("===== CONDITIONS ====="):]
@@ -1055,7 +1093,7 @@ class TestAxesSets(unittest.TestCase):
         hz = self.ru.set_horizons(self.paper, horizons)
         p, n, cells = self.ru.build_prompt_joint(groups, by_group, hz, spec, self.paper["conditions"],
                                                  self.paper, date(2026, 9, 4))
-        self.assertEqual((n, cells), (QUESTIONS, 105))
+        self.assertEqual((n, cells), (QUESTIONS, 3 * QUESTIONS))
         cond = p[p.index("===== CONDITIONS ====="):]
         for h in ("GROWTH CONDITIONS", "LABOR-FORCE CONDITIONS", "TASK-HORIZON CONDITIONS"):
             self.assertIn(f"===== {h} =====", cond)
