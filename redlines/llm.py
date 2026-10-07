@@ -179,6 +179,34 @@ def thinking_budget_for(model, max_tokens):
     return max(1024, min(budget, max_tokens - THINKING_HEADROOM))
 
 
+# PROMPT CACHING (2026-10-06). The loop resends the whole conversation every
+# turn, and Anthropic caches only what a request marks -- nothing was marked,
+# so every turn paid the full input price for the whole history again
+# (Sonnet 5.5 on 2026-10-02: 4.73M input tokens, $9.46 of the call's $12.53).
+# A breakpoint on the last message makes each turn write what it added and
+# read the rest at $0.20-0.25/M. The history is append-only, so the prefix
+# holds; the tool list changing (the final tool offered, the debrief) costs
+# one rewrite each. Nothing the model sees changes. OpenAI caches prefixes
+# without being asked (GPT-6 Astra read 75% of its 10-02 input from cache).
+# REDLINES_PROMPT_CACHE picks the TTL: "5m" (default -- turns averaged 1-2
+# minutes on 10-02, and every read refreshes the entry), "1h" (writes cost 2x
+# input instead of 1.25x; worth it only if turns often run past five minutes,
+# which a row's cache_write_tokens shows), or "off".
+PROMPT_CACHE_DEFAULT = "5m"
+
+
+def prompt_cache_for(model):
+    """The cache_control for the last message of `model`'s requests, or None."""
+    if not model.startswith("anthropic/"):
+        return None
+    ttl = os.environ.get("REDLINES_PROMPT_CACHE", PROMPT_CACHE_DEFAULT).lower()
+    if ttl == "off":
+        return None
+    if ttl not in ("5m", "1h"):
+        raise ValueError(f"REDLINES_PROMPT_CACHE={ttl!r}: expected 5m, 1h or off")
+    return {"type": "ephemeral", "ttl": ttl}
+
+
 # {model: (effort, temperature, budget)} that the provider accepted, per
 # process, so the step-down ladder runs once per model rather than per turn.
 _ACCEPTED = {}
@@ -220,6 +248,12 @@ def _litellm_complete(model, messages, *, tools=None, tool_choice=None,
         kw["tools"] = tools
     if tool_choice:
         kw["tool_choice"] = tool_choice
+    cache = prompt_cache_for(model)
+    if cache:
+        # litellm's injection hook marks a deep copy, so `messages` -- the
+        # loop's history and its trace -- is never edited.
+        kw["cache_control_injection_points"] = [
+            {"location": "message", "index": -1, "control": cache}]
     effort = reasoning_for(model)
     budget = thinking_budget_for(model, max_tokens)
 
@@ -333,9 +367,10 @@ def _litellm_complete(model, messages, *, tools=None, tool_choice=None,
 
 def _usage_of(r):
     """One completion's tokens and price: {input_tokens, output_tokens,
-    reasoning_tokens?, cached_tokens?, cost_usd} -- cost_usd is None when
-    litellm has no price for the model, so an unpriced call is visible rather
-    than free. None when the response carries no usage at all."""
+    reasoning_tokens?, cached_tokens? (cache reads), cache_write_tokens?,
+    cost_usd} -- cost_usd is None when litellm has no price for the model, so
+    an unpriced call is visible rather than free. None when the response
+    carries no usage at all."""
     import litellm
     u = getattr(r, "usage", None)
     if u is None:
@@ -350,6 +385,9 @@ def _usage_of(r):
     ct = getattr(ptd, "cached_tokens", None) if ptd is not None else None
     if ct:
         out["cached_tokens"] = ct
+    cw = getattr(u, "cache_creation_input_tokens", None)
+    if cw:
+        out["cache_write_tokens"] = cw
     try:
         out["cost_usd"] = float(litellm.completion_cost(completion_response=r))
     except Exception:   # litellm raises its own family for an unknown model
@@ -373,7 +411,8 @@ def tally_usage(total, one, effective=None):
         total["unpriced_turns"] = total.get("unpriced_turns", 0) + 1
     else:
         total["cost_usd"] = round(total.get("cost_usd", 0.0) + one["cost_usd"], 6)
-    for k in ("input_tokens", "output_tokens", "reasoning_tokens", "cached_tokens"):
+    for k in ("input_tokens", "output_tokens", "reasoning_tokens", "cached_tokens",
+              "cache_write_tokens"):
         if one and one.get(k):
             total[k] = total.get(k, 0) + one[k]
 
