@@ -67,10 +67,22 @@ on `/v1/chat/completions` OpenAI refuses function tools for it under any
   legible in the series. `frontier5` (Fable 5 / GPT-5.5 / Opus 4.8 /
   Gemini 3.1 Pro / Grok 4.20) survives as a named set: the panel the series
   ran on until then.
-- A model the index ranks above the cut that the registry cannot run is
-  skipped with a WARN naming it — add a `_ROWS` entry (id, label, litellm id,
-  Epoch name, color) and it takes its seat next run. A tie at the cut is
-  broken by Epoch's rank order and WARNed.
+- **A model the index ranks above the cut with no row gets one on its own
+  (since 2026-10-07).** After the fetch, `python3 -m redlines.autoreg` finds
+  its provider from Epoch's `Organization`, matches the display name to
+  exactly one API id from that provider's model list ("GPT-6.1 Sol" =
+  `gpt-6.1-sol`; a trailing date, "preview" or "latest" allowed), probes it
+  with one tool-call request through the harness's own request path, and
+  records the row in `data/auto_models.json`, which the registry reads after
+  `_ROWS`. Label, family and color follow the hand rows: the name without
+  "Claude ", the name without version numbers (so GPT-6.1 Sol shares
+  GPT-5.6 Sol's `gpt-sol` seat rule), and the spare color farthest from the
+  panel it joins, chosen once and kept. GPT-6.1 Sol, third on the 2026-10-07
+  index, sat out that day's run for want of a row; this is why. Only a model
+  that cannot be matched or fails the probe is skipped with a WARN — a
+  `_ROWS` entry for it then takes its seat next run, and a hand row always
+  wins over an automatic one. A tie at the cut is broken by Epoch's rank
+  order and WARNed.
 - Every registry row carries a color, so any row the index promotes can be
   drawn. `model_colors()` lists the panel first, in its own colors, then every
   other model by ECI in the one retired gray (`RETIRED_COLOR`; decided
