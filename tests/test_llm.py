@@ -778,6 +778,78 @@ class TestThinkingBudget(unittest.TestCase):
             os.environ.pop("REDLINES_REASONING", None)
 
 
+class TestPromptCache(unittest.TestCase):
+    """Claude calls mark the last message for Anthropic's prompt cache
+    (2026-10-06); the conversation itself is never edited, and a turn's
+    cache writes are recorded beside its reads."""
+
+    def setUp(self):
+        self._saved = os.environ.pop("REDLINES_PROMPT_CACHE", None)
+
+    def tearDown(self):
+        os.environ.pop("REDLINES_PROMPT_CACHE", None)
+        if self._saved is not None:
+            os.environ["REDLINES_PROMPT_CACHE"] = self._saved
+
+    def test_anthropic_only_five_minutes_by_default(self):
+        self.assertEqual(llm.prompt_cache_for("anthropic/claude-sonnet-5-5"),
+                         {"type": "ephemeral", "ttl": "5m"})
+        self.assertIsNone(llm.prompt_cache_for("openai/responses/gpt-6-astra"))
+        self.assertIsNone(llm.prompt_cache_for("openrouter/anthropic/claude-opus-5-5"))
+
+    def test_override_and_off(self):
+        os.environ["REDLINES_PROMPT_CACHE"] = "1h"
+        self.assertEqual(llm.prompt_cache_for("anthropic/claude-opus-5-5")["ttl"], "1h")
+        os.environ["REDLINES_PROMPT_CACHE"] = "off"
+        self.assertIsNone(llm.prompt_cache_for("anthropic/claude-opus-5-5"))
+        os.environ["REDLINES_PROMPT_CACHE"] = "10m"
+        with self.assertRaises(ValueError):
+            llm.prompt_cache_for("anthropic/claude-opus-5-5")
+
+    def _complete(self, model, messages):
+        """_litellm_complete against a stand-in litellm; returns (sent kwargs, result)."""
+        from types import SimpleNamespace as NS
+        from unittest import mock
+        sent = []
+
+        def completion(**kw):
+            sent.append(kw)
+            usage = NS(prompt_tokens=320100, completion_tokens=1000,
+                       completion_tokens_details=None,
+                       prompt_tokens_details=NS(cached_tokens=300000),
+                       cache_creation_input_tokens=20000)
+            msg = NS(content="ok", tool_calls=None)
+            return NS(choices=[NS(message=msg)], usage=usage)
+
+        fake = NS(BadRequestError=type("BadRequestError", (Exception,), {}),
+                  APIConnectionError=type("APIConnectionError", (Exception,), {}),
+                  completion=completion, completion_cost=lambda completion_response: 0.12)
+        with mock.patch.dict(sys.modules, {"litellm": fake}):
+            out = llm._litellm_complete(model, messages)
+        return sent[-1], out
+
+    def test_claude_requests_mark_the_last_message_and_leave_history_alone(self):
+        messages = [{"role": "user", "content": "forecast"},
+                    {"role": "tool", "tool_call_id": "c1", "content": "{}"}]
+        before = json.dumps(messages)
+        kw, out = self._complete("anthropic/claude-sonnet-5-5", messages)
+        self.assertEqual(kw["cache_control_injection_points"],
+                         [{"location": "message", "index": -1,
+                           "control": {"type": "ephemeral", "ttl": "5m"}}])
+        self.assertEqual(json.dumps(messages), before)
+        self.assertEqual(out["usage"]["cached_tokens"], 300000)
+        self.assertEqual(out["usage"]["cache_write_tokens"], 20000)
+        kw, _ = self._complete("openai/responses/gpt-6-astra", messages)
+        self.assertNotIn("cache_control_injection_points", kw)
+
+    def test_cache_writes_are_tallied(self):
+        total = {}
+        for _ in range(2):
+            llm.tally_usage(total, {"input_tokens": 10, "cached_tokens": 6,
+                                    "cache_write_tokens": 3, "cost_usd": 0.01})
+        self.assertEqual((total["cached_tokens"], total["cache_write_tokens"]), (12, 6))
+
+
 class DebriefTurn2026_09_16(unittest.TestCase):
     """The debrief turn since 2026-09-16: deliveries merge across attempts, a
     stringified entry is parsed, an empty reply gets one text-only ask, and
