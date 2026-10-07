@@ -141,7 +141,8 @@ def _published(rows):
                            "ci_high": _float_or_none(r.get("eci_ci_high")),
                            "release_date": r.get("date") or None,
                            "country": r.get("Country (of organization)") or None,
-                           "organization": r.get("Organization") or None}
+                           "organization": r.get("Organization") or None,
+                           "access": r.get("Accessibility group") or None}
     for i, rec in enumerate(sorted(out.values(), key=lambda x: (-x["eci"], x["model"])), 1):
         rec["rank"] = i
     return out

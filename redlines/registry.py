@@ -30,6 +30,7 @@ import json
 import sys
 from pathlib import Path
 
+from . import autoreg as _autoreg
 from . import eci as _eci
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -156,7 +157,7 @@ CONFOUNDED_ARCHITECTURES = frozenset({"moe", "distilled"})
 _FIELDS = ("key", "family", "label", "litellm_id", "fb_name", "epoch_name", "color", "architecture", "roles")
 
 
-def _build_models() -> list[dict]:
+def _build_models(auto_path: Path = _autoreg.AUTO_MODELS) -> list[dict]:
     idx = load_epoch_index()
     out = []
     for row in _ROWS:
@@ -170,6 +171,20 @@ def _build_models() -> list[dict]:
         if d["color"] is None:
             raise ValueError(f"registry row {d['key']!r} has no color; any runnable row "
                              "can be ranked into the panel and must be drawable")
+        out.append(d)
+    # The rows the box added on its own (redlines.autoreg, 2026-10-07) for
+    # models the index ranked into the panel with no row here. A hand row
+    # for the same model wins; an entry whose model no snapshot in data/
+    # scores (a checkout without the box's newest fetch) is left out.
+    hand = {d["epoch_name"] for d in out} | {d["key"] for d in out}
+    for e in _autoreg.load(auto_path):
+        rec = idx.get(e["epoch_name"])
+        if rec is None or e["epoch_name"] in hand or e["key"] in hand:
+            continue
+        d = {f: e.get(f) for f in _FIELDS}
+        d["roles"] = list(d["roles"] or [])
+        d["eci"], d["ci_low"], d["ci_high"] = int(rec["eci"]), rec["ci_low"], rec["ci_high"]
+        d["auto"] = True
         out.append(d)
     return out
 
@@ -293,7 +308,8 @@ def _select(k, snapshot):
         above = [r["model"] for r in unrunnable if (r["eci"], -r["rank"]) > (cut["eci"], -cut["rank"])]
         if above:
             warnings.append(f"the index ranks {', '.join(above)} above the panel's cut but the "
-                            f"registry cannot run them (no row in redlines/registry.py); "
+                            f"registry cannot run them (no row in redlines/registry.py, and redlines.autoreg "
+                            f"could not add one -- its log line says why); "
                             f"skipped, the next runnable model took the seat")
         tied = [r["model"] for r in ranked if r["eci"] == cut["eci"]
                 and r["model"] not in {m["epoch_name"] for m, _ in chosen}]

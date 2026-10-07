@@ -34,8 +34,12 @@
 #   Epoch's published scores (python3 -m redlines.eci --fetch), and the
 #   capability conditions are regenerated from it -- no hand step between a
 #   model shipping and the panel and prompt knowing it. A new model the index
-#   ranks into the panel that the registry has no row for is skipped (the next
-#   runnable one takes the seat) and paged: add its row to redlines/registry.py.
+#   ranks into the panel that the registry has no row for is ADDED ON ITS OWN
+#   since 2026-10-07 (redlines.autoreg: matched to its provider's API id,
+#   probed with one request, recorded in data/auto_models.json) and paged once
+#   as news. Only a model that cannot be added is skipped (the next runnable
+#   one takes the seat) and paged as a fault; a hand row in
+#   redlines/registry.py, if one is ever wanted, takes precedence.
 #
 # ALERTS (2026-10-01): with NTFY_TOPIC set in the env file, a failed run, a
 #   failed fetch, a failed publish, a panel change and an unrunnable model at
@@ -55,7 +59,7 @@
 #     rsync -avz <box>:Projects/redlines/results/runs/ results/runs/
 #   and the inputs the run quoted (the fetched index and the sets built from it):
 #     rsync -avz '<box>:Projects/redlines/data/epoch_capabilities_index_*.csv' data/
-#     rsync -avz <box>:Projects/redlines/data/{eci_self_conditions,eci_self6mo_conditions,combined_conditions}.json data/
+#     rsync -avz <box>:Projects/redlines/data/{eci_self_conditions,eci_self6mo_conditions,combined_conditions,auto_models}.json data/
 #
 # SETUP
 #   Keys live in ~/.config/redlines/env (mode 600), one KEY=value per line:
@@ -125,6 +129,18 @@ panel_labels() {
 PREV_PANEL="$(panel_labels 2>/dev/null || true)"
 if ! "$PY" -m redlines.eci --fetch; then
     notify "AIRO: Epoch ECI fetch failed" "Run $STAMP goes ahead on the previous snapshot. Check https://epoch.ai/data/eci_scores.csv" high warning
+fi
+# NEW MODELS (2026-10-07): give a row to each model the index now ranks into
+# the panel without one (redlines.autoreg), before the panel is read. A crash
+# here costs only the new model's seat -- the rest of the run goes ahead, and
+# the model is paged below as unrunnable.
+if ! ADDED="$("$PY" -m redlines.autoreg)"; then
+    echo "WARN: redlines.autoreg failed; a new model without a registry row sits this run out"
+    ADDED=""
+fi
+if [ -n "$ADDED" ]; then
+    echo "$ADDED"
+    notify "AIRO: new model joins the registry" "$ADDED" default new
 fi
 "$PY" code/check_eci_snapshot.py --rebuild
 PANEL="$(panel_labels)"
