@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:dc="http://purl.org/dc/elements/1.1/">
+<channel><title>Synthetic Wire: AI</title>
+<item>
+  <title>Example Lab releases Model Nine</title>
+  <link>https://www.example-wire.test/2026/10/12/example-lab-model-nine/?syn-25&amp;utm_source=rss</link>
+  <atom:link href="" rel="standout"/>
+  <description>&lt;p&gt;The lab says Model Nine &lt;b&gt;beats&lt;/b&gt; its predecessor.&lt;/p&gt;</description>
+  <pubDate>Mon, 12 Oct 2026 09:00:00 GMT</pubDate>
+  <guid>wire-1</guid>
+  <category>Artificial Intelligence</category>
+</item>
+<item>
+  <title>Ransomware gang uses AI agent against hospital network</title>
+  <link>https://www.example-wire.test/2026/10/12/hospital-ransomware-agent</link>
+  <description>Investigators say an AI agent wrote the intrusion tooling.</description>
+  <pubDate>Mon, 12 Oct 2026 15:30:00 +0000</pubDate>
+</item>
+</channel></rss>

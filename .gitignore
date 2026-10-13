@@ -50,3 +50,7 @@ data/leap/
 # a clone renders with the fallback stack in web/demo/00-head.html.
 web/fonts/
 
+
+# news pipeline state: feed items, Jev decisions, stories, full text
+# (redlines/news.py). Article text never goes in the repo.
+.local/news/

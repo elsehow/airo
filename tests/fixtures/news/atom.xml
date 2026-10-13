@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+<title>Synthetic Gadget Blog</title>
+<entry>
+  <title type="html">Example Lab&#8217;s Model Nine is out</title>
+  <link rel="alternate" type="text/html" href="https://gadgets.example.test/ai/123/example-lab-model-nine"/>
+  <id>https://gadgets.example.test/?p=123</id>
+  <updated>2026-10-12T07:15:00-04:00</updated>
+  <published>2026-10-12T07:00:00-04:00</published>
+  <summary type="html">Model Nine arrives with a longer context window.</summary>
+</entry>
+<entry>
+  <title>A new phone with a bigger screen</title>
+  <link rel="alternate" href="https://gadgets.example.test/phones/124/bigger-screen"/>
+  <id>https://gadgets.example.test/?p=124</id>
+  <published>2026-10-12T08:00:00Z</published>
+  <summary>It is a phone.</summary>
+</entry>
+</feed>

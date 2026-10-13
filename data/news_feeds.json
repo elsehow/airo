@@ -1,0 +1,12 @@
+{
+  "_doc": "The news feeds redlines/news.py polls, one per line. `ai_only`: the publisher already filters the feed to AI (false sends each item through the Jev AI gate). `open_access`: articles read without a subscription (milestone 2 reads their full text). `resolve`: how to turn the feed's links into the publisher's URL (google_news: the link is a Google redirect). Probed from airo-dev 2026-10-13.",
+  "feeds": [
+    {"id": "ft_ai", "source": "Financial Times", "url": "https://www.ft.com/artificial-intelligence?format=rss", "ai_only": true, "open_access": false},
+    {"id": "nyt_ai", "source": "New York Times", "url": "https://www.nytimes.com/svc/collections/v1/publish/https://www.nytimes.com/topic/subject/artificial-intelligence/rss.xml", "ai_only": true, "open_access": false},
+    {"id": "nyt_tech", "source": "New York Times", "url": "https://rss.nytimes.com/services/xml/rss/nyt/Technology.xml", "ai_only": false, "open_access": false},
+    {"id": "reuters_gnews", "source": "Reuters", "url": "https://news.google.com/rss/search?q=site:reuters.com+%22artificial+intelligence%22+when:7d&hl=en-US&gl=US&ceid=US:en", "ai_only": true, "open_access": true, "resolve": "google_news"},
+    {"id": "ars_ai", "source": "Ars Technica", "url": "https://arstechnica.com/ai/feed/", "ai_only": true, "open_access": true},
+    {"id": "mittr_ai", "source": "MIT Technology Review", "url": "https://www.technologyreview.com/topic/artificial-intelligence/feed", "ai_only": true, "open_access": true},
+    {"id": "verge_ai", "source": "The Verge", "url": "https://www.theverge.com/rss/ai-artificial-intelligence/index.xml", "ai_only": true, "open_access": true}
+  ]
+}
