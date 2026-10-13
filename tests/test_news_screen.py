@@ -154,6 +154,45 @@ class Screen(unittest.TestCase):
         self.assertEqual(len(jev.calls), 1)
 
 
+class Digest(unittest.TestCase):
+    def setUp(self):
+        self.ss, self.its = stories()
+        self.fc = forecast()
+        patch = mock.patch.object(ns, "writer", lambda fc: ("Opus 5.5", "anthropic/claude-opus-5-5", 167.3))
+        patch.start()
+        self.addCleanup(patch.stop)
+
+    def test_cutoff(self):
+        self.fc["run"] = "2026-10-12T1030Z"
+        self.assertEqual(ns.forecast_time(self.fc), "2026-10-12T10:30:00Z")
+        self.assertEqual([s["title"] for s in ns.after_forecast(self.ss, self.its, self.fc)],
+                         ["Chip stocks fall", "Port volume record"])
+
+    def test_listing_orders(self):
+        fwd = ns.digest_listing(self.ss, self.its)
+        self.assertEqual(ns.digest_listing(self.ss, self.its, "reversed"), fwd[::-1])   # same labels
+        self.assertEqual(fwd, ns.digest_listing(list(reversed(self.ss)), self.its))     # input order ignored
+
+    def test_digest(self):
+        self.fc["run"] = "2026-10-01T1200Z"
+        seen = {}
+        def complete(model, system, prompt):
+            seen["prompt"] = prompt
+            lab = next(l for l, s in ns.digest_listing(self.ss, self.its) if s["title"] == "Agent worm hits hospitals")
+            return {"text": f"Prose.\nVERDICT ai: small; direction: up; stories: {lab}, S99\n"
+                            "VERDICT cyber: small; direction: up; stories: none\n"
+                            "VERDICT bio: none; direction: none; stories: none\n"
+                            "VERDICT misalign: none; direction: none; stories: none", "usage": {}}
+        row = ns.digest(self.ss, self.its, self.fc, "airo", complete=complete)
+        self.assertEqual(row["stories"], 4)
+        self.assertEqual(row["verdicts"]["ai"], {"size": "small", "direction": "up", "stories": [self.ss[0]["id"]]})
+        self.assertEqual((row["overall"], row["text"]), ("small", "Prose."))
+        self.assertIn("CYBER incident ladder", seen["prompt"])
+        ns.digest(self.ss, self.its, self.fc, "generic", complete=complete)
+        self.assertNotIn("AIRO", seen["prompt"])
+        self.assertNotIn("Agents misbehave.", seen["prompt"])
+
+
 class Notes(unittest.TestCase):
     def setUp(self):
         self.ss, self.its = stories()
@@ -175,10 +214,18 @@ class Notes(unittest.TestCase):
         p = ns.explain_prompt(s, self.its, self.fc, ["cyber"], today="2026-10-13")
         self.assertIn('"Agent worm hits hospitals"', p)
         self.assertIn("CYBER incident ladder", p)
-        self.assertNotIn("BIO incident ladder", p)
+        self.assertIn("BIO incident ladder", p)            # every family: a verdict for each
         self.assertIn("AI extinction", p)
         self.assertIn("Agents misbehave.", p)
-        self.assertIn("VERDICT: <size>", p)
+        self.assertIn("VERDICT cyber: <size>", p)
+
+    def test_per_family_verdicts(self):
+        text = "Note.\n\nVERDICT ai: small\n**VERDICT cyber:** negligible\nVERDICT bio: none\nVERDICT misalign: none"
+        self.assertEqual(ns.parse_verdicts(text),
+                         ("Note.", {"ai": "small", "cyber": "negligible", "bio": "none", "misalign": "none"}))
+        n = ns.explain(self.ss[0], self.its, self.fc, self.screened[self.ss[0]["id"]],
+                       complete=lambda *a: {"text": text, "usage": {}})
+        self.assertEqual((n["verdict"], n["verdicts"]["cyber"], n["text"]), ("small", "negligible", "Note."))
 
     def test_explain(self):
         s = self.ss[0]
@@ -197,7 +244,7 @@ class Notes(unittest.TestCase):
         self.assertEqual((n["forecast"], n["frame"], n["verdict"]), ("generic", "generic", "small"))
         self.assertNotIn("AIRO", seen["system"] + seen["prompt"])
         self.assertNotIn("Agents misbehave.", seen["prompt"])            # no panel reasoning
-        self.assertIn("VERDICT: <size>", seen["prompt"])
+        self.assertIn("VERDICT misalign: <size>", seen["prompt"])
 
     def test_empty_note_raises(self):
         with self.assertRaises(RuntimeError):

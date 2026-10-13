@@ -45,6 +45,7 @@ and reused on the next run when its key matches, so a re-run costs nothing.
 """
 import json
 import os
+import random
 import re
 import statistics
 from datetime import date
@@ -199,6 +200,29 @@ def screen_question(c, frame="airo"):
                          "or opinion."}}
 
 
+def forecast_time(fc):
+    """When the forecast was elicited, from the run id ("2026-10-09T1200Z")."""
+    d, t = fc["run"].split("T")
+    return f"{d}T{t[:2]}:{t[2:4]}:00Z"
+
+
+def first_report(story, items):
+    return min(news.item_time(items[m["item"]]) for m in story["members"])
+
+
+def after_forecast(stories, items, fc):
+    """Stories whose first report came out after the forecast was elicited: the
+    only news the forecast cannot already reflect."""
+    cut = forecast_time(fc)
+    return [s for s in stories if first_report(s, items) > cut]
+
+
+def top_stories(stories, screened, n=3):
+    """The n stories Jev scored highest (by their highest family), ties in list order."""
+    rows = [s for s in stories if s["id"] in screened]
+    return sorted(rows, key=lambda s: -p_max(screened[s["id"]]))[:n]
+
+
 def story_reports(story, items, n=3):
     out = []
     for m in story["members"][:n]:
@@ -275,8 +299,16 @@ def explain_prompt(story, items, fc, causes, today=None):
     the families the screen flagged plus the cross-cutting questions, the
     panel's reasoning, and the task, ending in a VERDICT line."""
     today = today or news._now()[:10]
+    sections, rationales = _forecast_block(fc)
+    reports, full = _reports(story, items)
+    return _airo_prompt(story, fc, today, sections, reports, full, rationales)
+
+
+def _forecast_block(fc):
+    """The forecast as the writer sees it: every family's ladder, the
+    cross-cutting questions, and the panel's rationales."""
     sections = []
-    for c in causes or list(FAMILY):   # an audited story the screen passed over: show every family
+    for c in FAMILY:   # every family: the note gives a verdict for each
         qs = [q for q in fc["ladder"]["questions"] if q["cause"] == c]
         sections.append(f"### {qs[0]['cause_label']} ladder\n\nQuestion (one per severity rung): "
                         f"{qs[0]['text']}\n\nResolution criteria (abridged): {qs[0]['criteria'][:1500]}\n\n"
@@ -285,19 +317,19 @@ def explain_prompt(story, items, fc, causes, today=None):
     sections.append("### Cross-cutting questions\n\n"
                     + "\n".join(f"- {q['name']}: {q['text'][:400]}" for q in cq) + "\n\n"
                     + _table(fc, [(q["id"], q["name"]) for q in cq], "question"))
-    reports, full = _reports(story, items)
     rationales = "\n\n".join(f"**{m}**: {fc['rationales'][m][:NOTE_RATIONALE_CHARS]}" for m in fc["models"])
-    return _airo_prompt(story, fc, today, sections, reports, full, rationales)
+    return sections, rationales
 
 
 def _reports(story, items):
     """The story's reports for the writer: one line each, then any article text."""
+    shown = story["members"][:3]   # the reports Jev sees
     reports = "\n".join(
         f"- {items[m['item']]['source']} ({(items[m['item']].get('published') or '')[:10]}): "
         f"\"{items[m['item']]['title']}\""
         + (f" — {items[m['item']]['summary']}" if items[m['item']].get("summary") else "")
-        for m in story["members"])
-    full = [items[m["item"]] for m in story["members"] if items[m["item"]].get("text")]
+        for m in shown)
+    full = [items[m["item"]] for m in shown if items[m["item"]].get("text")]
     if full:
         reports += "\n\nThe text of " + ("one report" if len(full) == 1 else f"{len(full)} reports") + \
             " as extracted from the publisher's page (a paywalled article may stop after its opening):\n\n" + \
@@ -328,13 +360,13 @@ Each cell is the ensemble median across the panel, with the panel's range in bra
 
 Write the note AIRO would publish about this story, for a reader who follows AI risk but not the details of AIRO's question set. In 120–250 words of plain prose:
 
-1. Say whether this news should move the forecast at all, and if so which questions, which severity rungs and which horizons, and in which direction. Give the size in words (no change / negligible / small / moderate / large); do not give new numbers.
+1. Say whether this news should move the forecast at all, family by family, and if so which questions, which severity rungs and which horizons, and in which direction. Give the size in words (no change / negligible / small / moderate / large); do not give new numbers.
 2. Explain the mechanism: why this kind of development does or does not change the chance of the incidents these questions count, referring to the panel's reasoning where it helps.
 3. Name what would have to be true, or come out next, for this story to matter more than you judge it does.
 
 Be calibrated rather than dramatic. Most news should not move a forecast of rare catastrophic incidents, and saying so plainly is a good answer. Work only from what the reports say; where the headlines leave something unknown, say so rather than assume.
 
-End with one final line, on its own, of the form `VERDICT: <size>`, where <size> is one of none, negligible, small, moderate, large: the largest change you judge this story warrants to any question."""
+{VERDICT_RULE}"""
 
 
 SYSTEM_GENERIC = ("You forecast catastrophic risk from AI. When AI news breaks, you write a short note "
@@ -364,7 +396,31 @@ Write a short note on whether this story should change forecasts of catastrophic
 
 Be calibrated rather than dramatic. Most news should not move a forecast of rare catastrophic incidents, and saying so plainly is a good answer. Work only from what the reports say; where the headlines leave something unknown, say so rather than assume.
 
-End with one final line, on its own, of the form `VERDICT: <size>`, where <size> is one of none, negligible, small, moderate, large: the largest change you judge this story warrants to any such forecast."""
+{VERDICT_RULE}"""
+
+
+VERDICT_LINES = "\n".join(f"VERDICT {c}: <size>" for c in FAMILY)
+VERDICT_RULE = (f"End with exactly four final lines, one per family, each on its own line:\n\n{VERDICT_LINES}\n\n"
+                "where <size> is one of none, negligible, small, moderate, large: the largest change you judge "
+                "the news warrants to that family's questions. The families: "
+                + "; ".join(f"{c} = {FAMILY[c]}" for c in FAMILY) + ".")
+
+
+def parse_verdicts(text):
+    """(text without the VERDICT lines, {family: size}) from "VERDICT <family>: <size>" lines."""
+    out, keep = {}, []
+    for line in (text or "").splitlines():
+        m = re.match(r"^\s*\**\s*VERDICT\s+([a-z]+)\s*\**\s*:\s*\**\s*([a-z]+)", line, re.I)
+        if m and m[1].lower() in FAMILY and m[2].lower() in VERDICTS:
+            out[m[1].lower()] = m[2].lower()
+        else:
+            keep.append(line)
+    return "\n".join(keep).strip(), out
+
+
+def overall(verdicts):
+    """The largest of the per-family verdicts."""
+    return max(verdicts.values(), key=VERDICTS.index) if verdicts else None
 
 
 def parse_verdict(text):
@@ -401,11 +457,18 @@ def explain(story, items, fc, screen_row, complete=None, now=None, frame="airo")
     r = (complete or default_complete)(model_id, system, prompt)
     if not (r.get("text") or "").strip():
         raise RuntimeError(f"{label} returned no text for {story['id']} (usage {r.get('usage')})")
-    text, verdict = parse_verdict(r["text"])
+    text, verdicts = parse_verdicts(r["text"])
+    if not verdicts:                       # an older single-line verdict
+        text, v = parse_verdict(text)
+        verdicts = {}
+    else:
+        v = overall(verdicts)
+    verdict = v
     return {"at": now or news._now(), "story": story["id"], "title": story["title"],
             "forecast": frame_id(fc, frame), "frame": frame, "writer": label, "model": model_id, "eci": eci,
             "causes": causes, "p_moves": screen_row and screen_row["p_moves"],
             "flagged": bool(screen_row) and flagged(screen_row), "text": text, "verdict": verdict,
+            "verdicts": verdicts,
             "usage": r.get("usage"), "prompt_chars": len(system) + len(prompt)}
 
 
@@ -428,6 +491,124 @@ def pick_for_notes(stories, screened, notes, flagged_n=1, audit_below=0):
     spread = [rest[round((i + 1) * (len(rest) - 1) / k)] for i in range(k)] if rest and k else []
     audit = down[:near] + [p for i, p in enumerate(spread) if p not in spread[:i]]
     return [s for s, _ in up[:flagged_n]] + [s for s, _ in audit]
+
+
+# --------------------------------------------------------------- digest
+#
+# No Jev gate: the writer reads every story published since the forecast in one
+# call and judges how much the news, taken together, moves each family.
+
+DIGEST_SEED = 0
+DIRECTIONS = ("up", "down", "mixed", "none")
+
+
+def digest_listing(stories, items, order="forward", seed=DIGEST_SEED):
+    """[(label, story)]: one fixed shuffle, labelled S1.. in that order; "reversed"
+    lists the same labels back to front, to test for position effects."""
+    ss = sorted(stories, key=lambda s: s["id"])
+    random.Random(seed).shuffle(ss)
+    out = [(f"S{i + 1}", s) for i, s in enumerate(ss)]
+    return out[::-1] if order == "reversed" else out
+
+
+def _digest_story(label, story, items):
+    lines = [f"### {label}: \"{story['title']}\" ({len(story['members'])} report"
+             f"{'s' if len(story['members']) > 1 else ''})"]
+    for v in story_reports(story, items):          # exactly what Jev sees
+        lines.append(f"- {v['source']} ({v['published']}): \"{v['headline']}\""
+                     + (f" — {v['standfirst']}" if v.get("standfirst") else ""))
+        if v.get("full_text"):
+            lines.append(f"  Article text as extracted (a paywalled article may stop early): {v['full_text']}")
+    return "\n".join(lines)
+
+
+DIGEST_LINES = "\n".join(f"VERDICT {c}: <size>; direction: <direction>; stories: <ids>" for c in FAMILY)
+
+
+def digest_prompt(listing, items, fc, frame="airo", today=None):
+    today = today or news._now()[:10]
+    cut = forecast_time(fc)
+    news_block = "\n\n".join(_digest_story(label, s, items) for label, s in listing)
+    head = f"Today is {today}."
+    if frame == "airo":
+        sections, rationales = _forecast_block(fc)
+        head += (f" The latest AIRO ensemble forecast was elicited on {fc['day']} from a panel of "
+                 f"{len(fc['models'])} models ({', '.join(fc['models'])}).")
+        forecast = f"""
+
+## The current forecast
+
+Each cell is the ensemble median across the panel, with the panel's range in brackets. Horizons: 6mo and 12mo run from the forecast date; the years mean by the end of that year.
+
+{chr(10).join(sections)}
+
+### The panel's rationales (each model's own, abridged)
+
+{rationales}"""
+        target, scope = "the forecast", "AIRO's forecast"
+    else:
+        forecast = ""
+        target = "forecasts of catastrophic risk from AI"
+        scope = ("forecasts of catastrophic risk from AI: the probability that AI-related incidents cause deaths "
+                 "or economic damage at severities from 100 deaths up to human extinction, over horizons from the "
+                 "next six months to 2100")
+    return f"""{head}
+
+## The news
+
+Every AI news story published since {cut[:10]} {cut[11:16]} UTC, one entry per real-world event (duplicate write-ups have been merged), {len(listing)} stories in no particular order. For each you have up to three reports: source, date, headline and standfirst, and article text where it could be extracted.
+
+{news_block}{forecast}
+
+## Your task
+
+Judge how much this news, taken together, should move {scope}, family by family. Most stories will not matter; a week of news usually moves a forecast of rare catastrophic incidents little or not at all, and saying so plainly is a good answer. Several weak stories pointing the same way can add up; say so where they do.
+
+For each family ({", ".join(FAMILY.values())}), write a short paragraph: whether {target} should move, which severities and horizons, in which direction, and which stories drive that judgment (cite them by id, e.g. S12). Then a short paragraph on the week overall: what, if anything, would have to come out next for this news to matter more. Work only from what the reports say; where they leave something unknown, say so rather than assume. 250–500 words.
+
+End with exactly four final lines, one per family, each on its own line:
+
+{DIGEST_LINES}
+
+where <size> is one of none, negligible, small, moderate, large; <direction> is one of up, down, mixed, none; and <ids> lists the stories that drive the verdict, comma-separated, or "none". The families: {"; ".join(f"{c} = {FAMILY[c]}" for c in FAMILY)}."""
+
+
+def parse_digest(text, labels):
+    """(prose, {family: {size, direction, stories: [story ids]}}). `labels` maps
+    S-labels to story ids; unknown labels are dropped."""
+    out, keep = {}, []
+    pat = re.compile(r"^\s*\**\s*VERDICT\s+([a-z]+)\s*\**\s*:\s*\**\s*([a-z]+)\s*;\s*direction\s*:\s*([a-z]+)"
+                     r"\s*;\s*stories\s*:\s*(.*)$", re.I)
+    for line in (text or "").splitlines():
+        m = pat.match(line)
+        if m and m[1].lower() in FAMILY and m[2].lower() in VERDICTS:
+            ids = [labels[x] for x in re.findall(r"S\d+", m[4]) if x in labels]
+            out[m[1].lower()] = {"size": m[2].lower(),
+                                 "direction": m[3].lower() if m[3].lower() in DIRECTIONS else None,
+                                 "stories": ids}
+        else:
+            keep.append(line)
+    return "\n".join(keep).strip(), out
+
+
+def digest(stories, items, fc, frame="airo", order="forward", complete=None, now=None):
+    """One no-gate read of every story after the forecast. Raises if the writer
+    returns no text."""
+    label, model_id, eci = writer(fc)
+    post = after_forecast(stories, items, fc)
+    listing = digest_listing(post, items, order)
+    prompt = digest_prompt(listing, items, fc, frame, today=(now or news._now())[:10])
+    system = SYSTEM if frame == "airo" else SYSTEM_GENERIC
+    r = (complete or default_complete)(model_id, system, prompt)
+    if not (r.get("text") or "").strip():
+        raise RuntimeError(f"{label} returned no text for the {frame}/{order} digest (usage {r.get('usage')})")
+    labels = {lab: s["id"] for lab, s in listing}
+    text, verdicts = parse_digest(r["text"], labels)
+    return {"at": now or news._now(), "frame": frame, "order": order, "forecast": frame_id(fc, frame),
+            "run": fc["run"], "cutoff": forecast_time(fc), "stories": len(listing), "labels": labels,
+            "writer": label, "model": model_id, "eci": eci, "text": text, "verdicts": verdicts,
+            "overall": overall({c: v["size"] for c, v in verdicts.items()}),
+            "usage": r.get("usage"), "prompt_chars": len(system) + len(prompt)}
 
 
 # ------------------------------------------------------------ calibrate
