@@ -44,6 +44,21 @@
 .frame .controls button { font-size: 14px; padding: 6px 14px; }
 .frame.sub { background: var(--bg); }
 .stories { display: grid; gap: 8px; }
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); }
+.tabs button { font: inherit; font-size: 15px; background: none; border: 0; border-bottom: 2px solid transparent; color: var(--ink-soft); padding: 8px 14px; cursor: pointer; margin-bottom: -1px; }
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--link); font-weight: 600; }
+.tabs button:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+#tab-explore { display: grid; gap: 18px; }
+#tab-explore[hidden] { display: none; }
+.summary { display: grid; gap: 14px; }
+.tablewrap { overflow-x: auto; }
+table.cond { border-collapse: collapse; font-size: 13px; width: 100%; min-width: 760px; }
+table.cond th, table.cond td { text-align: left; padding: 7px 10px 7px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+table.cond th { font-family: var(--mono); font-size: 11px; font-weight: 500; color: var(--ink-faint); text-transform: uppercase; letter-spacing: 0.06em; }
+table.cond td.n { font-family: var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+table.cond tr.gate td { border-top: 2px solid var(--line); }
+table.cond .v { font-family: var(--mono); font-size: 12px; white-space: nowrap; border-left: 3px solid var(--c); padding-left: 6px; }
+table.cond .read { color: var(--ink-soft); font-size: 12.5px; max-width: 30ch; }
 .vgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
 .vcell { border: 1px solid var(--line); border-left: 3px solid var(--c); border-radius: 6px; padding: 8px 10px; display: grid; gap: 2px; background: var(--panel); min-width: 0; }
 .vcell b { font-family: var(--mono); font-weight: 500; font-size: 15px; }
@@ -128,6 +143,12 @@ details.dropped ul { font-size: 13px; color: var(--ink-soft); padding-left: 18px
     <h1>AI news, one story per event</h1>
     <p class="lede">Every unique story the feeds produced, after Jev folded duplicate write-ups together. Jev then asked of each story whether it would change a forecast of AI catastrophic risk. Stories in full ink might, for at least one cause family; faded stories are not expected to. Click a story for its sources and Jev's probabilities.</p>
   </header>
+  <div class="tabs" role="tablist" aria-label="View">
+    <button role="tab" id="t-summary" aria-controls="tab-summary" aria-selected="true">Summary</button>
+    <button role="tab" id="t-explore" aria-controls="tab-explore" aria-selected="false">Explore</button>
+  </div>
+  <section id="tab-summary" role="tabpanel" aria-labelledby="t-summary" class="summary"></section>
+  <div id="tab-explore" role="tabpanel" aria-labelledby="t-explore" hidden>
   <section class="band" id="band"></section>
   <section class="frame" aria-labelledby="jev-h">
     <h2 class="sec" id="jev-h">Jev screen</h2>
@@ -162,6 +183,7 @@ details.dropped ul { font-size: 13px; color: var(--ink-soft); padding-left: 18px
   </section>
   <details class="dropped" id="dropped"></details>
   <p class="note" id="note"></p>
+  </div>
 </main>
 
 <script id="data" type="application/json">__DATA__</script>
@@ -374,7 +396,61 @@ function footnote() {
     DESC[frame] + " " + RDESC[rframe] + ` A story is flagged at p ${FLAG} or above, a deliberately low bar so that few real movers are missed.`;
 }
 
+// ---- Summary: every Jev condition x writer condition side by side
+const fmtK = n => n == null ? "–" : n >= 1000 ? Math.round(n / 1000) + "k" : String(n);
+const usd = x => x == null ? "–" : "$" + x.toFixed(x < 0.1 ? 3 : 2);
+const RANK = ["none", "negligible", "small", "moderate", "large"];
+function vcell(size, dir, extra) {
+  return `<span class="v" style="--c:${VCOLOR[size] || "var(--line)"}">${esc(size || "–")}${dir && dir !== "none" ? " " + (dir === "up" ? "↑" : dir === "down" ? "↓" : "↕") : ""}${extra ? " " + extra : ""}</span>`;
+}
+function summary() {
+  const rows = [];
+  for (const jf of ["airo", "generic", "none"]) for (const rf of FRAMES) {
+    const ju = jf === "none" ? null : (D.jev_usage || {})[jf];
+    if (jf === "none") {
+      const d = (D.digests || {})[rf] || {}, f = d.forward, r = d.reversed;
+      const fam = CAUSES.map(([k]) => { const a = f && f.verdicts[k], b = r && r.verdicts[k];
+        return vcell(a && a.size, a && a.direction, b && a && b.size !== a.size ? `(rev: ${esc(b.size)})` : ""); });
+      rows.push({jf, rf, read: `All ${POST.length} stories in one call${r ? "; repeated with the list reversed" : ""}`, fam,
+                 jevIn: null, jevUsd: 0, wIn: f && f.usage.in, wOut: f && f.usage.out, wUsd: f && f.usage.usd,
+                 extra: r ? `reversed repeat: ${fmtK(r.usage.in)} in, ${fmtK(r.usage.out)} out, ${usd(r.usage.usd)}` : ""});
+    } else {
+      const tops = topStories(jf), notes = (D.frames[rf] || {}).notes || {}, ns = tops.map(s => notes[s.id]).filter(Boolean);
+      const fam = CAUSES.map(([k]) => { const sizes = ns.map(n => (n.verdicts || {})[k]).filter(Boolean);
+        const best = sizes.sort((a, b) => RANK.indexOf(b) - RANK.indexOf(a))[0];
+        const by = ns.filter(n => (n.verdicts || {})[k] === best && RANK.indexOf(best) >= 2).length;
+        return vcell(best, null, by ? `(${by} of ${tops.length})` : ""); });
+      const sum = key => ns.reduce((t, n) => t + ((n.usage || {})[key] || 0), 0);
+      rows.push({jf, rf, read: `Jev's top ${tops.length}: ` + tops.map(s => esc(s.title)).join("; ") + (ns.length < tops.length ? ` (${tops.length - ns.length} not written)` : ""),
+                 fam, jevIn: ju && ju.in, jevUsd: ju ? ju.usd : 0, wIn: sum("in"), wOut: sum("out"), wUsd: sum("usd"), extra: ""});
+    }
+  }
+  const jevRows = FRAMES.map(f => { const v = POST.map(s => pOf(f, s)).filter(p => p >= 0).sort((a, b) => a - b);
+    const u = (D.jev_usage || {})[f] || {};
+    return `<tr><td>${esc(NAME[f])}</td><td class="n">${v.length}</td><td class="n">${v.length ? v[Math.floor((v.length - 1) / 2)].toFixed(2) : "–"}</td><td class="n">${v.length ? v[v.length - 1].toFixed(2) : "–"}</td><td class="n">${v.filter(p => p >= FLAG).length}</td><td class="n">${fmtK(u.in)}</td><td class="n">${usd(u.usd)}</td></tr>`; }).join("");
+  $("tab-summary").innerHTML = `
+    <p class="note">The same week of news (${POST.length} stories published after the ${esc(FC)} forecast), run through each pipeline. Rows pair a gate (what picks the stories) with a writer (the top-ECI model, shown the AIRO forecast or not). Verdicts are the largest change the writer judged for each family; for a Jev gate, the largest across Jev's top ${TOPN} stories. Costs are what these runs cost: Jev bills $42 per billion input tokens; the writer's “out” is mostly thinking.</p>
+    <div class="tablewrap"><table class="cond"><thead><tr><th>gate</th><th>writer</th><th>what the writer read</th>${CAUSES.map(([, l]) => `<th>${l}</th>`).join("")}<th>Jev in</th><th>writer in / out</th><th>cost</th></tr></thead><tbody>
+    ${rows.map((r, i) => `<tr class="${i % 2 ? "" : "gate"}"><td>${i % 2 ? "" : esc(NAME[r.jf])}</td><td>${esc(r.rf === "airo" ? "Sees the AIRO forecast" : "Generic")}</td><td class="read">${r.read}</td>${r.fam.map(c => `<td>${c}</td>`).join("")}
+      <td class="n">${r.jevIn == null ? "–" : fmtK(r.jevIn)}</td><td class="n">${fmtK(r.wIn)} / ${fmtK(r.wOut)}</td><td class="n">${usd((r.jevUsd || 0) + (r.wUsd || 0))}${r.extra ? `<div class="note">${r.extra}</div>` : ""}</td></tr>`).join("")}
+    </tbody></table></div>
+    <div class="eyebrow">The two Jev screens</div>
+    <div class="tablewrap"><table class="cond" style="min-width:520px"><thead><tr><th>Jev</th><th>stories</th><th>median p</th><th>highest</th><th>at or above ${FLAG}</th><th>tokens in</th><th>cost</th></tr></thead><tbody>${jevRows}</tbody></table></div>
+    <p class="note">↑ up, ↓ down, ↕ mixed. “(n of 3)”: how many of Jev's top stories drew that verdict. Open the Explore tab for the rationales, the histograms and the stories themselves.</p>`;
+}
+
+let tab = "summary";
+try { if (localStorage.getItem("news-tab") === "explore") tab = "explore"; } catch (e) {}
+function showTab(t) {
+  tab = t;
+  for (const x of ["summary", "explore"]) { $("t-" + x).setAttribute("aria-selected", String(x === t)); $("tab-" + x).hidden = x !== t; }
+  try { localStorage.setItem("news-tab", t); } catch (e) {}
+}
+for (const x of ["summary", "explore"]) $("t-" + x).addEventListener("click", () => showTab(x));
+
 $("dropped").innerHTML = `<summary>${D.dropped.length} items dropped by the AI gate (feeds not limited to AI)</summary><ul>` +
   D.dropped.map(d => `<li>${esc(d.title)} <span class="n">(p_ai ${d.p?.toFixed(2)})</span></li>`).join("") + "</ul>";
 applyFrame();
+summary();
+showTab(tab);
 </script>

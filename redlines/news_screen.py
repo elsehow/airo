@@ -631,6 +631,14 @@ def calibrate(screened, notes):
 # ----------------------------------------------------------------- page
 
 PAGE_TEMPLATE = ROOT / "web" / "news" / "stories.html"
+JEV_USD_PER_TOKEN = 42e-9   # Jev bills input tokens only: $42 per billion (2026-10)
+
+
+def _usage(u):
+    """A writer call's usage, trimmed to what the page shows."""
+    u = u or {}
+    return {"in": u.get("input_tokens"), "out": u.get("output_tokens"),
+            "thinking": u.get("reasoning_tokens"), "usd": u.get("cost_usd")}
 
 
 def _frame_data(state_dir, frame):
@@ -641,7 +649,7 @@ def _frame_data(state_dir, frame):
     cal = calibrate(screened, notes)
     return screened, {
         "notes": {n["story"]: dict({k: n[k] for k in ("at", "text", "verdict", "writer", "eci", "flagged")},
-                                   verdicts=n.get("verdicts") or {})
+                                   verdicts=n.get("verdicts") or {}, usage=_usage(n.get("usage")))
                   for n in notes},
         "calibration": {"pairs": cal["pairs"], "false_flags": cal["false_flags"],
                         "misses": cal["misses"], "suggest": cal["suggest"]}}
@@ -661,6 +669,7 @@ def page_data(state_dir, fc_meta=None):
         if d["run"] == airo_run:      # the newest of each frame and order wins
             digests.setdefault(d["frame"], {})[d["order"]] = {
                 k: d[k] for k in ("at", "text", "verdicts", "overall", "writer", "eci", "stories", "cutoff")}
+            digests[d["frame"]][d["order"]]["usage"] = _usage(d.get("usage"))
     stories = [{"id": s["id"], "title": s["title"], "first": s["first_seen"], "last": s["last_seen"],
                 "post": cut is None or first_report(s, items) > cut,
                 "sources": s["sources"],
@@ -671,6 +680,7 @@ def page_data(state_dir, fc_meta=None):
                 "related": [{"title": title_of.get(r["story"], ""), "p": r["p_followup"]}
                             for r in s["related"]]}
                for s in built["stories"]]
+    post_ids = {s["id"] for s in stories if s["post"]}
     fetches = news.read_jsonl(os.path.join(state_dir, "fetches.jsonl"))
     written = {(f, sid) for f in FRAMES for sid in frames[f][1]["notes"]}
     gaps = [g for g in news.read_jsonl(os.path.join(state_dir, "rationale_gaps.jsonl"))
@@ -686,6 +696,11 @@ def page_data(state_dir, fc_meta=None):
             "dropped": [{"title": items[i]["title"], "p": gate.get(i)} for i in built["dropped"]],
             "frames": {f: frames[f][1] for f in FRAMES},
             "digests": digests,
+            "jev_usage": {f: {"calls": len(rows), "in": sum((r.get("usage") or {}).get("input_tokens", 0) for r in rows),
+                              "usd": round(sum((r.get("usage") or {}).get("input_tokens", 0) for r in rows)
+                                           * JEV_USD_PER_TOKEN, 4)}
+                          for f in FRAMES
+                          for rows in [[r for sid, r in frames[f][0].items() if sid in post_ids]]},
             "gaps": {f"{g['frame']}:{g['story']}": "The writer returned no text "
                      f"({sum(1 for h in gaps if (h['frame'], h['story']) == (g['frame'], g['story']))} "
                      "attempt(s)); it stopped before writing, which a retry can fix." for g in gaps}}
