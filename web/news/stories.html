@@ -26,6 +26,18 @@
 .notecard a { color: var(--link); }
 .story .notetext { font-size: 14px; border-left: 2px solid var(--link); padding-left: 12px; }
 .chip.note { --c: var(--link); }
+.hist { display: grid; gap: 8px; }
+.hist .controls { margin: 0; }
+.hist svg { width: 100%; height: auto; display: block; font-family: var(--mono); font-size: 11px; }
+.hist .ax { stroke: var(--line); }
+.hist .tk { fill: var(--ink-faint); font-variant-numeric: tabular-nums; }
+.hist .b-un { fill: var(--ink-faint); opacity: .45; }
+.hist .b-no { fill: var(--ink); }
+.hist .b-mv { fill: var(--link); }
+.hist .thr { stroke: var(--c-bio); stroke-dasharray: 4 3; stroke-width: 1.5; }
+.hist .thr-l { fill: var(--c-bio); }
+.hist .key { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--ink-soft); }
+.hist .key i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
 .calib { display: grid; gap: 8px; }
 .tablewrap { overflow-x: auto; }
 .calib table { border-collapse: collapse; font-size: 13px; width: 100%; }
@@ -107,6 +119,7 @@ details.dropped ul { font-size: 13px; color: var(--ink-soft); padding-left: 18px
     <div class="legend" id="legend"></div>
   </div>
   <section class="notecard" id="notecard" hidden></section>
+  <section class="hist" id="hist"></section>
   <section class="calib" id="calib" hidden></section>
   <section class="list" id="list" aria-live="polite"></section>
   <details class="dropped" id="dropped"></details>
@@ -181,6 +194,40 @@ if (nid) {
     ${noteHTML(n.text)}<div class="by">Verdict: <b>${esc(n.verdict || "unparsed")}</b></div>`;
   card.hidden = false;
 }
+
+const MOVES = ["small", "moderate", "large"];
+let histOf = "max";
+function hist() {
+  const BIN = 0.05, N = 20, W = 640, H = 220, L = 34, R = 8, T = 18, B = 30;
+  const val = s => histOf === "max" ? Math.max(0, ...CAUSES.map(([k]) => s.screen[k] ?? 0)) : s.screen[histOf];
+  const bins = Array.from({length: N}, () => ({un: 0, no: 0, mv: 0}));
+  const vals = [];
+  for (const s of D.stories) {
+    const p = val(s); if (p == null) continue; vals.push(p);
+    const n = NOTES[s.id], b = bins[Math.min(N - 1, Math.floor(p / BIN + 1e-9))];
+    if (!n) b.un++; else if (MOVES.includes(n.verdict)) b.mv++; else b.no++;
+  }
+  vals.sort((a, b) => a - b);
+  const med = vals.length ? vals[Math.floor((vals.length - 1) / 2)] : 0;
+  const top = Math.max(1, ...bins.map(b => b.un + b.no + b.mv)), step = top > 40 ? 10 : 5, ymax = Math.ceil(top / step) * step;
+  const x = p => L + (W - L - R) * p, y = c => H - B - (H - T - B) * c / ymax, bw = (W - L - R) / N;
+  let g = "";
+  for (let c = 0; c <= ymax; c += step) g += `<line class="ax" x1="${L}" x2="${W - R}" y1="${y(c)}" y2="${y(c)}"/><text class="tk" x="${L - 6}" y="${y(c) + 4}" text-anchor="end">${c}</text>`;
+  for (let i = 0; i <= 10; i++) g += `<text class="tk" x="${x(i / 10)}" y="${H - B + 16}" text-anchor="middle">${(i / 10).toFixed(1)}</text>`;
+  g += `<text class="tk" x="${(L + W - R) / 2}" y="${H - 2}" text-anchor="middle">Jev p(story would change the forecast)</text>`;
+  bins.forEach((b, i) => { let c = 0;
+    for (const [k, cls] of [["un", "b-un"], ["no", "b-no"], ["mv", "b-mv"]]) if (b[k]) {
+      g += `<rect class="${cls}" x="${x(i * BIN) + 1}" width="${bw - 2}" y="${y(c + b[k])}" height="${y(c) - y(c + b[k])}"><title>p ${(i * BIN).toFixed(2)}–${((i + 1) * BIN).toFixed(2)}: ${b[k]}</title></rect>`; c += b[k]; } });
+  g += `<line class="thr" x1="${x(FLAG)}" x2="${x(FLAG)}" y1="${T - 6}" y2="${H - B}"/><text class="thr-l" x="${x(FLAG) + 5}" y="${T + 2}">flag at ${FLAG}</text>`;
+  const above = vals.filter(p => p >= FLAG).length, label = histOf === "max" ? "the highest of its four families" : CAUSES.find(([k]) => k === histOf)[1];
+  document.getElementById("hist").innerHTML = `<div class="eyebrow">How Jev scored every story</div>
+    <p class="note">${vals.length} stories, each scored by ${label}, in bins of ${BIN}. Median ${med.toFixed(2)}, highest ${vals.length ? vals[vals.length - 1].toFixed(2) : "–"}; ${above} at or above the flag. Bars are split by what the top-ECI model said when it wrote a note.</p>
+    <div class="controls">${[["max", "Highest family"], ...CAUSES].map(([k, l]) => `<button data-h="${k}" aria-pressed="${k === histOf}">${l}</button>`).join("")}</div>
+    <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Histogram of Jev scores">${g}</svg>
+    <div class="key"><span><i class="b-un" style="background:var(--ink-faint);opacity:.45"></i>no note</span><span><i style="background:var(--ink)"></i>note: none or negligible</span><span><i style="background:var(--link)"></i>note: small or more</span></div>`;
+  document.querySelectorAll("#hist button").forEach(b => b.addEventListener("click", () => { histOf = b.dataset.h; hist(); }));
+}
+hist();
 
 document.getElementById("fc-day").textContent = FC;
 const C = D.calibration;
