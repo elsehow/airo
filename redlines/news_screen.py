@@ -640,7 +640,8 @@ def _frame_data(state_dir, frame):
     notes = [n for n in news.read_jsonl(os.path.join(state_dir, LOGS[frame][1])) if n["forecast"] == against]
     cal = calibrate(screened, notes)
     return screened, {
-        "notes": {n["story"]: {k: n[k] for k in ("at", "text", "verdict", "writer", "eci", "flagged")}
+        "notes": {n["story"]: dict({k: n[k] for k in ("at", "text", "verdict", "writer", "eci", "flagged")},
+                                   verdicts=n.get("verdicts") or {})
                   for n in notes},
         "calibration": {"pairs": cal["pairs"], "false_flags": cal["false_flags"],
                         "misses": cal["misses"], "suggest": cal["suggest"]}}
@@ -653,7 +654,15 @@ def page_data(state_dir, fc_meta=None):
     gate = {d["item"]: d["p_ai"] for d in news.read_jsonl(os.path.join(state_dir, "decisions.jsonl"))
             if d["kind"] == "gate"}
     title_of = {s["id"]: s["title"] for s in built["stories"]}
+    airo_run = max((r["forecast"] for r in news.read_jsonl(os.path.join(state_dir, LOGS["airo"][0]))), default=None)
+    cut = forecast_time({"run": airo_run}) if airo_run else None
+    digests = {}
+    for d in news.read_jsonl(os.path.join(state_dir, "digest.jsonl")):
+        if d["run"] == airo_run:      # the newest of each frame and order wins
+            digests.setdefault(d["frame"], {})[d["order"]] = {
+                k: d[k] for k in ("at", "text", "verdicts", "overall", "writer", "eci", "stories", "cutoff")}
     stories = [{"id": s["id"], "title": s["title"], "first": s["first_seen"], "last": s["last_seen"],
+                "post": cut is None or first_report(s, items) > cut,
                 "sources": s["sources"],
                 "screens": {f: (frames[f][0].get(s["id"]) or {}).get("p_moves", {}) for f in FRAMES},
                 "members": [{"source": m["source"], "title": m["title"], "url": m["url"],
@@ -670,11 +679,13 @@ def page_data(state_dir, fc_meta=None):
     return {"meta": {"items": built["stats"]["items"], "stories": len(stories), "built": built["built_at"],
                      "polls": len({f["at"] for f in fetches}), "feeds": len({f["feed"] for f in fetches}),
                      "same_at": built["thresholds"]["same_at"], "screen_at": SCREEN_AT,
+                     "cutoff": cut,
                      "forecast": (fc_meta or {}).get("day") or max((r["forecast"] for r in airo_rows), default=None),
                      "panel": (fc_meta or {}).get("models") or []},
             "stories": stories,
             "dropped": [{"title": items[i]["title"], "p": gate.get(i)} for i in built["dropped"]],
             "frames": {f: frames[f][1] for f in FRAMES},
+            "digests": digests,
             "gaps": {f"{g['frame']}:{g['story']}": "The writer returned no text "
                      f"({sum(1 for h in gaps if (h['frame'], h['story']) == (g['frame'], g['story']))} "
                      "attempt(s)); it stopped before writing, which a retry can fix." for g in gaps}}

@@ -43,6 +43,18 @@
 .hist .b-other { fill: var(--ink-faint); fill-opacity: .22; stroke: var(--ink-faint); stroke-width: 1.2; stroke-dasharray: 3 2; }
 .frame .controls button { font-size: 14px; padding: 6px 14px; }
 .frame.sub { background: var(--bg); }
+.vgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+.vcell { border: 1px solid var(--line); border-left: 3px solid var(--c); border-radius: 6px; padding: 8px 10px; display: grid; gap: 2px; background: var(--panel); min-width: 0; }
+.vcell b { font-family: var(--mono); font-weight: 500; font-size: 15px; }
+.vcell span { font-size: 12px; color: var(--ink-soft); }
+.vcell .cites { font-size: 12px; }
+.vcell .cites a { color: var(--link); }
+.chip.dg { --c: var(--c-bio); }
+.story.pre { opacity: .32; }
+.chip.pre { --c: var(--line); color: var(--ink-faint); }
+table.robust { border-collapse: collapse; font-size: 13px; }
+table.robust th, table.robust td { text-align: left; padding: 4px 14px 4px 0; border-bottom: 1px solid var(--line); }
+table.robust th { font-family: var(--mono); font-size: 11px; font-weight: 500; color: var(--ink-faint); text-transform: uppercase; letter-spacing: 0.06em; }
 .sec { font-family: var(--display); font-weight: 600; font-size: 1.2rem; line-height: 1.2; margin: 0; }
 h3.sec { font-size: 1.05rem; }
 .chip.p { --c: var(--line); color: var(--ink-soft); }
@@ -133,6 +145,15 @@ details.dropped ul { font-size: 13px; color: var(--ink-soft); padding-left: 18px
       <div class="notes" id="notes"></div>
     </section>
   </section>
+  <section class="frame" aria-labelledby="dig-h">
+    <h2 class="sec" id="dig-h">No Jev gate · the top-ECI model reads the whole week</h2>
+    <div class="controls" role="group" aria-label="What the writer was shown">
+      <button data-d="airo" aria-pressed="true">Sees the AIRO forecast</button>
+      <button data-d="generic" aria-pressed="false">Generic: no forecast</button>
+    </div>
+    <p class="note" id="dig-desc"></p>
+    <div id="digest"></div>
+  </section>
   <section class="band" id="band"></section>
   <div class="controls" role="group" aria-label="Filter">
     <button id="f-all" aria-pressed="true">All stories</button>
@@ -159,9 +180,10 @@ const when = iso => { const d = new Date(iso); return d.toLocaleString(undefined
 const $ = id => document.getElementById(id);
 
 // The frame: what Jev and the writer were shown. Everything below the toggle is drawn from it.
-let frame = "airo", rframe = "airo";   // Jev's frame, and the writer's
+let frame = "airo", rframe = "airo", dframe = "airo";   // Jev's frame, the rationale writer's, the digest writer's
 try { if (localStorage.getItem("news-frame") === "generic") frame = "generic";
-      if (localStorage.getItem("news-rframe") === "generic") rframe = "generic"; } catch (e) {}
+      if (localStorage.getItem("news-rframe") === "generic") rframe = "generic";
+      if (localStorage.getItem("news-dframe") === "generic") dframe = "generic"; } catch (e) {}
 let NOTES = {}, mode = "all", histOf = "ai";
 const NAME = {airo: "Sees the AIRO forecast", generic: "Generic"};
 const RNAME = {airo: "writer sees the forecast", generic: "generic writer"};
@@ -173,13 +195,19 @@ const DESC = {
   airo: `Jev saw each story with the ${FC} AIRO ensemble medians and the panel's reasoning, and was asked per cause family whether a forecaster holding that forecast would change it.`,
   generic: "Jev saw only the story, and was asked per cause family whether a careful forecaster of catastrophic risk from AI would change their probabilities. No AIRO numbers or reasoning.",
 };
+const DDESC = {
+  airo: `No Jev screen: the writer read every story published after the forecast was elicited, as Jev sees each one, with the ${FC} AIRO forecast and the panel's rationales, and judged how much the news as a whole moves each family. One call, thinking only.`,
+  generic: "No Jev screen: the writer read every story published after the forecast was elicited, as Jev sees each one, with no forecast, and judged how much the news as a whole should move forecasts of AI catastrophic risk, family by family. One call, thinking only.",
+};
 const RDESC = {
   airo: `The writer saw the story with the ${FC} AIRO ensemble forecast (medians and ranges) and each panel model's rationale, and wrote a note on whether it should move that forecast. One call, thinking only: no tools, no search.`,
   generic: "The writer saw only the story, and wrote a note on whether it should move forecasts of AI catastrophic risk in general. One call, thinking only: no tools, no search.",
 };
 
+const POST = D.stories.filter(s => s.post);
+const TOPN = 3;
 function applyFrame() {
-  const tops = new Set(FRAMES.map(f => topStory(f).id));
+  const tops = new Set(FRAMES.flatMap(f => topStories(f).map(s => s.id)));
   NOTES = Object.fromEntries(Object.entries((D.frames[rframe] || {}).notes || {}).filter(([id]) => tops.has(id)));
   D.stories.forEach(s => {
     s.screen = s.screens[frame] || {};
@@ -192,11 +220,18 @@ function applyFrame() {
   document.querySelectorAll(".frame button[data-r]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.r === rframe)));
   $("frame-desc").textContent = DESC[frame];
   $("rat-desc").textContent = RDESC[rframe];
-  band(); notes(); hist(); render(); footnote();
+  document.querySelectorAll(".frame button[data-d]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.d === dframe)));
+  $("dig-desc").textContent = DDESC[dframe];
+  band(); notes(); hist(); digest(); render(); footnote();
 }
 document.querySelectorAll(".frame button[data-f]").forEach(b => b.addEventListener("click", () => {
   frame = b.dataset.f;
   try { localStorage.setItem("news-frame", frame); } catch (e) {}
+  applyFrame();
+}));
+document.querySelectorAll(".frame button[data-d]").forEach(b => b.addEventListener("click", () => {
+  dframe = b.dataset.d;
+  try { localStorage.setItem("news-dframe", dframe); } catch (e) {}
   applyFrame();
 }));
 document.querySelectorAll(".frame button[data-r]").forEach(b => b.addEventListener("click", () => {
@@ -206,10 +241,10 @@ document.querySelectorAll(".frame button[data-r]").forEach(b => b.addEventListen
 }));
 
 function band() {
-  const rel = D.stories.filter(s => s.relevant).length, multi = D.stories.filter(s => s.sources.length > 1).length;
+  const rel = POST.filter(s => s.relevant).length, multi = D.stories.filter(s => s.sources.length > 1).length;
   $("band").innerHTML = [
-    [m.items, "items from " + m.feeds + " feeds"], [m.stories, "unique stories"], [multi, "multi-source stories"],
-    [rel, "might move the forecast"], [Object.keys(NOTES).length, "rationales (" + RNAME[rframe] + ")"], [D.dropped.length, "dropped as not AI"]
+    [m.items, "items from " + m.feeds + " feeds"], [m.stories, "unique stories"], [POST.length, "after the forecast"], [multi, "multi-source stories"],
+    [rel, "flagged by Jev (after the forecast)"], [Object.keys(NOTES).length, "rationales (" + RNAME[rframe] + ")"], [D.dropped.length, "dropped as not AI"]
   ].map(([n, l]) => `<div><b>${n}</b><span>${l}</span></div>`).join("");
 }
 $("legend").innerHTML = CAUSES.map(([k, l]) => `<span><span class="dot" style="--c:var(--c-${k})"></span>${l}</span>`).join("");
@@ -227,7 +262,8 @@ function noteHTML(text) {
 
 function storyHTML(s) {
   const n = NOTES[s.id];
-  const chips = (s.scored ? `<span class="chip p" title="Jev p(story would change the forecast), highest family">p ${s.pmax.toFixed(2)}</span>` : `<span class="chip p">not screened</span>`)
+  const cited = CAUSES.some(([k]) => ((((D.digests || {})[dframe] || {}).forward || {}).verdicts || {})[k]?.stories?.includes(s.id));
+  const chips = (s.post ? "" : `<span class="chip pre">before the forecast</span>`) + (cited ? `<span class="chip dg">Digest</span>` : "") + (s.scored ? `<span class="chip p" title="Jev p(story would change the forecast), highest family">p ${s.pmax.toFixed(2)}</span>` : `<span class="chip p">not screened</span>`)
     + (n ? `<span class="chip note">Rationale: ${esc(n.verdict || "?")}</span>` : "")
     + s.flags.map(([k, l]) => `<span class="chip" style="--c:var(--c-${k})">${l} ${s.screen[k].toFixed(2)}</span>`).join("");
   const span = s.first === s.last ? when(s.first) : `${when(s.first)} – ${when(s.last)}`;
@@ -238,7 +274,7 @@ function storyHTML(s) {
   const note = n ? `<div class="eyebrow">Rationale (${RNAME[rframe]}) · ${esc(n.writer)} · verdict: ${esc(n.verdict || "unparsed")}</div>${noteHTML(n.text)}` : "";
   const verdict = `<div class="related">${s.relevant ? "Might move " + AGAINST[frame] + " for: " + s.flags.map(([k, l]) => l).join(", ") : "Checked against " + AGAINST[frame] + ": not expected to move it"} (Jev, flagged at ${FLAG}).</div>`;
   const related = s.related.map(r => `<div class="related">Possible follow-up to: ${esc(r.title)} (p ${r.p.toFixed(2)})</div>`).join("");
-  return `<details class="story${s.relevant ? "" : " quiet"}" id="${s.id}"><summary>
+  return `<details class="story${!s.post ? " pre" : s.relevant ? "" : " quiet"}" id="${s.id}"><summary>
       <div class="head"><div class="headline">${esc(s.title)}</div>
       <div class="meta"><span>${span}</span><span>${esc(s.sources.join(", "))}</span><span class="n">${s.members.length} item${s.members.length > 1 ? "s" : ""}</span></div></div>
       <div class="chips">${chips}</div></summary>
@@ -258,23 +294,43 @@ for (const [id, v] of [["f-all", "all"], ["f-rel", "rel"], ["f-multi", "multi"]]
 // The pipeline: Jev's top story in its frame goes to the top-ECI model, whose rationale is
 // written in its own frame. Rationales on other stories (the calibration run) are left off.
 function pOf(f, s) { const sc = s.screens[f] || {}; return Math.max(-1, ...CAUSES.map(([k]) => sc[k] ?? -1)); }
-function topStory(f) {
-  const written = s => FRAMES.filter(r => ((D.frames[r] || {}).notes || {})[s.id]).length;
-  return [...D.stories].sort((a, b) => pOf(f, b) - pOf(f, a) || written(b) - written(a))[0];
+function topStories(f) {   // Jev's top stories after the forecast; ties in list order, as the pipeline picks them
+  return [...POST].sort((a, b) => pOf(f, b) - pOf(f, a)).slice(0, TOPN);
+}
+const VCOLOR = {none: "var(--line)", negligible: "var(--link)", small: "var(--c-bio)", moderate: "var(--c-bio)", large: "var(--c-bio)"};
+function verdictGrid(vs, cites) {
+  return `<div class="vgrid">${CAUSES.map(([k, l]) => { const v = vs[k]; const size = v && (v.size || v); return `<div class="vcell" style="--c:${VCOLOR[size] || "var(--line)"}">
+    <span>${l}</span><b>${esc(size || "–")}${v && v.direction && v.direction !== "none" ? " · " + esc(v.direction) : ""}</b>
+    ${cites && v && v.stories && v.stories.length ? `<span class="cites">${v.stories.map(id => { const st = D.stories.find(x => x.id === id); return st ? `<a href="#${id}">${esc(st.title)}</a>` : ""; }).join("; ")}</span>` : ""}</div>`; }).join("")}</div>`;
 }
 const FRAMES = ["airo", "generic"];
 
 function notes() {
-  const el = $("notes"), s = topStory(frame), n = NOTES[s.id];
+  const el = $("notes");
   const shown = rframe === "airo" ? `shown the ensemble forecast of ${esc(FC)} and the panel's rationales` : "shown no forecast, asked about AI catastrophic-risk forecasts in general";
-  el.innerHTML = `<article class="notecard">
-    <div class="eyebrow">Jev's top story · ${esc(NAME[frame])} · p ${s.pmax.toFixed(2)}</div>
+  el.innerHTML = `<p class="note">Jev's top ${TOPN} stories published after the forecast (${esc(NAME[frame])}), each with the top-ECI model's rationale (${esc(RNAME[rframe])}).</p>` + topStories(frame).map((s, i) => {
+    const n = NOTES[s.id];
+    return `<article class="notecard">
+    <div class="eyebrow">Jev's #${i + 1} · ${esc(NAME[frame])} · p ${s.pmax.toFixed(2)}</div>
     <h2>${esc(s.title)}</h2>
-    <div class="by">${s.flags.map(([k, l]) => `${l} ${s.screen[k].toFixed(2)}`).join(", ")}. ${s.members.length} report${s.members.length > 1 ? "s" : ""} (${esc(s.sources.join(", "))})${s.members.some(x => x.full) ? ", with the article text Tavily could extract" : ", headlines and standfirsts only"}. <a href="#${s.id}">Sources</a>.</div>
+    <div class="by">${s.flags.map(([k, l]) => `${l} ${s.screen[k].toFixed(2)}`).join(", ") || "Not flagged"}. ${s.members.length} report${s.members.length > 1 ? "s" : ""} (${esc(s.sources.join(", "))}), first ${when(s.first)}. <a href="#${s.id}">Sources</a>.</div>
     ${n ? `<div class="by">Rationale by ${esc(n.writer)}, the highest-ECI model on the panel (ECI ${n.eci}), ${shown}.</div>
-    ${noteHTML(n.text)}<div class="by">Verdict: <b>${esc(n.verdict || "unparsed")}</b></div>`
-        : `<p class="note">No rationale in this condition: ${esc(RNAME[rframe])}. ${GAPS[rframe + ":" + s.id] || "Not written yet."}</p>`}
-  </article>`;
+    ${verdictGrid(n.verdicts || {}, false)}${noteHTML(n.text)}`
+        : `<p class="note">No rationale in this condition. ${GAPS[rframe + ":" + s.id] || "Not written yet."}</p>`}
+  </article>`; }).join("");
+}
+
+function digest() {
+  const el = $("digest"), d = (D.digests || {})[dframe] || {}, fwd = d.forward, rev = d.reversed;
+  if (!fwd && !rev) { el.innerHTML = `<p class="note">Not run yet in this condition.</p>`; return; }
+  const main = fwd || rev;
+  const robust = fwd && rev ? `<div class="tablewrap"><table class="robust"><thead><tr><th>family</th><th>listed in shuffle</th><th>listed reversed</th></tr></thead><tbody>${CAUSES.map(([k, l]) =>
+      `<tr><td>${l}</td><td>${esc((fwd.verdicts[k] || {}).size || "–")} ${esc((fwd.verdicts[k] || {}).direction || "")}</td><td>${esc((rev.verdicts[k] || {}).size || "–")} ${esc((rev.verdicts[k] || {}).direction || "")}</td></tr>`).join("")}</tbody></table></div>
+      <p class="note">Robustness: the same ${main.stories} stories, once in a fixed shuffle and once reversed.</p>` : "";
+  el.innerHTML = `<article class="notecard">
+    <div class="eyebrow">${main.stories} stories since ${when(main.cutoff)} · overall: ${esc(main.overall || "–")}</div>
+    <div class="by">Read by ${esc(main.writer)} (ECI ${main.eci}) in one call${fwd ? ", stories in a fixed shuffle" : ", stories reversed"}. Stories it cites are linked and marked “Digest” in the list.</div>
+    ${verdictGrid(main.verdicts, true)}${noteHTML(main.text)}${robust}</article>`;
 }
 
 function hist() {
@@ -285,7 +341,7 @@ function hist() {
   const binOf = p => Math.min(N - 1, Math.floor(p / BIN + 1e-9));
   const bins = Array.from({length: N}, () => ({un: 0, no: 0, mv: 0})), ghost = Array(N).fill(0);
   const vals = [], ovals = [];
-  for (const s of D.stories) {
+  for (const s of POST) {
     const q = valIn(other, s); if (q != null) { ovals.push(q); ghost[binOf(q)]++; }
     const p = valIn(frame, s); if (p == null) continue; vals.push(p);
     const n = NOTES[s.id], b = bins[binOf(p)];
@@ -308,7 +364,7 @@ function hist() {
   const above = vals.filter(p => p >= FLAG).length, label = `its ${CAUSES.find(([k]) => k === histOf)[1]} score`;
   const omed = ovals.length ? ovals[Math.floor((ovals.length - 1) / 2)] : null, oabove = ovals.filter(p => p >= FLAG).length;
   $("hist").innerHTML = `<div class="eyebrow">How Jev scored every story · ${NAME[frame]}, with ${NAME[other]} behind it</div>
-    <p class="note">${vals.length} stories, each scored by ${label}, in bins of ${BIN}. ${NAME[frame]}: median ${med.toFixed(2)}, highest ${vals.length ? vals[vals.length - 1].toFixed(2) : "–"}, ${above} at or above the flag.${omed == null ? "" : ` ${NAME[other]}: median ${omed.toFixed(2)}, highest ${ovals[ovals.length - 1].toFixed(2)}, ${oabove} at or above the flag.`}</p>
+    <p class="note">${vals.length} stories published after the forecast, each scored by ${label}, in bins of ${BIN}. ${NAME[frame]}: median ${med.toFixed(2)}, highest ${vals.length ? vals[vals.length - 1].toFixed(2) : "–"}, ${above} at or above the flag.${omed == null ? "" : ` ${NAME[other]}: median ${omed.toFixed(2)}, highest ${ovals[ovals.length - 1].toFixed(2)}, ${oabove} at or above the flag.`}</p>
     <div class="controls">${CAUSES.map(([k, l]) => `<button data-h="${k}" aria-pressed="${k === histOf}">${l}</button>`).join("")}</div>
     <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Histogram of Jev scores">${g}</svg>
     <div class="key"><span><i style="background:var(--c-misalign)"></i>${NAME[frame]}</span><span><i style="background:var(--link)"></i>Jev's top story, rationale: none or negligible</span><span><i style="background:var(--c-bio)"></i>rationale: small or more</span><span><i style="background:color-mix(in srgb, var(--ink-faint) 22%, transparent);outline:1.2px dashed var(--ink-faint);outline-offset:-1px"></i>${NAME[other]} (the other tab)</span></div>`;
