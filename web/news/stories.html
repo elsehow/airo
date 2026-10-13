@@ -148,7 +148,7 @@ const $ = id => document.getElementById(id);
 // The frame: what Jev and the writer were shown. Everything below the toggle is drawn from it.
 let frame = "airo";
 try { if (localStorage.getItem("news-frame") === "generic") frame = "generic"; } catch (e) {}
-let NOTES = {}, CAL = null, mode = "all", histOf = "max";
+let NOTES = {}, CAL = null, mode = "all", histOf = "ai";
 const NAME = {airo: "Against the AIRO forecast", generic: "Generic"};
 const AGAINST = {
   airo: `the ${FC} AIRO ensemble forecast`,
@@ -255,7 +255,7 @@ function hist() {
   const BIN = 0.05, N = 20, W = 640, H = 220, L = 34, R = 8, T = 18, B = 30;
   const other = frame === "airo" ? "generic" : "airo";
   const valIn = (f, s) => { const sc = s.screens[f] || {}; if (!Object.keys(sc).length) return null;
-    return histOf === "max" ? Math.max(...CAUSES.map(([k]) => sc[k] ?? 0)) : sc[histOf]; };
+    return sc[histOf]; };
   const binOf = p => Math.min(N - 1, Math.floor(p / BIN + 1e-9));
   const bins = Array.from({length: N}, () => ({un: 0, no: 0, mv: 0})), ghost = Array(N).fill(0);
   const vals = [], ovals = [];
@@ -279,11 +279,11 @@ function hist() {
     for (const [k, cls] of [["un", "b-un"], ["no", "b-no"], ["mv", "b-mv"]]) if (b[k]) {
       g += `<rect class="${cls}" x="${x(i * BIN) + 4}" width="${bw - 8}" y="${y(c + b[k])}" height="${y(c) - y(c + b[k])}"><title>p ${(i * BIN).toFixed(2)}–${((i + 1) * BIN).toFixed(2)}: ${b[k]}</title></rect>`; c += b[k]; } });
   g += `<line class="thr" x1="${x(FLAG)}" x2="${x(FLAG)}" y1="${T - 6}" y2="${H - B}"/><text class="thr-l" x="${x(FLAG) + 5}" y="${T + 2}">flag at ${FLAG}</text>`;
-  const above = vals.filter(p => p >= FLAG).length, label = histOf === "max" ? "the highest of its four families" : CAUSES.find(([k]) => k === histOf)[1];
+  const above = vals.filter(p => p >= FLAG).length, label = `its ${CAUSES.find(([k]) => k === histOf)[1]} score`;
   const omed = ovals.length ? ovals[Math.floor((ovals.length - 1) / 2)] : null, oabove = ovals.filter(p => p >= FLAG).length;
   $("hist").innerHTML = `<div class="eyebrow">How Jev scored every story · ${NAME[frame]}, with ${NAME[other]} behind it</div>
     <p class="note">${vals.length} stories, each scored by ${label}, in bins of ${BIN}. ${NAME[frame]}: median ${med.toFixed(2)}, highest ${vals.length ? vals[vals.length - 1].toFixed(2) : "–"}, ${above} at or above the flag.${omed == null ? "" : ` ${NAME[other]}: median ${omed.toFixed(2)}, highest ${ovals[ovals.length - 1].toFixed(2)}, ${oabove} at or above the flag.`} Bars are split by what the top-ECI model said when it wrote a note${CAL && CAL.pairs.length ? `: of ${CAL.pairs.length} notes, ${CAL.false_flags} flagged stories it judged not to move the forecast, and ${CAL.misses} unflagged ones it judged would` : ""}.</p>
-    <div class="controls">${[["max", "Highest family"], ...CAUSES].map(([k, l]) => `<button data-h="${k}" aria-pressed="${k === histOf}">${l}</button>`).join("")}</div>
+    <div class="controls">${CAUSES.map(([k, l]) => `<button data-h="${k}" aria-pressed="${k === histOf}">${l}</button>`).join("")}</div>
     <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Histogram of Jev scores">${g}</svg>
     <div class="key"><span><i style="background:var(--c-misalign)"></i>${NAME[frame]}: no note</span><span><i style="background:var(--link)"></i>note: none or negligible</span><span><i style="background:var(--c-bio)"></i>note: small or more</span><span><i style="background:color-mix(in srgb, var(--ink-faint) 22%, transparent);outline:1.2px dashed var(--ink-faint);outline-offset:-1px"></i>${NAME[other]} (the other tab)</span></div>`;
   document.querySelectorAll("#hist button").forEach(b => b.addEventListener("click", () => { histOf = b.dataset.h; hist(); }));
