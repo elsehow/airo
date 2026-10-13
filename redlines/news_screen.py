@@ -405,7 +405,7 @@ def page_data(state_dir, fc_meta=None):
                      "panel": (fc_meta or {}).get("models") or []},
             "stories": stories,
             "dropped": [{"title": items[i]["title"], "p": gate.get(i)} for i in built["dropped"]],
-            "notes": {n["story"]: {k: n[k] for k in ("text", "verdict", "writer", "eci", "flagged")}
+            "notes": {n["story"]: {k: n[k] for k in ("at", "text", "verdict", "writer", "eci", "flagged")}
                       for n in notes},
             "calibration": {"pairs": cal["pairs"], "false_flags": cal["false_flags"],
                             "misses": cal["misses"], "suggest": cal["suggest"]}}
