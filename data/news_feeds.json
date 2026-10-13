@@ -4,6 +4,7 @@
     {"id": "ft_ai", "source": "Financial Times", "url": "https://www.ft.com/artificial-intelligence?format=rss", "ai_only": true, "open_access": false},
     {"id": "nyt_ai", "source": "New York Times", "url": "https://www.nytimes.com/svc/collections/v1/publish/https://www.nytimes.com/topic/subject/artificial-intelligence/rss.xml", "ai_only": true, "open_access": false},
     {"id": "nyt_tech", "source": "New York Times", "url": "https://rss.nytimes.com/services/xml/rss/nyt/Technology.xml", "ai_only": false, "open_access": false},
+    {"id": "nyt_science", "source": "New York Times", "url": "https://rss.nytimes.com/services/xml/rss/nyt/Science.xml", "ai_only": false, "open_access": false},
     {"id": "reuters_gnews", "source": "Reuters", "url": "https://news.google.com/rss/search?q=site:reuters.com+%22artificial+intelligence%22+when:7d&hl=en-US&gl=US&ceid=US:en", "ai_only": true, "open_access": true, "resolve": "google_news"},
     {"id": "ars_ai", "source": "Ars Technica", "url": "https://arstechnica.com/ai/feed/", "ai_only": true, "open_access": true},
     {"id": "mittr_ai", "source": "MIT Technology Review", "url": "https://www.technologyreview.com/topic/artificial-intelligence/feed", "ai_only": true, "open_access": true},
