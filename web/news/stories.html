@@ -43,6 +43,7 @@
 .hist .b-other { fill: var(--ink-faint); fill-opacity: .22; stroke: var(--ink-faint); stroke-width: 1.2; stroke-dasharray: 3 2; }
 .frame .controls button { font-size: 14px; padding: 6px 14px; }
 .frame.sub { background: var(--bg); }
+.stories { display: grid; gap: 8px; }
 .vgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
 .vcell { border: 1px solid var(--line); border-left: 3px solid var(--c); border-radius: 6px; padding: 8px 10px; display: grid; gap: 2px; background: var(--panel); min-width: 0; }
 .vcell b { font-family: var(--mono); font-weight: 500; font-size: 15px; }
@@ -127,6 +128,7 @@ details.dropped ul { font-size: 13px; color: var(--ink-soft); padding-left: 18px
     <h1>AI news, one story per event</h1>
     <p class="lede">Every unique story the feeds produced, after Jev folded duplicate write-ups together. Jev then asked of each story whether it would change a forecast of AI catastrophic risk. Stories in full ink might, for at least one cause family; faded stories are not expected to. Click a story for its sources and Jev's probabilities.</p>
   </header>
+  <section class="band" id="band"></section>
   <section class="frame" aria-labelledby="jev-h">
     <h2 class="sec" id="jev-h">Jev screen</h2>
     <div class="controls" role="group" aria-label="What Jev was shown">
@@ -145,15 +147,19 @@ details.dropped ul { font-size: 13px; color: var(--ink-soft); padding-left: 18px
       <p class="note" id="rat-desc"></p>
       <div class="notes" id="notes"></div>
     </section>
+    <section class="stories" aria-labelledby="list-h">
+      <h3 class="sec" id="list-h">Stories</h3>
+      <p class="note" id="list-desc"></p>
+      <div class="controls" role="group" aria-label="Filter">
+        <button id="f-all" aria-pressed="true">All stories</button>
+        <button id="f-rel" aria-pressed="false">Above the threshold</button>
+        <button id="f-multi" aria-pressed="false">Multi-source only</button>
+        <div class="legend" id="legend"></div>
+      </div>
+      <div class="list" id="list" aria-live="polite"></div>
+      <details class="dropped" id="pre"></details>
+    </section>
   </section>
-  <section class="band" id="band"></section>
-  <div class="controls" role="group" aria-label="Filter">
-    <button id="f-all" aria-pressed="true">All stories</button>
-    <button id="f-rel" aria-pressed="false">Might move it</button>
-    <button id="f-multi" aria-pressed="false">Multi-source only</button>
-    <div class="legend" id="legend"></div>
-  </div>
-  <section class="list" id="list" aria-live="polite"></section>
   <details class="dropped" id="dropped"></details>
   <p class="note" id="note"></p>
 </main>
@@ -258,7 +264,7 @@ function storyHTML(s) {
   const note = n ? `<div class="eyebrow">Rationale (${RNAME[rframe]}) · ${esc(n.writer)} · verdict: ${esc(n.verdict || "unparsed")}</div>${noteHTML(n.text)}` : "";
   const verdict = frame === "none" ? `<div class="related">${s.cited ? "Cited" : "Not cited"} by the top-ECI model's read of the whole week (${esc(RNAME[rframe])}).</div>` : `<div class="related">${s.relevant ? "Might move " + AGAINST[frame] + " for: " + s.flags.map(([k, l]) => l).join(", ") : "Checked against " + AGAINST[frame] + ": not expected to move it"} (Jev, flagged at ${FLAG}).</div>`;
   const related = s.related.map(r => `<div class="related">Possible follow-up to: ${esc(r.title)} (p ${r.p.toFixed(2)})</div>`).join("");
-  return `<details class="story${!s.post ? " pre" : s.relevant ? "" : " quiet"}" id="${s.id}"><summary>
+  return `<details class="story${s.relevant ? "" : " quiet"}" id="${s.id}"><summary>
       <div class="head"><div class="headline">${esc(s.title)}</div>
       <div class="meta"><span>${span}</span><span>${esc(s.sources.join(", "))}</span><span class="n">${s.members.length} item${s.members.length > 1 ? "s" : ""}</span></div></div>
       <div class="chips">${chips}</div></summary>
@@ -266,8 +272,14 @@ function storyHTML(s) {
 }
 
 function render() {
-  const pick = D.stories.filter(s => mode === "all" || (mode === "rel" ? s.relevant : s.sources.length > 1));
+  const keep = s => mode === "all" || (mode === "rel" ? s.relevant : s.sources.length > 1);
+  const pick = POST.filter(keep), pre = D.stories.filter(s => !s.post && keep(s));
   $("list").innerHTML = pick.map(storyHTML).join("") || '<p class="note">No stories match this filter.</p>';
+  $("pre").innerHTML = `<summary>${pre.length} stories first reported before the forecast (${esc(when(m.cutoff))}): left out of the screen above</summary>` + pre.map(storyHTML).join("");
+  $("f-rel").textContent = frame === "none" ? "Cited by the read" : "Above the threshold";
+  $("list-desc").textContent = frame === "none"
+    ? `The ${POST.length} stories published after the forecast. In full ink: the stories the top-ECI model's read of the week cites (${RNAME[rframe]}). No Jev scores in this condition.`
+    : `The ${POST.length} stories published after the forecast, with Jev's p (${NAME[frame]}). In full ink: at or above the threshold of ${FLAG} for at least one family; greyed: below it.`;
   for (const [id, v] of [["f-all", "all"], ["f-rel", "rel"], ["f-multi", "multi"]])
     $(id).setAttribute("aria-pressed", String(mode === v));
 }
