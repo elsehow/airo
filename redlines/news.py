@@ -248,6 +248,9 @@ def load_items(state_dir=STATE_DIR):
                 it["feeds"].append(r["also_in"])
         else:
             items[r["id"]] = dict(r, feeds=[r["feed"]])
+    for r in read_jsonl(os.path.join(state_dir, FULLTEXT_LOG)):   # the newest extract wins
+        if r["item"] in items and r.get("text"):
+            items[r["item"]]["text"] = r["text"]
     return items
 
 
@@ -433,6 +436,51 @@ def jev_ask(state, questions, key=None, model=JEV_MODEL, post=None, tries=4):
         if status not in (429, 529, 500, 502, 503, 504, None) or attempt == tries - 1:
             raise JevError(f"jev call failed: {err}")
         time.sleep(2 ** attempt)
+
+
+# ------------------------------------------------------------ full text
+
+FULLTEXT_LOG = "fulltext.jsonl"   # article text stays in the state directory, never the repo
+TAVILY_EXTRACT_URL = "https://api.tavily.com/extract"
+
+
+def extract_text(url, key=None, depth="advanced", post=None):
+    """An article's text via Tavily extract: {"url", "text", "chars"} or, when
+    it cannot be read, {"url", "text": "", "error"}. Raises only with no key.
+    "advanced" depth costs 2 credits per 5 URLs (about a cent per article)."""
+    key = key or os.environ.get("TAVILY_API_KEY")
+    if not key:
+        raise RuntimeError("no TAVILY_API_KEY set")
+    post = post or (lambda url, body, headers: http_get(url, timeout=90, data=body, headers=headers))
+    body = json.dumps({"urls": [url], "extract_depth": depth}).encode()
+    status, resp, err = post(TAVILY_EXTRACT_URL, body,
+                             {"Authorization": f"Bearer {key}", "Content-Type": "application/json"})
+    if err:
+        return {"url": url, "text": "", "error": err}
+    data = json.loads(resp)
+    res = data.get("results") or []
+    if not res:
+        failed = data.get("failed_results") or [{}]
+        return {"url": url, "text": "", "error": failed[0].get("error") or "no content returned"}
+    text = res[0].get("raw_content") or ""
+    return {"url": url, "text": text, "chars": len(text)}
+
+
+def fetch_fulltext(item_ids, items, state_dir=STATE_DIR, extract=extract_text, now=None):
+    """Extract each item's article once and log it to fulltext.jsonl. Returns the rows."""
+    have = {r["item"] for r in read_jsonl(os.path.join(state_dir, FULLTEXT_LOG)) if r.get("text")}
+    rows = []
+    for i in item_ids:
+        if i in have:
+            continue
+        it = items[i]
+        link = it.get("link") or ""
+        # the publisher's own link: the canonical form drops "www.", which some sites refuse
+        url = it["url"] if not link or "news.google.com" in link else link
+        r = dict(extract(url), item=i, at=now or _now())
+        append_jsonl(os.path.join(state_dir, FULLTEXT_LOG), [r])
+        rows.append(r)
+    return rows
 
 
 def _ts(s):

@@ -148,7 +148,7 @@ function storyHTML(s) {
   const chips = (NOTES[s.id] ? `<span class="chip note">Note: ${esc(NOTES[s.id].verdict || "?")}</span>` : "") + s.flags.map(([k, l]) => `<span class="chip" style="--c:var(--c-${k})">${l} ${s.screen[k].toFixed(2)}</span>`).join("");
   const span = s.first === s.last ? when(s.first) : `${when(s.first)} – ${when(s.last)}`;
   const members = s.members.map(x => `<li><span class="p">${x.p == null ? "first" : "p " + x.p.toFixed(2)}</span>
-    <span><span class="src">${esc(x.source)}</span>${x.open ? "" : '<span class="pay">paywall</span>'} · <a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.title)}</a></span></li>`).join("");
+    <span><span class="src">${esc(x.source)}</span>${x.open ? "" : '<span class="pay">paywall</span>'}${x.full ? '<span class="pay">text read</span>' : ""} · <a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.title)}</a></span></li>`).join("");
   const scores = CAUSES.map(([k, l]) => { const p = s.screen[k]; return p == null ? "" :
     `<span>${l} ${p.toFixed(2)}<span class="bar"><i style="--c:var(--c-${k});width:${Math.round(p*100)}%"></i></span></span>`; }).join("");
   const note = NOTES[s.id] ? `<div class="eyebrow">AIRO note · written by ${esc(NOTES[s.id].writer)} · verdict: ${esc(NOTES[s.id].verdict || "unparsed")}</div>${noteHTML(NOTES[s.id].text)}` : "";

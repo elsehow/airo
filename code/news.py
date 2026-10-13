@@ -7,6 +7,7 @@
     python3 code/news.py screen            # would each story move the forecast? (Jev)
     python3 code/news.py explain --notes 1 --audit-below 0 --dry-run
     python3 code/news.py explain --notes 1 # the top-ECI model's note (paid; see --dry-run)
+    python3 code/news.py fulltext --story s-...   # Tavily extract of a story's reports (paid, ~1c each)
     python3 code/news.py calibrate         # Jev's p against the notes' verdicts
     python3 code/news.py page --out ~/news.html
     python3 code/news.py report --out ~/news-report.md
@@ -35,7 +36,7 @@ def forecast(a):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("step", choices=["poll", "reduce", "screen", "explain", "calibrate", "page", "report"])
+    ap.add_argument("step", choices=["poll", "reduce", "fulltext", "screen", "explain", "calibrate", "page", "report"])
     ap.add_argument("--state", default=news.STATE_DIR, help="state directory (default %(default)s)")
     ap.add_argument("--replay", action="store_true", help="reduce: use logged decisions only, call nothing")
     ap.add_argument("--out", help="page/report: where to write it")
@@ -45,6 +46,7 @@ def main():
     ap.add_argument("--notes", type=int, default=1, help="explain: newest flagged stories to write notes for")
     ap.add_argument("--audit-below", type=int, default=0,
                     help="explain: also the N highest-p stories just below the threshold")
+    ap.add_argument("--story", action="append", help="fulltext: a story id whose reports to read in full")
     ap.add_argument("--dry-run", action="store_true", help="explain: say what would be called, call nothing")
     a = ap.parse_args()
     state = a.state
@@ -54,6 +56,15 @@ def main():
             print(json.dumps(row))
     elif a.step == "reduce":
         print(json.dumps(news.run_reduce(state_dir=state, replay=a.replay)))
+    elif a.step == "fulltext":
+        built, items = json.load(open(path("stories.json"))), news.load_items(state)
+        by_id = {s["id"]: s for s in built["stories"]}
+        ids = [m["item"] for sid in (a.story or []) for m in by_id[sid]["members"]]
+        print(f"{len(ids)} articles, ~${0.016 * len(ids):.2f} at most", file=sys.stderr)
+        if a.dry_run:
+            return
+        for r in news.fetch_fulltext(ids, items, state_dir=state):
+            print(json.dumps({"item": r["item"], "url": r["url"], "chars": r.get("chars"), "error": r.get("error")}))
     elif a.step == "report":
         text = news.report(state_dir=state)
         if a.out:

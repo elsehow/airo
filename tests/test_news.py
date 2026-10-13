@@ -5,6 +5,7 @@ import json
 import os
 import tempfile
 import unittest
+from unittest import mock
 
 from redlines import news
 
@@ -310,6 +311,27 @@ class JevClient(unittest.TestCase):
     def test_bad_request_raises(self):
         with self.assertRaises(news.JevError):
             news.jev_ask({}, {}, key="k", post=lambda *a: (422, b"", "HTTP 422"))
+
+
+class FullText(unittest.TestCase):
+    def test_extract(self):
+        ok = lambda *a: (200, json.dumps({"results": [{"raw_content": "Body."}]}).encode(), None)
+        self.assertEqual(news.extract_text("https://x/a", key="k", post=ok)["text"], "Body.")
+        failed = lambda *a: (200, json.dumps({"results": [], "failed_results": [{"error": "paywall"}]}).encode(), None)
+        self.assertEqual(news.extract_text("https://x/a", key="k", post=failed)["error"], "paywall")
+        with mock.patch.dict(os.environ, {"TAVILY_API_KEY": ""}), self.assertRaises(RuntimeError):
+            news.extract_text("https://x/a")
+
+    def test_fetch_once_and_load(self):
+        d = tempfile.mkdtemp()
+        its = items_of(item("Worm hits hospitals", "2026-10-12T09:00:00Z"))
+        news.append_jsonl(os.path.join(d, "items.jsonl"), list(its.values()))
+        calls = []
+        ext = lambda url: calls.append(url) or {"url": url, "text": "The whole article.", "chars": 18}
+        news.fetch_fulltext(list(its), its, state_dir=d, extract=ext)
+        news.fetch_fulltext(list(its), its, state_dir=d, extract=ext)   # read once, not twice
+        self.assertEqual(len(calls), 1)
+        self.assertEqual(next(iter(news.load_items(d).values()))["text"], "The whole article.")
 
 
 if __name__ == "__main__":

@@ -60,6 +60,7 @@ SCREEN_AT = 0.3         # p(moves the forecast) at which a story is flagged. Del
                         # `calibrate` says whether the writer's verdicts agree.
 SCREEN_HORIZONS = ("12mo", "2030", "2100")   # what the screen's forecast table shows
 RATIONALE_CHARS = 1500  # per panel model, in the screen's state
+FULLTEXT_CHARS = 24000  # per article, in the screen's state and the note (about 6k tokens)
 NOTE_RATIONALE_CHARS = 2500
 WRITER_MAX_TOKENS = 64000   # max-effort thinking used 40k on one note (2026-10-13);
                             # 20k left a note with no text
@@ -174,11 +175,21 @@ def screen_question(c):
 
 
 def story_reports(story, items, n=3):
-    return [news.item_view(items[m["item"]]) for m in story["members"][:n]]
+    out = []
+    for m in story["members"][:n]:
+        v, it = news.item_view(items[m["item"]]), items[m["item"]]
+        if it.get("text"):
+            v["full_text"] = it["text"][:FULLTEXT_CHARS]
+        out.append(v)
+    return out
 
 
-def _screen_key(story, fc):
-    return [story["id"], fc["run"], [m["item"] for m in story["members"][:3]]]
+def _screen_key(story, fc, items=None):
+    shown = [m["item"] for m in story["members"][:3]]
+    key = [story["id"], fc["run"], shown]
+    if items and any(items[i].get("text") for i in shown):
+        key.append("full_text")   # read in full: a new question, screened again
+    return key
 
 
 def screen(stories, items, fc, decisions, ask=None, log=None, now=None):
@@ -189,7 +200,7 @@ def screen(stories, items, fc, decisions, ask=None, log=None, now=None):
     state_fc = None
     out = {}
     for s in stories:
-        key = _screen_key(s, fc)
+        key = _screen_key(s, fc, items)
         row = logged.get(json.dumps(key))
         if row is None and ask is not None:
             state_fc = state_fc or screen_state(fc)
@@ -251,12 +262,17 @@ def explain_prompt(story, items, fc, causes, today=None):
         f"\"{items[m['item']]['title']}\""
         + (f" — {items[m['item']]['summary']}" if items[m['item']].get("summary") else "")
         for m in story["members"])
+    full = [items[m["item"]] for m in story["members"] if items[m["item"]].get("text")]
+    if full:
+        reports += "\n\nThe text of " + ("one report" if len(full) == 1 else f"{len(full)} reports") + \
+            " as extracted from the publisher's page (a paywalled article may stop after its opening):\n\n" + \
+            "\n\n".join(f"### {it['source']}: {it['title']}\n\n{it['text'][:FULLTEXT_CHARS]}" for it in full)
     rationales = "\n\n".join(f"**{m}**: {fc['rationales'][m][:NOTE_RATIONALE_CHARS]}" for m in fc["models"])
     return f"""Today is {today}. The latest AIRO ensemble forecast was elicited on {fc['day']} from a panel of {len(fc['models'])} models ({", ".join(fc['models'])}).
 
 ## The news story
 
-"{story['title']}" — {len(story['members'])} reports, {story['first_seen'][:10]} to {story['last_seen'][:10]}. You have the headlines and standfirsts only, not the full articles:
+"{story['title']}" — {len(story['members'])} reports, {story['first_seen'][:10]} to {story['last_seen'][:10]}. {'You have the headlines and standfirsts, and article text where given below' if full else 'You have the headlines and standfirsts only, not the full articles'}:
 
 {reports}
 
@@ -375,7 +391,8 @@ def page_data(state_dir, fc_meta=None):
     stories = [{"id": s["id"], "title": s["title"], "first": s["first_seen"], "last": s["last_seen"],
                 "sources": s["sources"], "screen": (screened.get(s["id"]) or {}).get("p_moves", {}),
                 "members": [{"source": m["source"], "title": m["title"], "url": m["url"],
-                             "open": m["open_access"], "p": m["p_same"]} for m in s["members"]],
+                             "open": m["open_access"], "p": m["p_same"],
+                             "full": bool(items.get(m["item"], {}).get("text"))} for m in s["members"]],
                 "related": [{"title": title_of.get(r["story"], ""), "p": r["p_followup"]}
                             for r in s["related"]]}
                for s in built["stories"]]

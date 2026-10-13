@@ -113,6 +113,19 @@ class Screen(unittest.TestCase):
         fc2 = dict(fc, run="2026-10-14T1200Z")
         self.assertEqual(ns.screen(ss, its, fc2, log), {})
 
+    def test_full_text_rescreens_and_is_shown(self):
+        ss, its = stories()
+        fc, log = forecast(), []
+        ns.screen(ss, its, fc, [], ask=FakeJev(), log=log.append)
+        its[ss[0]["members"][0]["item"]]["text"] = "Full article body."
+        jev = FakeJev()
+        ns.screen(ss, its, fc, log, ask=jev, log=log.append)
+        self.assertEqual(len(jev.calls), 1)
+        self.assertEqual(jev.calls[0][0]["story"]["reports"][0]["full_text"], "Full article body.")
+        p = ns.explain_prompt(ss[0], its, fc, ["cyber"], today="2026-10-13")
+        self.assertIn("Full article body.", p)
+        self.assertNotIn("standfirsts only", p)
+
     def test_new_member_rescreens(self):
         ss, its = stories()
         fc, log = forecast(), []
