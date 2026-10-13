@@ -1,0 +1,200 @@
+<title>AIRO News Stories</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Source+Serif+4:opsz,wght@8..60,500;8..60,600&display=swap">
+<style>
+/* Layout: one reading column, a summary band, then a dense story list; relevance is shown by fading, cause by coloured chips. */
+:root {
+  --bg: #f6f8f1;          /* FRI stone, from the AIRO dashboard */
+  --panel: #ffffff;
+  --ink: #1f2328;
+  --ink-soft: #57606a;
+  --ink-faint: #7a838c;
+  --line: #d9ded3;
+  --link: #115633;        /* AIRO green */
+  --chip-bg: #eef1e8;
+  --c-ai: #3a4150; --c-bio: #a63d76; --c-cyber: #a1801a; --c-misalign: #2a8a9c;
+  --display: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --body: system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "DM Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+.notecard { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 18px 20px; display: grid; gap: 10px; }
+.notecard h2 { font-family: var(--display); font-weight: 600; font-size: 1.25rem; line-height: 1.25; margin: 0; text-wrap: balance; }
+.notecard .by { font-size: 12.5px; color: var(--ink-soft); }
+.notetext { display: grid; gap: 10px; max-width: 68ch; font-size: 15px; line-height: 1.6; }
+.notetext p, .notetext ul { margin: 0; }
+.notetext ul { padding-left: 20px; display: grid; gap: 3px; }
+.notecard a { color: var(--link); }
+.story .notetext { font-size: 14px; border-left: 2px solid var(--link); padding-left: 12px; }
+.chip.note { --c: var(--link); }
+.calib { display: grid; gap: 8px; }
+.tablewrap { overflow-x: auto; }
+.calib table { border-collapse: collapse; font-size: 13px; width: 100%; }
+.calib th, .calib td { text-align: left; padding: 5px 10px 5px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+.calib th { font-family: var(--mono); font-size: 11px; font-weight: 500; color: var(--ink-faint); text-transform: uppercase; letter-spacing: 0.06em; }
+.calib td.n { font-family: var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #141713; --panel: #1c201b; --ink: #e6e9e1; --ink-soft: #a8afa4; --ink-faint: #7f877c;
+  --line: #2f352d; --link: #7fc79b; --chip-bg: #252a23;
+  --c-ai: #aeb7c7; --c-bio: #e08abb; --c-cyber: #d8b44a; --c-misalign: #5cc6d8; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #141713; --panel: #1c201b; --ink: #e6e9e1; --ink-soft: #a8afa4; --ink-faint: #7f877c;
+  --line: #2f352d; --link: #7fc79b; --chip-bg: #252a23;
+  --c-ai: #aeb7c7; --c-bio: #e08abb; --c-cyber: #d8b44a; --c-misalign: #5cc6d8; color-scheme: dark }
+
+body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 15px; line-height: 1.5; }
+.wrap { max-width: 860px; margin: 0 auto; padding-inline: 20px; padding-block: 28px 64px; display: grid; gap: 22px; }
+h1 { font-family: var(--display); font-weight: 600; font-size: 1.9rem; line-height: 1.15; margin: 0; text-wrap: balance; letter-spacing: -0.01em; }
+.lede { color: var(--ink-soft); margin: 6px 0 0; max-width: 65ch; }
+.eyebrow { font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-faint); }
+.band { display: flex; flex-wrap: wrap; gap: 8px 28px; padding-block: 14px; border-block: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+.band div { display: grid; }
+.band b { font-family: var(--mono); font-weight: 500; font-size: 1.25rem; }
+.band span { font-size: 12px; color: var(--ink-soft); }
+.controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.controls button { font: inherit; font-size: 13px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); border-radius: 999px; padding: 4px 12px; cursor: pointer; }
+.controls button[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.controls button:focus-visible, summary:focus-visible, a:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+.legend { margin-left: auto; display: flex; gap: 10px; flex-wrap: wrap; font-size: 12px; color: var(--ink-soft); }
+.list { display: grid; }
+.story { border-bottom: 1px solid var(--line); padding-block: 12px; transition: opacity .15s; }
+.story.quiet { opacity: 0.42; }
+.story.quiet:hover, .story.quiet:focus-within, .story.quiet[open] { opacity: 1; }
+.story > summary { list-style: none; cursor: pointer; display: grid; grid-template-columns: 1fr auto; gap: 4px 14px; }
+.story > summary::-webkit-details-marker { display: none; }
+.head { min-width: 0; }
+.headline { font-family: var(--display); font-weight: 500; font-size: 1.08rem; line-height: 1.3; text-wrap: balance; }
+.story:not(.quiet) .headline { font-weight: 600; }
+.meta { font-size: 12.5px; color: var(--ink-soft); margin-top: 3px; display: flex; flex-wrap: wrap; gap: 2px 10px; }
+.meta .n { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.chips { display: flex; gap: 5px; flex-wrap: wrap; justify-content: flex-end; align-content: start; max-width: 220px; }
+.chip { font-family: var(--mono); font-size: 11px; padding: 1px 7px; border-radius: 4px; background: var(--chip-bg); color: var(--ink); border-left: 3px solid var(--c); white-space: nowrap; }
+.dot { display: inline-block; width: 9px; height: 9px; border-radius: 2px; background: var(--c); margin-right: 4px; vertical-align: -1px; }
+.detail { margin-top: 10px; display: grid; gap: 10px; }
+.members { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+.members li { display: grid; grid-template-columns: 74px 1fr; gap: 10px; font-size: 13.5px; }
+.members .p { font-family: var(--mono); font-size: 11.5px; color: var(--ink-soft); font-variant-numeric: tabular-nums; padding-top: 2px; }
+.members a { color: var(--link); text-decoration: none; overflow-wrap: anywhere; }
+.members a:hover { text-decoration: underline; }
+.src { color: var(--ink-soft); }
+.pay { font-family: var(--mono); font-size: 10.5px; color: var(--ink-faint); border: 1px solid var(--line); border-radius: 3px; padding: 0 4px; margin-left: 4px; }
+.scores { display: flex; flex-wrap: wrap; gap: 6px 16px; font-family: var(--mono); font-size: 11.5px; color: var(--ink-soft); }
+.bar { display: inline-block; width: 48px; height: 6px; background: var(--chip-bg); border-radius: 3px; vertical-align: 1px; margin-left: 4px; overflow: hidden; }
+.bar i { display: block; height: 100%; background: var(--c); }
+.related { font-size: 12.5px; color: var(--ink-soft); }
+.note { font-size: 13px; color: var(--ink-soft); max-width: 65ch; }
+details.dropped summary { cursor: pointer; font-size: 13px; color: var(--ink-soft); }
+details.dropped ul { font-size: 13px; color: var(--ink-soft); padding-left: 18px; }
+@media (max-width: 560px) {
+  .story > summary { grid-template-columns: 1fr; }
+  .chips { justify-content: flex-start; max-width: none; }
+  .legend { margin-left: 0; }
+  .members li { grid-template-columns: 1fr; gap: 0; }
+}
+@media (prefers-reduced-motion: reduce) { .story { transition: none; } }
+</style>
+
+<main class="wrap">
+  <header>
+    <div class="eyebrow">AIRO · news pipeline</div>
+    <h1>AI news, one story per event</h1>
+    <p class="lede">Every unique story the feeds produced, after Jev folded duplicate write-ups together. Jev checked each story against the latest AIRO ensemble forecast (<span id="fc-day"></span>). Stories in full ink might move it for at least one cause family; faded stories are not expected to. Click a story for its sources and Jev's probabilities.</p>
+  </header>
+  <section class="band" id="band"></section>
+  <div class="controls" role="group" aria-label="Filter">
+    <button id="f-all" aria-pressed="true">All stories</button>
+    <button id="f-rel" aria-pressed="false">Might move it</button>
+    <button id="f-multi" aria-pressed="false">Multi-source only</button>
+    <div class="legend" id="legend"></div>
+  </div>
+  <section class="notecard" id="notecard" hidden></section>
+  <section class="calib" id="calib" hidden></section>
+  <section class="list" id="list" aria-live="polite"></section>
+  <details class="dropped" id="dropped"></details>
+  <p class="note" id="note"></p>
+</main>
+
+<script id="data" type="application/json">__DATA__</script>
+<script>
+const D = JSON.parse(document.getElementById("data").textContent);
+const CAUSES = [["ai", "AI incident"], ["cyber", "Cyber"], ["bio", "Bio"], ["misalign", "Misalignment"]];
+const FLAG = D.meta.screen_at;
+const FC = D.meta.forecast;
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const when = iso => { const d = new Date(iso); return d.toLocaleString(undefined, {month: "short", day: "numeric", hour: "2-digit", minute: "2-digit"}); };
+const flags = s => CAUSES.filter(([k]) => (s.screen[k] ?? 0) >= FLAG);
+D.stories.forEach(s => { s.flags = flags(s); s.relevant = s.flags.length > 0; });
+
+const m = D.meta, rel = D.stories.filter(s => s.relevant).length, multi = D.stories.filter(s => s.sources.length > 1).length;
+document.getElementById("band").innerHTML = [
+  [m.items, "items from " + m.feeds + " feeds"], [m.stories, "unique stories"], [multi, "multi-source stories"],
+  [rel, "might move the forecast"], [D.dropped.length, "dropped as not AI"]
+].map(([n, l]) => `<div><b>${n}</b><span>${l}</span></div>`).join("");
+document.getElementById("legend").innerHTML = CAUSES.map(([k, l]) => `<span><span class="dot" style="--c:var(--c-${k})"></span>${l}</span>`).join("");
+
+function storyHTML(s) {
+  const chips = (NOTES[s.id] ? `<span class="chip note">Note: ${esc(NOTES[s.id].verdict || "?")}</span>` : "") + s.flags.map(([k, l]) => `<span class="chip" style="--c:var(--c-${k})">${l} ${s.screen[k].toFixed(2)}</span>`).join("");
+  const span = s.first === s.last ? when(s.first) : `${when(s.first)} – ${when(s.last)}`;
+  const members = s.members.map(x => `<li><span class="p">${x.p == null ? "first" : "p " + x.p.toFixed(2)}</span>
+    <span><span class="src">${esc(x.source)}</span>${x.open ? "" : '<span class="pay">paywall</span>'} · <a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.title)}</a></span></li>`).join("");
+  const scores = CAUSES.map(([k, l]) => { const p = s.screen[k]; return p == null ? "" :
+    `<span>${l} ${p.toFixed(2)}<span class="bar"><i style="--c:var(--c-${k});width:${Math.round(p*100)}%"></i></span></span>`; }).join("");
+  const note = NOTES[s.id] ? `<div class="eyebrow">AIRO note · written by ${esc(NOTES[s.id].writer)} · verdict: ${esc(NOTES[s.id].verdict || "unparsed")}</div>${noteHTML(NOTES[s.id].text)}` : "";
+  const verdict = `<div class="related">${s.relevant ? `Might move the ${FC} forecast for: ` + s.flags.map(([k, l]) => l).join(", ") : `Checked against the ${FC} forecast: not expected to move it`} (Jev, flagged at ${FLAG}).</div>`;
+  const related = s.related.map(r => `<div class="related">Possible follow-up to: ${esc(r.title)} (p ${r.p.toFixed(2)})</div>`).join("");
+  return `<details class="story${s.relevant ? "" : " quiet"}" id="${s.id}"${NOTES[s.id] ? " open" : ""}><summary>
+      <div class="head"><div class="headline">${esc(s.title)}</div>
+      <div class="meta"><span>${span}</span><span>${esc(s.sources.join(", "))}</span><span class="n">${s.members.length} item${s.members.length > 1 ? "s" : ""}</span></div></div>
+      <div class="chips">${chips}</div></summary>
+    <div class="detail">${note}<ul class="members">${members}</ul>${verdict}<div class="scores">${scores}</div>${related}</div></details>`;
+}
+
+
+function noteHTML(text) {
+  const out = []; let list = [];
+  for (const line of text.split("\n").map(l => l.trim()).filter(Boolean)) {
+    if (line.startsWith("- ")) { list.push(`<li>${esc(line.slice(2))}</li>`); continue; }
+    if (list.length) { out.push(`<ul>${list.join("")}</ul>`); list = []; }
+    out.push(`<p>${esc(line)}</p>`);
+  }
+  if (list.length) out.push(`<ul>${list.join("")}</ul>`);
+  return `<div class="notetext">${out.join("")}</div>`;
+}
+const NOTES = D.notes || {};
+let mode = "all";
+function render() {
+  const pick = D.stories.filter(s => mode === "all" || (mode === "rel" ? s.relevant : s.sources.length > 1));
+  document.getElementById("list").innerHTML = pick.map(storyHTML).join("") || '<p class="note">No stories match this filter.</p>';
+  for (const [id, v] of [["f-all", "all"], ["f-rel", "rel"], ["f-multi", "multi"]])
+    document.getElementById(id).setAttribute("aria-pressed", String(mode === v));
+}
+for (const [id, v] of [["f-all", "all"], ["f-rel", "rel"], ["f-multi", "multi"]])
+  document.getElementById(id).addEventListener("click", () => { mode = v; render(); });
+render();
+
+const nid = D.stories.filter(s => NOTES[s.id] && NOTES[s.id].flagged).sort((a, b) => b.last.localeCompare(a.last)).map(s => s.id)[0];
+if (nid) {
+  const n = NOTES[nid], s = D.stories.find(x => x.id === nid);
+  const card = document.getElementById("notecard");
+  card.innerHTML = `<div class="eyebrow">How the news moves the forecast · latest flagged story</div>
+    <h2>${esc(s.title)}</h2>
+    <div class="by">Written by ${esc(n.writer)}, the highest-ECI model on the panel (ECI ${n.eci}), against the ensemble forecast of ${esc(FC)} (${esc(D.meta.panel.join(", "))}). It read the headlines and standfirsts of ${s.members.length} reports, not the full articles. <a href="#${s.id}">See the story's sources</a>. It is the most recent story the screen flagged: ${s.flags.map(([k, l]) => `${l} ${s.screen[k].toFixed(2)}`).join(", ")}.</div>
+    ${noteHTML(n.text)}<div class="by">Verdict: <b>${esc(n.verdict || "unparsed")}</b></div>`;
+  card.hidden = false;
+}
+
+document.getElementById("fc-day").textContent = FC;
+const C = D.calibration;
+if (C && C.pairs.length) {
+  const el = document.getElementById("calib");
+  el.innerHTML = `<div class="eyebrow">Is the screen's threshold right?</div>
+    <p class="note">The top-ECI model wrote a note, ending in a verdict, for the newest flagged stories and for the stories just below the threshold (p ${FLAG}). A verdict of small, moderate or large counts as moving the forecast. False flags: <b>${C.false_flags}</b>. Misses: <b>${C.misses}</b>. ${C.suggest == null ? "No note said a story moves the forecast, so the threshold could rise; how far depends on stories nobody has judged yet." : `The highest threshold that still flags every story judged to move it: <b>${C.suggest}</b>.`}</p>
+    <div class="tablewrap"><table><thead><tr><th>Jev p</th><th></th><th>verdict</th><th>story</th></tr></thead><tbody>${C.pairs.map(([p, v, t]) =>
+      `<tr><td class="n">${p.toFixed(2)}</td><td>${p >= FLAG ? "flagged" : "below"}</td><td>${esc(v)}</td><td>${esc(t)}</td></tr>`).join("")}</tbody></table></div>`;
+  el.hidden = false;
+}
+document.getElementById("dropped").innerHTML = `<summary>${D.dropped.length} items dropped by the AI gate (NYT Technology feed only)</summary><ul>` +
+  D.dropped.map(d => `<li>${esc(d.title)} <span class="n">(p_ai ${d.p?.toFixed(2)})</span></li>`).join("") + "</ul>";
+document.getElementById("note").textContent =
+  `Built ${when(m.built)} from ${m.polls} polls. A write-up joins a story when Jev puts p(same event) at ${m.same_at} or above. ` +
+  `The screen gives Jev the story with the ${FC} ensemble medians and the panel's reasoning, and asks one yes/no per cause family: would a forecaster holding this forecast change it after reading the story? A story is flagged at p ${FLAG} or above, a deliberately low bar so that few real movers are missed.`;
+</script>
