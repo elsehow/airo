@@ -184,17 +184,17 @@ render();
 const noted = D.stories.filter(s => NOTES[s.id]).sort((a, b) => b.last.localeCompare(a.last));
 // the newest flagged story's note, and the note last written on a story the screen passed over
 const audit = noted.filter(s => !NOTES[s.id].flagged).sort((a, b) => NOTES[b.id].at.localeCompare(NOTES[a.id].at))[0];
-const top = [noted.find(s => NOTES[s.id].flagged), audit].filter(Boolean);
-if (top.length) {
+const featured = [noted.find(s => NOTES[s.id].flagged), audit].filter(Boolean);
+if (featured.length) {
   const el = document.getElementById("notes");
-  el.innerHTML = `<div class="eyebrow">How the news moves the forecast · notes by the top-ECI model</div>` + top.map(s => {
+  el.innerHTML = `<div class="eyebrow">How the news moves the forecast · notes by the top-ECI model</div>` + featured.map(s => {
     const n = NOTES[s.id];
     const why = n.flagged ? `the most recent story the screen flagged (${s.flags.map(([k, l]) => `${l} ${s.screen[k].toFixed(2)}`).join(", ")})`
                           : `a story the screen passed over (p ${s.pmax.toFixed(2)}), read as a check on it`;
     return `<article class="notecard"><h2>${esc(s.title)}</h2>
       <div class="by">Written by ${esc(n.writer)}, the highest-ECI model on the panel (ECI ${n.eci}), against the ensemble forecast of ${esc(FC)}. It is ${why}. It read ${s.members.length} report${s.members.length > 1 ? "s" : ""}${s.members.some(m => m.full) ? ", with the article text Tavily could extract" : ": headlines and standfirsts, not the full articles"}. <a href="#${s.id}">Sources</a>.</div>
       ${noteHTML(n.text)}<div class="by">Verdict: <b>${esc(n.verdict || "unparsed")}</b></div></article>`;
-  }).join("") + (noted.length > top.length ? `<p class="note">${noted.length - top.length} more stories have notes; they are marked “Note” in the list below.</p>` : "");
+  }).join("") + (noted.length > featured.length ? `<p class="note">${noted.length - featured.length} more stories have notes; they are marked “Note” in the list below.</p>` : "");
   el.hidden = false;
 }
 

@@ -204,6 +204,13 @@ class Notes(unittest.TestCase):
         out = ns.render_page(d, os.path.join(d, "stories.html"), {"day": "2026-10-09", "models": ["Opus 5.5"]})
         html = open(out).read()
         self.assertNotIn("__DATA__", html)
+        # a top-level const/let named after a window property (top, name, location...)
+        # is a SyntaxError in the browser, and the whole page goes blank
+        import re
+        script = html.rsplit("<script>", 1)[1]
+        clash = re.findall(r"^(?:const|let)\s+(top|name|status|location|parent|self|length|origin|history)\b",
+                           script, re.M)
+        self.assertEqual(clash, [])
         data = json.loads(html.split('<script id="data" type="application/json">', 1)[1]
                           .split("</script>", 1)[0].replace("<\\/", "</"))
         self.assertEqual(data["notes"][s["id"]]["verdict"], "small")
