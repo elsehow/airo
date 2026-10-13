@@ -39,7 +39,8 @@
 .hist .key { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--ink-soft); }
 .hist .key i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
 .notes { display: grid; gap: 14px; }
-.frame { display: grid; gap: 6px; }
+.frame { display: grid; gap: 10px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; }
+.hist .b-other { fill: var(--c-misalign); fill-opacity: .16; stroke: var(--c-misalign); stroke-width: 1.2; stroke-dasharray: 3 2; }
 .frame .controls button { font-size: 14px; padding: 6px 14px; }
 .chip.p { --c: var(--line); color: var(--ink-soft); }
 .story:not(.quiet) .chip.p { --c: var(--ink); color: var(--ink); }
@@ -111,16 +112,16 @@ details.dropped ul { font-size: 13px; color: var(--ink-soft); padding-left: 18px
     <h1>AI news, one story per event</h1>
     <p class="lede">Every unique story the feeds produced, after Jev folded duplicate write-ups together. Jev then asked of each story whether it would change a forecast of AI catastrophic risk. Stories in full ink might, for at least one cause family; faded stories are not expected to. Click a story for its sources and Jev's probabilities.</p>
   </header>
-  <section class="frame">
+  <section class="frame" aria-label="Which screen to show">
     <div class="controls" role="group" aria-label="What Jev and the writer were shown">
       <button data-f="airo" aria-pressed="true">Against the AIRO forecast</button>
       <button data-f="generic" aria-pressed="false">Generic: no forecast shown</button>
     </div>
     <p class="note" id="frame-desc"></p>
+    <div class="hist" id="hist"></div>
   </section>
   <section class="band" id="band"></section>
   <section class="notes" id="notes" hidden></section>
-  <section class="hist" id="hist"></section>
   <div class="controls" role="group" aria-label="Filter">
     <button id="f-all" aria-pressed="true">All stories</button>
     <button id="f-rel" aria-pressed="false">Might move it</button>
@@ -148,6 +149,7 @@ const $ = id => document.getElementById(id);
 let frame = "airo";
 try { if (localStorage.getItem("news-frame") === "generic") frame = "generic"; } catch (e) {}
 let NOTES = {}, CAL = null, mode = "all", histOf = "max";
+const NAME = {airo: "Against the AIRO forecast", generic: "Generic"};
 const AGAINST = {
   airo: `the ${FC} AIRO ensemble forecast`,
   generic: "forecasts of AI catastrophic risk in general",
@@ -167,11 +169,11 @@ function applyFrame() {
     s.relevant = s.flags.length > 0;
     s.pmax = Math.max(0, ...CAUSES.map(([k]) => s.screen[k] ?? 0));
   });
-  document.querySelectorAll(".frame button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.f === frame)));
+  document.querySelectorAll(".frame button[data-f]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.f === frame)));
   $("frame-desc").textContent = DESC[frame];
   band(); notes(); hist(); render(); footnote();
 }
-document.querySelectorAll(".frame button").forEach(b => b.addEventListener("click", () => {
+document.querySelectorAll(".frame button[data-f]").forEach(b => b.addEventListener("click", () => {
   frame = b.dataset.f;
   try { localStorage.setItem("news-frame", frame); } catch (e) {}
   applyFrame();
@@ -251,32 +253,39 @@ function notes() {
 
 function hist() {
   const BIN = 0.05, N = 20, W = 640, H = 220, L = 34, R = 8, T = 18, B = 30;
-  const val = s => !s.scored ? null : histOf === "max" ? s.pmax : s.screen[histOf];
-  const bins = Array.from({length: N}, () => ({un: 0, no: 0, mv: 0}));
-  const vals = [];
+  const other = frame === "airo" ? "generic" : "airo";
+  const valIn = (f, s) => { const sc = s.screens[f] || {}; if (!Object.keys(sc).length) return null;
+    return histOf === "max" ? Math.max(...CAUSES.map(([k]) => sc[k] ?? 0)) : sc[histOf]; };
+  const binOf = p => Math.min(N - 1, Math.floor(p / BIN + 1e-9));
+  const bins = Array.from({length: N}, () => ({un: 0, no: 0, mv: 0})), ghost = Array(N).fill(0);
+  const vals = [], ovals = [];
   for (const s of D.stories) {
-    const p = val(s); if (p == null) continue; vals.push(p);
-    const n = NOTES[s.id], b = bins[Math.min(N - 1, Math.floor(p / BIN + 1e-9))];
+    const q = valIn(other, s); if (q != null) { ovals.push(q); ghost[binOf(q)]++; }
+    const p = valIn(frame, s); if (p == null) continue; vals.push(p);
+    const n = NOTES[s.id], b = bins[binOf(p)];
     if (!n) b.un++; else if (MOVES.includes(n.verdict)) b.mv++; else b.no++;
   }
+  ovals.sort((a, b) => a - b);
   vals.sort((a, b) => a - b);
   const med = vals.length ? vals[Math.floor((vals.length - 1) / 2)] : 0;
-  const tallest = Math.max(1, ...bins.map(b => b.un + b.no + b.mv)), step = tallest > 40 ? 10 : 5, ymax = Math.ceil(tallest / step) * step;
+  const tallest = Math.max(1, ...bins.map(b => b.un + b.no + b.mv), ...ghost), step = tallest > 40 ? 10 : 5, ymax = Math.ceil(tallest / step) * step;
   const x = p => L + (W - L - R) * p, y = c => H - B - (H - T - B) * c / ymax, bw = (W - L - R) / N;
   let g = "";
   for (let c = 0; c <= ymax; c += step) g += `<line class="ax" x1="${L}" x2="${W - R}" y1="${y(c)}" y2="${y(c)}"/><text class="tk" x="${L - 6}" y="${y(c) + 4}" text-anchor="end">${c}</text>`;
   for (let i = 0; i <= 10; i++) g += `<text class="tk" x="${x(i / 10)}" y="${H - B + 16}" text-anchor="middle">${(i / 10).toFixed(1)}</text>`;
   g += `<text class="tk" x="${(L + W - R) / 2}" y="${H - 2}" text-anchor="middle">Jev p(story would change the forecast)</text>`;
+  ghost.forEach((c, i) => { if (c) g += `<rect class="b-other" x="${x(i * BIN) + 0.5}" width="${bw - 1}" y="${y(c)}" height="${y(0) - y(c)}"><title>${NAME[other]}: p ${(i * BIN).toFixed(2)}–${((i + 1) * BIN).toFixed(2)}: ${c}</title></rect>`; });
   bins.forEach((b, i) => { let c = 0;
     for (const [k, cls] of [["un", "b-un"], ["no", "b-no"], ["mv", "b-mv"]]) if (b[k]) {
-      g += `<rect class="${cls}" x="${x(i * BIN) + 1}" width="${bw - 2}" y="${y(c + b[k])}" height="${y(c) - y(c + b[k])}"><title>p ${(i * BIN).toFixed(2)}–${((i + 1) * BIN).toFixed(2)}: ${b[k]}</title></rect>`; c += b[k]; } });
+      g += `<rect class="${cls}" x="${x(i * BIN) + 4}" width="${bw - 8}" y="${y(c + b[k])}" height="${y(c) - y(c + b[k])}"><title>p ${(i * BIN).toFixed(2)}–${((i + 1) * BIN).toFixed(2)}: ${b[k]}</title></rect>`; c += b[k]; } });
   g += `<line class="thr" x1="${x(FLAG)}" x2="${x(FLAG)}" y1="${T - 6}" y2="${H - B}"/><text class="thr-l" x="${x(FLAG) + 5}" y="${T + 2}">flag at ${FLAG}</text>`;
   const above = vals.filter(p => p >= FLAG).length, label = histOf === "max" ? "the highest of its four families" : CAUSES.find(([k]) => k === histOf)[1];
-  $("hist").innerHTML = `<div class="eyebrow">How Jev scored every story</div>
-    <p class="note">${vals.length} stories, each scored by ${label}, in bins of ${BIN}. Median ${med.toFixed(2)}, highest ${vals.length ? vals[vals.length - 1].toFixed(2) : "–"}; ${above} at or above the flag. Bars are split by what the top-ECI model said when it wrote a note${CAL && CAL.pairs.length ? `: of ${CAL.pairs.length} notes, ${CAL.false_flags} flagged stories it judged not to move the forecast, and ${CAL.misses} unflagged ones it judged would` : ""}.</p>
+  const omed = ovals.length ? ovals[Math.floor((ovals.length - 1) / 2)] : null, oabove = ovals.filter(p => p >= FLAG).length;
+  $("hist").innerHTML = `<div class="eyebrow">How Jev scored every story · ${NAME[frame]}, with ${NAME[other]} behind it</div>
+    <p class="note">${vals.length} stories, each scored by ${label}, in bins of ${BIN}. ${NAME[frame]}: median ${med.toFixed(2)}, highest ${vals.length ? vals[vals.length - 1].toFixed(2) : "–"}, ${above} at or above the flag.${omed == null ? "" : ` ${NAME[other]}: median ${omed.toFixed(2)}, highest ${ovals[ovals.length - 1].toFixed(2)}, ${oabove} at or above the flag.`} Bars are split by what the top-ECI model said when it wrote a note${CAL && CAL.pairs.length ? `: of ${CAL.pairs.length} notes, ${CAL.false_flags} flagged stories it judged not to move the forecast, and ${CAL.misses} unflagged ones it judged would` : ""}.</p>
     <div class="controls">${[["max", "Highest family"], ...CAUSES].map(([k, l]) => `<button data-h="${k}" aria-pressed="${k === histOf}">${l}</button>`).join("")}</div>
     <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Histogram of Jev scores">${g}</svg>
-    <div class="key"><span><i style="background:var(--ink-faint);opacity:.45"></i>no note</span><span><i style="background:var(--ink)"></i>note: none or negligible</span><span><i style="background:var(--link)"></i>note: small or more</span></div>`;
+    <div class="key"><span><i style="background:color-mix(in srgb, var(--c-misalign) 16%, transparent);outline:1.2px dashed var(--c-misalign);outline-offset:-1px"></i>${NAME[other]} (the other tab)</span><span><i style="background:var(--ink-faint);opacity:.45"></i>no note</span><span><i style="background:var(--ink)"></i>note: none or negligible</span><span><i style="background:var(--link)"></i>note: small or more</span></div>`;
   document.querySelectorAll("#hist button").forEach(b => b.addEventListener("click", () => { histOf = b.dataset.h; hist(); }));
 }
 
