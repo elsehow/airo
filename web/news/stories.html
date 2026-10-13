@@ -150,6 +150,7 @@ details.dropped ul { font-size: 13px; color: var(--ink-soft); padding-left: 18px
 const D = JSON.parse(document.getElementById("data").textContent);
 const CAUSES = [["ai", "AI incident"], ["cyber", "Cyber"], ["bio", "Bio"], ["misalign", "Misalignment"]];
 const MOVES = ["small", "moderate", "large"];
+const GAPS = D.gaps || {};   // "frame:story" -> why a rationale is missing
 const FLAG = D.meta.screen_at;
 const FC = D.meta.forecast;
 const m = D.meta;
@@ -178,7 +179,8 @@ const RDESC = {
 };
 
 function applyFrame() {
-  NOTES = (D.frames[rframe] || {}).notes || {};
+  const tops = new Set(FRAMES.map(f => topStory(f).id));
+  NOTES = Object.fromEntries(Object.entries((D.frames[rframe] || {}).notes || {}).filter(([id]) => tops.has(id)));
   D.stories.forEach(s => {
     s.screen = s.screens[frame] || {};
     s.scored = Object.keys(s.screen).length > 0;
@@ -253,25 +255,26 @@ for (const [id, v] of [["f-all", "all"], ["f-rel", "rel"], ["f-multi", "multi"]]
   $(id).addEventListener("click", () => { mode = v; render(); });
 
 // the newest flagged story's note, and the note last written on a story the screen passed over
+// The pipeline: Jev's top story in its frame goes to the top-ECI model, whose rationale is
+// written in its own frame. Rationales on other stories (the calibration run) are left off.
+function pOf(f, s) { const sc = s.screens[f] || {}; return Math.max(-1, ...CAUSES.map(([k]) => sc[k] ?? -1)); }
+function topStory(f) {
+  const written = s => FRAMES.filter(r => ((D.frames[r] || {}).notes || {})[s.id]).length;
+  return [...D.stories].sort((a, b) => pOf(f, b) - pOf(f, a) || written(b) - written(a))[0];
+}
+const FRAMES = ["airo", "generic"];
+
 function notes() {
-  const el = $("notes");
-  const noted = D.stories.filter(s => NOTES[s.id]).sort((a, b) => b.last.localeCompare(a.last));
-  // featured: the newest story Jev flagged (in its current frame), and the rationale last written on one it passed over
-  const latest = noted.filter(s => !s.relevant).sort((a, b) => NOTES[b.id].at.localeCompare(NOTES[a.id].at))[0];
-  const featured = [noted.find(s => s.relevant), latest].filter(Boolean);
-  if (!featured.length) {
-    el.innerHTML = `<p class="note">No rationales written in this condition yet.</p>`;
-    return;
-  }
-  el.innerHTML = featured.map(s => {
-    const n = NOTES[s.id];
-    const why = s.relevant ? `Jev (${NAME[frame].toLowerCase()}) flagged it: ${s.flags.map(([k, l]) => `${l} ${s.screen[k].toFixed(2)}`).join(", ")}`
-                           : `Jev (${NAME[frame].toLowerCase()}) passed over it at p ${s.pmax.toFixed(2)}; this rationale is a check on that`;
-    const shown = rframe === "airo" ? `shown the ensemble forecast of ${esc(FC)}` : "shown no forecast, asked about AI catastrophic-risk forecasts in general";
-    return `<article class="notecard"><h2>${esc(s.title)}</h2>
-      <div class="by">Written by ${esc(n.writer)}, the highest-ECI model on the panel (ECI ${n.eci}), ${shown}. ${why}. It read ${s.members.length} report${s.members.length > 1 ? "s" : ""}${s.members.some(x => x.full) ? ", with the article text Tavily could extract" : ": headlines and standfirsts, not the full articles"}. <a href="#${s.id}">Sources</a>.</div>
-      ${noteHTML(n.text)}<div class="by">Verdict: <b>${esc(n.verdict || "unparsed")}</b></div></article>`;
-  }).join("") + (noted.length > featured.length ? `<p class="note">${noted.length - featured.length} more stories have rationales in this condition; they are marked “Rationale” in the list below.</p>` : "");
+  const el = $("notes"), s = topStory(frame), n = NOTES[s.id];
+  const shown = rframe === "airo" ? `shown the ensemble forecast of ${esc(FC)} and the panel's rationales` : "shown no forecast, asked about AI catastrophic-risk forecasts in general";
+  el.innerHTML = `<article class="notecard">
+    <div class="eyebrow">Jev's top story · ${esc(NAME[frame])} · p ${s.pmax.toFixed(2)}</div>
+    <h2>${esc(s.title)}</h2>
+    <div class="by">${s.flags.map(([k, l]) => `${l} ${s.screen[k].toFixed(2)}`).join(", ")}. ${s.members.length} report${s.members.length > 1 ? "s" : ""} (${esc(s.sources.join(", "))})${s.members.some(x => x.full) ? ", with the article text Tavily could extract" : ", headlines and standfirsts only"}. <a href="#${s.id}">Sources</a>.</div>
+    ${n ? `<div class="by">Rationale by ${esc(n.writer)}, the highest-ECI model on the panel (ECI ${n.eci}), ${shown}.</div>
+    ${noteHTML(n.text)}<div class="by">Verdict: <b>${esc(n.verdict || "unparsed")}</b></div>`
+        : `<p class="note">No rationale in this condition: ${esc(RNAME[rframe])}. ${GAPS[rframe + ":" + s.id] || "Not written yet."}</p>`}
+  </article>`;
 }
 
 function hist() {
@@ -303,15 +306,12 @@ function hist() {
       g += `<rect class="${cls}" x="${x(i * BIN) + 4}" width="${bw - 8}" y="${y(c + b[k])}" height="${y(c) - y(c + b[k])}"><title>p ${(i * BIN).toFixed(2)}–${((i + 1) * BIN).toFixed(2)}: ${b[k]}</title></rect>`; c += b[k]; } });
   g += `<line class="thr" x1="${x(FLAG)}" x2="${x(FLAG)}" y1="${T - 6}" y2="${H - B}"/><text class="thr-l" x="${x(FLAG) + 5}" y="${T + 2}">flag at ${FLAG}</text>`;
   const above = vals.filter(p => p >= FLAG).length, label = `its ${CAUSES.find(([k]) => k === histOf)[1]} score`;
-  const cal = {n: 0, ff: 0, miss: 0};
-  for (const s of D.stories) { const n = NOTES[s.id], p = valIn(frame, s); if (!n || !n.verdict || p == null) continue;
-    cal.n++; const mv = MOVES.includes(n.verdict); if (s.pmax >= FLAG && !mv) cal.ff++; if (s.pmax < FLAG && mv) cal.miss++; }
   const omed = ovals.length ? ovals[Math.floor((ovals.length - 1) / 2)] : null, oabove = ovals.filter(p => p >= FLAG).length;
   $("hist").innerHTML = `<div class="eyebrow">How Jev scored every story · ${NAME[frame]}, with ${NAME[other]} behind it</div>
-    <p class="note">${vals.length} stories, each scored by ${label}, in bins of ${BIN}. ${NAME[frame]}: median ${med.toFixed(2)}, highest ${vals.length ? vals[vals.length - 1].toFixed(2) : "–"}, ${above} at or above the flag.${omed == null ? "" : ` ${NAME[other]}: median ${omed.toFixed(2)}, highest ${ovals[ovals.length - 1].toFixed(2)}, ${oabove} at or above the flag.`} Bars are split by the verdict of the rationale (${RNAME[rframe]}) where there is one${cal.n ? `: of ${cal.n} rationales, ${cal.ff} are on flagged stories it judged not to move the forecast, and ${cal.miss} on unflagged ones it judged would` : ""}.</p>
+    <p class="note">${vals.length} stories, each scored by ${label}, in bins of ${BIN}. ${NAME[frame]}: median ${med.toFixed(2)}, highest ${vals.length ? vals[vals.length - 1].toFixed(2) : "–"}, ${above} at or above the flag.${omed == null ? "" : ` ${NAME[other]}: median ${omed.toFixed(2)}, highest ${ovals[ovals.length - 1].toFixed(2)}, ${oabove} at or above the flag.`}</p>
     <div class="controls">${CAUSES.map(([k, l]) => `<button data-h="${k}" aria-pressed="${k === histOf}">${l}</button>`).join("")}</div>
     <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Histogram of Jev scores">${g}</svg>
-    <div class="key"><span><i style="background:var(--c-misalign)"></i>${NAME[frame]}: no rationale</span><span><i style="background:var(--link)"></i>rationale: none or negligible</span><span><i style="background:var(--c-bio)"></i>rationale: small or more</span><span><i style="background:color-mix(in srgb, var(--ink-faint) 22%, transparent);outline:1.2px dashed var(--ink-faint);outline-offset:-1px"></i>${NAME[other]} (the other tab)</span></div>`;
+    <div class="key"><span><i style="background:var(--c-misalign)"></i>${NAME[frame]}</span><span><i style="background:var(--link)"></i>Jev's top story, rationale: none or negligible</span><span><i style="background:var(--c-bio)"></i>rationale: small or more</span><span><i style="background:color-mix(in srgb, var(--ink-faint) 22%, transparent);outline:1.2px dashed var(--ink-faint);outline-offset:-1px"></i>${NAME[other]} (the other tab)</span></div>`;
   document.querySelectorAll("#hist button").forEach(b => b.addEventListener("click", () => { histOf = b.dataset.h; hist(); }));
 }
 

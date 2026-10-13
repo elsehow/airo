@@ -482,6 +482,9 @@ def page_data(state_dir, fc_meta=None):
                             for r in s["related"]]}
                for s in built["stories"]]
     fetches = news.read_jsonl(os.path.join(state_dir, "fetches.jsonl"))
+    written = {(f, sid) for f in FRAMES for sid in frames[f][1]["notes"]}
+    gaps = [g for g in news.read_jsonl(os.path.join(state_dir, "rationale_gaps.jsonl"))
+            if (g["frame"], g["story"]) not in written]
     airo_rows = news.read_jsonl(os.path.join(state_dir, LOGS["airo"][0]))
     return {"meta": {"items": built["stats"]["items"], "stories": len(stories), "built": built["built_at"],
                      "polls": len({f["at"] for f in fetches}), "feeds": len({f["feed"] for f in fetches}),
@@ -490,7 +493,10 @@ def page_data(state_dir, fc_meta=None):
                      "panel": (fc_meta or {}).get("models") or []},
             "stories": stories,
             "dropped": [{"title": items[i]["title"], "p": gate.get(i)} for i in built["dropped"]],
-            "frames": {f: frames[f][1] for f in FRAMES}}
+            "frames": {f: frames[f][1] for f in FRAMES},
+            "gaps": {f"{g['frame']}:{g['story']}": "The writer returned no text "
+                     f"({sum(1 for h in gaps if (h['frame'], h['story']) == (g['frame'], g['story']))} "
+                     "attempt(s)); it stopped before writing, which a retry can fix." for g in gaps}}
 
 
 def render_page(state_dir, out_path, fc_meta=None):

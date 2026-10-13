@@ -112,6 +112,9 @@ def main():
                     n = ns.explain(by_id[s["id"]], items, fc, screened.get(s["id"]), frame=a.frame)
                 except RuntimeError as e:
                     print(f"  skipped: {e}", file=sys.stderr)
+                    news.append_jsonl(path("rationale_gaps.jsonl"), [{
+                        "at": news._now(), "frame": a.frame, "story": s["id"], "forecast": against,
+                        "error": str(e)}])
                     continue
                 news.append_jsonl(notes_log, [n])
                 print(json.dumps({"story": n["title"], "verdict": n["verdict"],
