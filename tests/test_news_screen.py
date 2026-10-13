@@ -126,6 +126,20 @@ class Screen(unittest.TestCase):
         self.assertIn("Full article body.", p)
         self.assertNotIn("standfirsts only", p)
 
+    def test_generic_frame_hides_the_forecast(self):
+        ss, its = stories()
+        fc, jev, log = forecast(), FakeJev(), []
+        ns.screen(ss, its, fc, [], ask=FakeJev(), log=log.append)          # the AIRO frame first
+        out = ns.screen(ss, its, fc, [], ask=jev, log=log.append, frame="generic")
+        state, qs = jev.calls[0]
+        self.assertEqual(set(state), {"story"})
+        self.assertNotIn("airo_forecast", json.dumps(qs))
+        self.assertEqual({r["forecast"] for r in out.values()}, {"generic"})
+        # a new forecast run does not re-ask the generic question
+        again = FakeJev()
+        ns.screen(ss, its, dict(fc, run="2026-10-14T1200Z"), log, ask=again, frame="generic")
+        self.assertEqual(again.calls, [])
+
     def test_new_member_rescreens(self):
         ss, its = stories()
         fc, log = forecast(), []
@@ -173,6 +187,18 @@ class Notes(unittest.TestCase):
         self.assertEqual(n["causes"], ["ai", "cyber", "bio", "misalign"])   # 0.7 and 0.35 both >= 0.3
         self.assertNotIn("VERDICT", n["text"])
 
+    def test_explain_generic(self):
+        s = self.ss[0]
+        seen = {}
+        def complete(model, system, prompt):
+            seen.update(system=system, prompt=prompt)
+            return fake_complete(model, system, prompt)
+        n = ns.explain(s, self.its, self.fc, self.screened[s["id"]], complete=complete, frame="generic")
+        self.assertEqual((n["forecast"], n["frame"], n["verdict"]), ("generic", "generic", "small"))
+        self.assertNotIn("AIRO", seen["system"] + seen["prompt"])
+        self.assertNotIn("Agents misbehave.", seen["prompt"])            # no panel reasoning
+        self.assertIn("VERDICT: <size>", seen["prompt"])
+
     def test_empty_note_raises(self):
         with self.assertRaises(RuntimeError):
             ns.explain(self.ss[0], self.its, self.fc, self.screened[self.ss[0]["id"]],
@@ -213,9 +239,11 @@ class Notes(unittest.TestCase):
         self.assertEqual(clash, [])
         data = json.loads(html.split('<script id="data" type="application/json">', 1)[1]
                           .split("</script>", 1)[0].replace("<\\/", "</"))
-        self.assertEqual(data["notes"][s["id"]]["verdict"], "small")
+        self.assertEqual(data["frames"]["airo"]["notes"][s["id"]]["verdict"], "small")
+        self.assertEqual(data["frames"]["generic"]["notes"], {})
         self.assertEqual(data["meta"]["screen_at"], ns.SCREEN_AT)
-        self.assertEqual(len(data["calibration"]["pairs"]), 1)
+        self.assertEqual(len(data["frames"]["airo"]["calibration"]["pairs"]), 1)
+        self.assertEqual(data["stories"][0]["screens"]["generic"], {})
 
 
 if __name__ == "__main__":

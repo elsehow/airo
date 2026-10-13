@@ -47,6 +47,9 @@ def main():
     ap.add_argument("--audit-below", type=int, default=0,
                     help="explain: also the N highest-p stories just below the threshold")
     ap.add_argument("--story", action="append", help="fulltext, explain: a story id to act on (repeatable)")
+    ap.add_argument("--frame", choices=ns.FRAMES, default="airo",
+                    help="screen, explain, calibrate: show Jev and the writer the AIRO forecast (airo) "
+                         "or ask about AI catastrophic-risk forecasts in general (generic)")
     ap.add_argument("--dry-run", action="store_true", help="explain: say what would be called, call nothing")
     a = ap.parse_args()
     state = a.state
@@ -77,19 +80,21 @@ def main():
         built = json.load(open(path("stories.json")))
         items = news.load_items(state)
         print(f"forecast {fc['run']} ({fc['day']}), panel {', '.join(fc['models'])}", file=sys.stderr)
-        log_rows = news.read_jsonl(path("screen.jsonl"))
+        screen_log, notes_log = (path(f) for f in ns.LOGS[a.frame])
+        log_rows = news.read_jsonl(screen_log)
         if a.step == "screen":
             if not os.environ.get("TYPESAFE_API_KEY"):
                 sys.exit("no TYPESAFE_API_KEY set")
             calls = []
             ask = lambda st, qs: calls.append(1) or news.jev_ask(st, qs)
             out = ns.screen(built["stories"], items, fc, log_rows, ask=ask,
-                            log=lambda r: news.append_jsonl(path("screen.jsonl"), [r]))
-            print(json.dumps({"stories": len(out), "calls": len(calls),
+                            log=lambda r: news.append_jsonl(screen_log, [r]), frame=a.frame)
+            print(json.dumps({"frame": a.frame, "stories": len(out), "calls": len(calls),
                               "flagged": sum(ns.flagged(r) for r in out.values()), "screen_at": ns.SCREEN_AT}))
             return
-        screened = ns.screen(built["stories"], items, fc, log_rows)
-        notes = [n for n in news.read_jsonl(path("notes.jsonl")) if n["forecast"] == fc["run"]]
+        screened = ns.screen(built["stories"], items, fc, log_rows, frame=a.frame)
+        against = ns.frame_id(fc, a.frame)
+        notes = [n for n in news.read_jsonl(notes_log) if n["forecast"] == against]
         if a.step == "explain":
             label, model_id, eci = ns.writer(fc)
             pick = ([s for s in built["stories"] if s["id"] in a.story] if a.story else
@@ -104,11 +109,11 @@ def main():
             by_id = {s["id"]: s for s in built["stories"]}
             for s in pick:
                 try:
-                    n = ns.explain(by_id[s["id"]], items, fc, screened[s["id"]])
+                    n = ns.explain(by_id[s["id"]], items, fc, screened.get(s["id"]), frame=a.frame)
                 except RuntimeError as e:
                     print(f"  skipped: {e}", file=sys.stderr)
                     continue
-                news.append_jsonl(path("notes.jsonl"), [n])
+                news.append_jsonl(notes_log, [n])
                 print(json.dumps({"story": n["title"], "verdict": n["verdict"],
                                   "cost_usd": (n["usage"] or {}).get("cost_usd")}))
         elif a.step == "calibrate":

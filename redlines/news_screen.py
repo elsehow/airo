@@ -158,7 +158,32 @@ def screen_state(fc):
 
 # --------------------------------------------------------------- screen
 
-def screen_question(c):
+# Two framings of the same screen and notes. "airo": Jev and the writer see the
+# latest AIRO ensemble forecast and the panel's reasoning. "generic": they see
+# only the story, and are asked about forecasts of catastrophic risk from AI in
+# general. Each frame keeps its own logs.
+FRAMES = ("airo", "generic")
+LOGS = {"airo": ("screen.jsonl", "notes.jsonl"), "generic": ("screen_generic.jsonl", "notes_generic.jsonl")}
+
+
+def frame_id(fc, frame):
+    """What a screen row or note was answered against: the forecast run, or "generic"."""
+    return fc["run"] if frame == "airo" else "generic"
+
+
+def screen_question(c, frame="airo"):
+    if frame == "generic":
+        return {"type": "noul",
+                "instructions": f"Would a careful forecaster of catastrophic risk from AI change any of "
+                                f"their probabilities for {FAMILY[c]} after reading `story`?",
+                "criteria": {
+                    "true": "Yes: `story` reports a new event or finding, not already widely known, that "
+                            "bears on how likely these incidents are: an incident that causes or comes "
+                            "close to causing serious harm, a new dangerous-capability or safety finding, "
+                            "or a change to safeguards, restraints or policies that hold the risk down.",
+                    "false": "No: `story` is expected or already widely known, or does not bear on how "
+                             "likely these incidents are: business, markets, earnings, routine launches at "
+                             "or near the existing frontier, jobs, culture or opinion."}}
     return {"type": "noul",
             "instructions": f"Would a forecaster holding `airo_forecast` change any of its "
                             f"probabilities for {FAMILY[c]} after reading `story`?",
@@ -184,30 +209,33 @@ def story_reports(story, items, n=3):
     return out
 
 
-def _screen_key(story, fc, items=None):
+def _screen_key(story, fc, items=None, frame="airo"):
     shown = [m["item"] for m in story["members"][:3]]
-    key = [story["id"], fc["run"], shown]
+    key = [story["id"], frame_id(fc, frame), shown]
     if items and any(items[i].get("text") for i in shown):
         key.append("full_text")   # read in full: a new question, screened again
     return key
 
 
-def screen(stories, items, fc, decisions, ask=None, log=None, now=None):
+def screen(stories, items, fc, decisions, ask=None, log=None, now=None, frame="airo"):
     """{story id: screen row} for every story, from the log where its key
     matches (same story, forecast and shown members) and from Jev otherwise.
-    With ask=None nothing is called and unlogged stories are left out."""
+    With ask=None nothing is called and unlogged stories are left out.
+    frame="generic" leaves the forecast out of Jev's state."""
     logged = {json.dumps(d["key"]): d for d in decisions}
     state_fc = None
     out = {}
     for s in stories:
-        key = _screen_key(s, fc, items)
+        key = _screen_key(s, fc, items, frame)
         row = logged.get(json.dumps(key))
         if row is None and ask is not None:
-            state_fc = state_fc or screen_state(fc)
-            r = ask({"story": {"reports": story_reports(s, items)}, "airo_forecast": state_fc},
-                    {c: screen_question(c) for c in FAMILY})
+            state = {"story": {"reports": story_reports(s, items)}}
+            if frame == "airo":
+                state_fc = state_fc or screen_state(fc)
+                state["airo_forecast"] = state_fc
+            r = ask(state, {c: screen_question(c, frame) for c in FAMILY})
             row = {"at": now or news._now(), "key": key, "story": s["id"], "title": s["title"],
-                   "forecast": fc["run"], "model": r.get("model"), "usage": r.get("usage"),
+                   "forecast": frame_id(fc, frame), "frame": frame, "model": r.get("model"), "usage": r.get("usage"),
                    "p_moves": {c: round(float(r["answers"][c]["noul"]), 4) for c in FAMILY},
                    "screen_at": SCREEN_AT}
             log and log(row)
@@ -257,6 +285,13 @@ def explain_prompt(story, items, fc, causes, today=None):
     sections.append("### Cross-cutting questions\n\n"
                     + "\n".join(f"- {q['name']}: {q['text'][:400]}" for q in cq) + "\n\n"
                     + _table(fc, [(q["id"], q["name"]) for q in cq], "question"))
+    reports, full = _reports(story, items)
+    rationales = "\n\n".join(f"**{m}**: {fc['rationales'][m][:NOTE_RATIONALE_CHARS]}" for m in fc["models"])
+    return _airo_prompt(story, fc, today, sections, reports, full, rationales)
+
+
+def _reports(story, items):
+    """The story's reports for the writer: one line each, then any article text."""
     reports = "\n".join(
         f"- {items[m['item']]['source']} ({(items[m['item']].get('published') or '')[:10]}): "
         f"\"{items[m['item']]['title']}\""
@@ -267,7 +302,10 @@ def explain_prompt(story, items, fc, causes, today=None):
         reports += "\n\nThe text of " + ("one report" if len(full) == 1 else f"{len(full)} reports") + \
             " as extracted from the publisher's page (a paywalled article may stop after its opening):\n\n" + \
             "\n\n".join(f"### {it['source']}: {it['title']}\n\n{it['text'][:FULLTEXT_CHARS]}" for it in full)
-    rationales = "\n\n".join(f"**{m}**: {fc['rationales'][m][:NOTE_RATIONALE_CHARS]}" for m in fc["models"])
+    return reports, full
+
+
+def _airo_prompt(story, fc, today, sections, reports, full, rationales):
     return f"""Today is {today}. The latest AIRO ensemble forecast was elicited on {fc['day']} from a panel of {len(fc['models'])} models ({", ".join(fc['models'])}).
 
 ## The news story
@@ -299,6 +337,36 @@ Be calibrated rather than dramatic. Most news should not move a forecast of rare
 End with one final line, on its own, of the form `VERDICT: <size>`, where <size> is one of none, negligible, small, moderate, large: the largest change you judge this story warrants to any question."""
 
 
+SYSTEM_GENERIC = ("You forecast catastrophic risk from AI. When AI news breaks, you write a short note "
+                  "on whether and how it should change forecasts of AI-related catastrophic risk.")
+
+
+def generic_prompt(story, items, today=None):
+    """The writer's prompt with no forecast: the story and the same task, asked
+    about forecasts of catastrophic risk from AI in general."""
+    today = today or news._now()[:10]
+    reports, full = _reports(story, items)
+    return f"""Today is {today}.
+
+## The news story
+
+"{story['title']}" — {len(story['members'])} reports, {story['first_seen'][:10]} to {story['last_seen'][:10]}. {'You have the headlines and standfirsts, and article text where given below' if full else 'You have the headlines and standfirsts only, not the full articles'}:
+
+{reports}
+
+## Your task
+
+Write a short note on whether this story should change forecasts of catastrophic risk from AI: the probability that AI-related incidents (of any kind, and specifically AI-enabled cyber attacks, AI-enabled biological harm, and harm from misaligned AI) cause deaths or economic damage at severities from 100 deaths up to human extinction, over horizons from the next six months to 2100. Write for a reader who follows AI risk. In 120–250 words of plain prose:
+
+1. Say whether this news should move such forecasts at all, and if so which kinds of risk, which severities and which horizons, and in which direction. Give the size in words (no change / negligible / small / moderate / large); do not give numbers.
+2. Explain the mechanism: why this kind of development does or does not change the chance of such incidents.
+3. Name what would have to be true, or come out next, for this story to matter more than you judge it does.
+
+Be calibrated rather than dramatic. Most news should not move a forecast of rare catastrophic incidents, and saying so plainly is a good answer. Work only from what the reports say; where the headlines leave something unknown, say so rather than assume.
+
+End with one final line, on its own, of the form `VERDICT: <size>`, where <size> is one of none, negligible, small, moderate, large: the largest change you judge this story warrants to any such forecast."""
+
+
 def parse_verdict(text):
     """(note without the VERDICT line, verdict or None)."""
     m = re.search(r"^\s*\**VERDICT:?\**\s*:?\s*\**\s*([a-z]+)", text or "", re.I | re.M)
@@ -318,21 +386,27 @@ def default_complete(model, system, prompt):
     return {"text": r.get("content"), "usage": r.get("usage")}
 
 
-def explain(story, items, fc, screen_row, complete=None, now=None):
+def explain(story, items, fc, screen_row, complete=None, now=None, frame="airo"):
     """One note for one story: the writer's text, its parsed verdict and the
-    call's usage. Raises if the writer returns no text (all thinking)."""
+    call's usage. Raises if the writer returns no text (all thinking). The
+    writer is the panel's top-ECI model in both frames; frame="generic" shows
+    it no forecast."""
     label, model_id, eci = writer(fc)
     causes = [c for c, p in screen_row["p_moves"].items() if p >= SCREEN_AT] if screen_row else []
-    prompt = explain_prompt(story, items, fc, causes, today=(now or news._now())[:10])
-    r = (complete or default_complete)(model_id, SYSTEM, prompt)
+    today = (now or news._now())[:10]
+    if frame == "generic":
+        system, prompt = SYSTEM_GENERIC, generic_prompt(story, items, today)
+    else:
+        system, prompt = SYSTEM, explain_prompt(story, items, fc, causes, today=today)
+    r = (complete or default_complete)(model_id, system, prompt)
     if not (r.get("text") or "").strip():
         raise RuntimeError(f"{label} returned no text for {story['id']} (usage {r.get('usage')})")
     text, verdict = parse_verdict(r["text"])
     return {"at": now or news._now(), "story": story["id"], "title": story["title"],
-            "forecast": fc["run"], "writer": label, "model": model_id, "eci": eci,
+            "forecast": frame_id(fc, frame), "frame": frame, "writer": label, "model": model_id, "eci": eci,
             "causes": causes, "p_moves": screen_row and screen_row["p_moves"],
             "flagged": bool(screen_row) and flagged(screen_row), "text": text, "verdict": verdict,
-            "usage": r.get("usage"), "prompt_chars": len(SYSTEM) + len(prompt)}
+            "usage": r.get("usage"), "prompt_chars": len(system) + len(prompt)}
 
 
 def pick_for_notes(stories, screened, notes, flagged_n=1, audit_below=0):
@@ -378,18 +452,29 @@ def calibrate(screened, notes):
 PAGE_TEMPLATE = ROOT / "web" / "news" / "stories.html"
 
 
+def _frame_data(state_dir, frame):
+    rows = news.read_jsonl(os.path.join(state_dir, LOGS[frame][0]))
+    against = max((r["forecast"] for r in rows), default=None)   # the latest run, or "generic"
+    screened = {r["story"]: r for r in rows if r["forecast"] == against}
+    notes = [n for n in news.read_jsonl(os.path.join(state_dir, LOGS[frame][1])) if n["forecast"] == against]
+    cal = calibrate(screened, notes)
+    return screened, {
+        "notes": {n["story"]: {k: n[k] for k in ("at", "text", "verdict", "writer", "eci", "flagged")}
+                  for n in notes},
+        "calibration": {"pairs": cal["pairs"], "false_flags": cal["false_flags"],
+                        "misses": cal["misses"], "suggest": cal["suggest"]}}
+
+
 def page_data(state_dir, fc_meta=None):
     built = json.load(open(os.path.join(state_dir, "stories.json")))
     items = news.load_items(state_dir)
-    rows = news.read_jsonl(os.path.join(state_dir, "screen.jsonl"))
-    latest_run = max((r["forecast"] for r in rows), default=None)
-    screened = {r["story"]: r for r in rows if r["forecast"] == latest_run}
-    notes = [n for n in news.read_jsonl(os.path.join(state_dir, "notes.jsonl")) if n["forecast"] == latest_run]
+    frames = {f: _frame_data(state_dir, f) for f in FRAMES}
     gate = {d["item"]: d["p_ai"] for d in news.read_jsonl(os.path.join(state_dir, "decisions.jsonl"))
             if d["kind"] == "gate"}
     title_of = {s["id"]: s["title"] for s in built["stories"]}
     stories = [{"id": s["id"], "title": s["title"], "first": s["first_seen"], "last": s["last_seen"],
-                "sources": s["sources"], "screen": (screened.get(s["id"]) or {}).get("p_moves", {}),
+                "sources": s["sources"],
+                "screens": {f: (frames[f][0].get(s["id"]) or {}).get("p_moves", {}) for f in FRAMES},
                 "members": [{"source": m["source"], "title": m["title"], "url": m["url"],
                              "open": m["open_access"], "p": m["p_same"],
                              "full": bool(items.get(m["item"], {}).get("text"))} for m in s["members"]],
@@ -397,18 +482,15 @@ def page_data(state_dir, fc_meta=None):
                             for r in s["related"]]}
                for s in built["stories"]]
     fetches = news.read_jsonl(os.path.join(state_dir, "fetches.jsonl"))
-    cal = calibrate(screened, notes)
+    airo_rows = news.read_jsonl(os.path.join(state_dir, LOGS["airo"][0]))
     return {"meta": {"items": built["stats"]["items"], "stories": len(stories), "built": built["built_at"],
                      "polls": len({f["at"] for f in fetches}), "feeds": len({f["feed"] for f in fetches}),
                      "same_at": built["thresholds"]["same_at"], "screen_at": SCREEN_AT,
-                     "forecast": (fc_meta or {}).get("day") or latest_run,
+                     "forecast": (fc_meta or {}).get("day") or max((r["forecast"] for r in airo_rows), default=None),
                      "panel": (fc_meta or {}).get("models") or []},
             "stories": stories,
             "dropped": [{"title": items[i]["title"], "p": gate.get(i)} for i in built["dropped"]],
-            "notes": {n["story"]: {k: n[k] for k in ("at", "text", "verdict", "writer", "eci", "flagged")}
-                      for n in notes},
-            "calibration": {"pairs": cal["pairs"], "false_flags": cal["false_flags"],
-                            "misses": cal["misses"], "suggest": cal["suggest"]}}
+            "frames": {f: frames[f][1] for f in FRAMES}}
 
 
 def render_page(state_dir, out_path, fc_meta=None):

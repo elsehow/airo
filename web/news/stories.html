@@ -39,6 +39,8 @@
 .hist .key { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--ink-soft); }
 .hist .key i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
 .notes { display: grid; gap: 14px; }
+.frame { display: grid; gap: 6px; }
+.frame .controls button { font-size: 14px; padding: 6px 14px; }
 .chip.p { --c: var(--line); color: var(--ink-soft); }
 .story:not(.quiet) .chip.p { --c: var(--ink); color: var(--ink); }
 .tablewrap { overflow-x: auto; }
@@ -107,8 +109,15 @@ details.dropped ul { font-size: 13px; color: var(--ink-soft); padding-left: 18px
   <header>
     <div class="eyebrow">AIRO · news pipeline</div>
     <h1>AI news, one story per event</h1>
-    <p class="lede">Every unique story the feeds produced, after Jev folded duplicate write-ups together. Jev checked each story against the latest AIRO ensemble forecast (<span id="fc-day"></span>). Stories in full ink might move it for at least one cause family; faded stories are not expected to. Click a story for its sources and Jev's probabilities.</p>
+    <p class="lede">Every unique story the feeds produced, after Jev folded duplicate write-ups together. Jev then asked of each story whether it would change a forecast of AI catastrophic risk. Stories in full ink might, for at least one cause family; faded stories are not expected to. Click a story for its sources and Jev's probabilities.</p>
   </header>
+  <section class="frame">
+    <div class="controls" role="group" aria-label="What Jev and the writer were shown">
+      <button data-f="airo" aria-pressed="true">Against the AIRO forecast</button>
+      <button data-f="generic" aria-pressed="false">Generic: no forecast shown</button>
+    </div>
+    <p class="note" id="frame-desc"></p>
+  </section>
   <section class="band" id="band"></section>
   <section class="notes" id="notes" hidden></section>
   <section class="hist" id="hist"></section>
@@ -127,37 +136,55 @@ details.dropped ul { font-size: 13px; color: var(--ink-soft); padding-left: 18px
 <script>
 const D = JSON.parse(document.getElementById("data").textContent);
 const CAUSES = [["ai", "AI incident"], ["cyber", "Cyber"], ["bio", "Bio"], ["misalign", "Misalignment"]];
+const MOVES = ["small", "moderate", "large"];
 const FLAG = D.meta.screen_at;
 const FC = D.meta.forecast;
+const m = D.meta;
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const when = iso => { const d = new Date(iso); return d.toLocaleString(undefined, {month: "short", day: "numeric", hour: "2-digit", minute: "2-digit"}); };
-const flags = s => CAUSES.filter(([k]) => (s.screen[k] ?? 0) >= FLAG);
-D.stories.forEach(s => { s.flags = flags(s); s.relevant = s.flags.length > 0; s.pmax = Math.max(0, ...CAUSES.map(([k]) => s.screen[k] ?? 0)); });
+const $ = id => document.getElementById(id);
 
-const m = D.meta, rel = D.stories.filter(s => s.relevant).length, multi = D.stories.filter(s => s.sources.length > 1).length;
-document.getElementById("band").innerHTML = [
-  [m.items, "items from " + m.feeds + " feeds"], [m.stories, "unique stories"], [multi, "multi-source stories"],
-  [rel, "might move the forecast"], [D.dropped.length, "dropped as not AI"]
-].map(([n, l]) => `<div><b>${n}</b><span>${l}</span></div>`).join("");
-document.getElementById("legend").innerHTML = CAUSES.map(([k, l]) => `<span><span class="dot" style="--c:var(--c-${k})"></span>${l}</span>`).join("");
+// The frame: what Jev and the writer were shown. Everything below the toggle is drawn from it.
+let frame = "airo";
+try { if (localStorage.getItem("news-frame") === "generic") frame = "generic"; } catch (e) {}
+let NOTES = {}, CAL = null, mode = "all", histOf = "max";
+const AGAINST = {
+  airo: `the ${FC} AIRO ensemble forecast`,
+  generic: "forecasts of AI catastrophic risk in general",
+};
+const DESC = {
+  airo: `Jev saw each story with the ${FC} AIRO ensemble medians and the panel's reasoning, and was asked per cause family whether a forecaster holding that forecast would change it. The writer saw the same forecast, its ranges and the panel's rationales.`,
+  generic: "Jev and the writer saw only the story. Neither was shown AIRO's numbers or reasoning; each was asked whether a careful forecaster of catastrophic risk from AI would change their probabilities, per cause family.",
+};
 
-function storyHTML(s) {
-  const chips = `<span class="chip p" title="Jev p(story would change the forecast), highest family">p ${s.pmax.toFixed(2)}</span>` + (NOTES[s.id] ? `<span class="chip note">Note: ${esc(NOTES[s.id].verdict || "?")}</span>` : "") + s.flags.map(([k, l]) => `<span class="chip" style="--c:var(--c-${k})">${l} ${s.screen[k].toFixed(2)}</span>`).join("");
-  const span = s.first === s.last ? when(s.first) : `${when(s.first)} – ${when(s.last)}`;
-  const members = s.members.map(x => `<li><span class="p">${x.p == null ? "first" : "p " + x.p.toFixed(2)}</span>
-    <span><span class="src">${esc(x.source)}</span>${x.open ? "" : '<span class="pay">paywall</span>'}${x.full ? '<span class="pay">text read</span>' : ""} · <a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.title)}</a></span></li>`).join("");
-  const scores = CAUSES.map(([k, l]) => { const p = s.screen[k]; return p == null ? "" :
-    `<span>${l} ${p.toFixed(2)}<span class="bar"><i style="--c:var(--c-${k});width:${Math.round(p*100)}%"></i></span></span>`; }).join("");
-  const note = NOTES[s.id] ? `<div class="eyebrow">AIRO note · written by ${esc(NOTES[s.id].writer)} · verdict: ${esc(NOTES[s.id].verdict || "unparsed")}</div>${noteHTML(NOTES[s.id].text)}` : "";
-  const verdict = `<div class="related">${s.relevant ? `Might move the ${FC} forecast for: ` + s.flags.map(([k, l]) => l).join(", ") : `Checked against the ${FC} forecast: not expected to move it`} (Jev, flagged at ${FLAG}).</div>`;
-  const related = s.related.map(r => `<div class="related">Possible follow-up to: ${esc(r.title)} (p ${r.p.toFixed(2)})</div>`).join("");
-  return `<details class="story${s.relevant ? "" : " quiet"}" id="${s.id}"><summary>
-      <div class="head"><div class="headline">${esc(s.title)}</div>
-      <div class="meta"><span>${span}</span><span>${esc(s.sources.join(", "))}</span><span class="n">${s.members.length} item${s.members.length > 1 ? "s" : ""}</span></div></div>
-      <div class="chips">${chips}</div></summary>
-    <div class="detail">${note}<ul class="members">${members}</ul>${verdict}<div class="scores">${scores}</div>${related}</div></details>`;
+function applyFrame() {
+  NOTES = (D.frames[frame] || {}).notes || {};
+  CAL = (D.frames[frame] || {}).calibration;
+  D.stories.forEach(s => {
+    s.screen = s.screens[frame] || {};
+    s.scored = Object.keys(s.screen).length > 0;
+    s.flags = CAUSES.filter(([k]) => (s.screen[k] ?? 0) >= FLAG);
+    s.relevant = s.flags.length > 0;
+    s.pmax = Math.max(0, ...CAUSES.map(([k]) => s.screen[k] ?? 0));
+  });
+  document.querySelectorAll(".frame button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.f === frame)));
+  $("frame-desc").textContent = DESC[frame];
+  band(); notes(); hist(); render(); footnote();
 }
+document.querySelectorAll(".frame button").forEach(b => b.addEventListener("click", () => {
+  frame = b.dataset.f;
+  try { localStorage.setItem("news-frame", frame); } catch (e) {}
+  applyFrame();
+}));
 
+function band() {
+  const rel = D.stories.filter(s => s.relevant).length, multi = D.stories.filter(s => s.sources.length > 1).length;
+  $("band").innerHTML = [
+    [m.items, "items from " + m.feeds + " feeds"], [m.stories, "unique stories"], [multi, "multi-source stories"],
+    [rel, "might move the forecast"], [Object.keys(NOTES).length, "notes by the top-ECI model"], [D.dropped.length, "dropped as not AI"]
+  ].map(([n, l]) => `<div><b>${n}</b><span>${l}</span></div>`).join("");
+}
+$("legend").innerHTML = CAUSES.map(([k, l]) => `<span><span class="dot" style="--c:var(--c-${k})"></span>${l}</span>`).join("");
 
 function noteHTML(text) {
   const out = []; let list = [];
@@ -169,40 +196,62 @@ function noteHTML(text) {
   if (list.length) out.push(`<ul>${list.join("")}</ul>`);
   return `<div class="notetext">${out.join("")}</div>`;
 }
-const NOTES = D.notes || {};
-let mode = "all";
+
+function storyHTML(s) {
+  const n = NOTES[s.id];
+  const chips = (s.scored ? `<span class="chip p" title="Jev p(story would change the forecast), highest family">p ${s.pmax.toFixed(2)}</span>` : `<span class="chip p">not screened</span>`)
+    + (n ? `<span class="chip note">Note: ${esc(n.verdict || "?")}</span>` : "")
+    + s.flags.map(([k, l]) => `<span class="chip" style="--c:var(--c-${k})">${l} ${s.screen[k].toFixed(2)}</span>`).join("");
+  const span = s.first === s.last ? when(s.first) : `${when(s.first)} – ${when(s.last)}`;
+  const members = s.members.map(x => `<li><span class="p">${x.p == null ? "first" : "p " + x.p.toFixed(2)}</span>
+    <span><span class="src">${esc(x.source)}</span>${x.open ? "" : '<span class="pay">paywall</span>'}${x.full ? '<span class="pay">text read</span>' : ""} · <a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.title)}</a></span></li>`).join("");
+  const scores = CAUSES.map(([k, l]) => { const p = s.screen[k]; return p == null ? "" :
+    `<span>${l} ${p.toFixed(2)}<span class="bar"><i style="--c:var(--c-${k});width:${Math.round(p*100)}%"></i></span></span>`; }).join("");
+  const note = n ? `<div class="eyebrow">Note · written by ${esc(n.writer)} · verdict: ${esc(n.verdict || "unparsed")}</div>${noteHTML(n.text)}` : "";
+  const verdict = `<div class="related">${s.relevant ? "Might move " + AGAINST[frame] + " for: " + s.flags.map(([k, l]) => l).join(", ") : "Checked against " + AGAINST[frame] + ": not expected to move it"} (Jev, flagged at ${FLAG}).</div>`;
+  const related = s.related.map(r => `<div class="related">Possible follow-up to: ${esc(r.title)} (p ${r.p.toFixed(2)})</div>`).join("");
+  return `<details class="story${s.relevant ? "" : " quiet"}" id="${s.id}"><summary>
+      <div class="head"><div class="headline">${esc(s.title)}</div>
+      <div class="meta"><span>${span}</span><span>${esc(s.sources.join(", "))}</span><span class="n">${s.members.length} item${s.members.length > 1 ? "s" : ""}</span></div></div>
+      <div class="chips">${chips}</div></summary>
+    <div class="detail">${note}<ul class="members">${members}</ul>${verdict}<div class="scores">${scores}</div>${related}</div></details>`;
+}
+
 function render() {
   const pick = D.stories.filter(s => mode === "all" || (mode === "rel" ? s.relevant : s.sources.length > 1));
-  document.getElementById("list").innerHTML = pick.map(storyHTML).join("") || '<p class="note">No stories match this filter.</p>';
+  $("list").innerHTML = pick.map(storyHTML).join("") || '<p class="note">No stories match this filter.</p>';
   for (const [id, v] of [["f-all", "all"], ["f-rel", "rel"], ["f-multi", "multi"]])
-    document.getElementById(id).setAttribute("aria-pressed", String(mode === v));
+    $(id).setAttribute("aria-pressed", String(mode === v));
 }
 for (const [id, v] of [["f-all", "all"], ["f-rel", "rel"], ["f-multi", "multi"]])
-  document.getElementById(id).addEventListener("click", () => { mode = v; render(); });
-render();
+  $(id).addEventListener("click", () => { mode = v; render(); });
 
-const noted = D.stories.filter(s => NOTES[s.id]).sort((a, b) => b.last.localeCompare(a.last));
 // the newest flagged story's note, and the note last written on a story the screen passed over
-const audit = noted.filter(s => !NOTES[s.id].flagged).sort((a, b) => NOTES[b.id].at.localeCompare(NOTES[a.id].at))[0];
-const featured = [noted.find(s => NOTES[s.id].flagged), audit].filter(Boolean);
-if (featured.length) {
-  const el = document.getElementById("notes");
+function notes() {
+  const el = $("notes");
+  const noted = D.stories.filter(s => NOTES[s.id]).sort((a, b) => b.last.localeCompare(a.last));
+  const audit = noted.filter(s => !NOTES[s.id].flagged).sort((a, b) => NOTES[b.id].at.localeCompare(NOTES[a.id].at))[0];
+  const featured = [noted.find(s => NOTES[s.id].flagged), audit].filter(Boolean);
+  if (!featured.length) {
+    el.innerHTML = `<div class="eyebrow">Notes by the top-ECI model</div><p class="note">No notes written in this frame yet.</p>`;
+    el.hidden = false;
+    return;
+  }
   el.innerHTML = `<div class="eyebrow">How the news moves the forecast · notes by the top-ECI model</div>` + featured.map(s => {
     const n = NOTES[s.id];
     const why = n.flagged ? `the most recent story the screen flagged (${s.flags.map(([k, l]) => `${l} ${s.screen[k].toFixed(2)}`).join(", ")})`
                           : `a story the screen passed over (p ${s.pmax.toFixed(2)}), read as a check on it`;
+    const shown = frame === "airo" ? `against the ensemble forecast of ${esc(FC)}` : "with no forecast shown, asked about AI catastrophic-risk forecasts in general";
     return `<article class="notecard"><h2>${esc(s.title)}</h2>
-      <div class="by">Written by ${esc(n.writer)}, the highest-ECI model on the panel (ECI ${n.eci}), against the ensemble forecast of ${esc(FC)}. It is ${why}. It read ${s.members.length} report${s.members.length > 1 ? "s" : ""}${s.members.some(m => m.full) ? ", with the article text Tavily could extract" : ": headlines and standfirsts, not the full articles"}. <a href="#${s.id}">Sources</a>.</div>
+      <div class="by">Written by ${esc(n.writer)}, the highest-ECI model on the panel (ECI ${n.eci}), ${shown}. It is ${why}. It read ${s.members.length} report${s.members.length > 1 ? "s" : ""}${s.members.some(x => x.full) ? ", with the article text Tavily could extract" : ": headlines and standfirsts, not the full articles"}. <a href="#${s.id}">Sources</a>.</div>
       ${noteHTML(n.text)}<div class="by">Verdict: <b>${esc(n.verdict || "unparsed")}</b></div></article>`;
   }).join("") + (noted.length > featured.length ? `<p class="note">${noted.length - featured.length} more stories have notes; they are marked “Note” in the list below.</p>` : "");
   el.hidden = false;
 }
 
-const MOVES = ["small", "moderate", "large"];
-let histOf = "max";
 function hist() {
   const BIN = 0.05, N = 20, W = 640, H = 220, L = 34, R = 8, T = 18, B = 30;
-  const val = s => histOf === "max" ? Math.max(0, ...CAUSES.map(([k]) => s.screen[k] ?? 0)) : s.screen[histOf];
+  const val = s => !s.scored ? null : histOf === "max" ? s.pmax : s.screen[histOf];
   const bins = Array.from({length: N}, () => ({un: 0, no: 0, mv: 0}));
   const vals = [];
   for (const s of D.stories) {
@@ -212,7 +261,7 @@ function hist() {
   }
   vals.sort((a, b) => a - b);
   const med = vals.length ? vals[Math.floor((vals.length - 1) / 2)] : 0;
-  const top = Math.max(1, ...bins.map(b => b.un + b.no + b.mv)), step = top > 40 ? 10 : 5, ymax = Math.ceil(top / step) * step;
+  const tallest = Math.max(1, ...bins.map(b => b.un + b.no + b.mv)), step = tallest > 40 ? 10 : 5, ymax = Math.ceil(tallest / step) * step;
   const x = p => L + (W - L - R) * p, y = c => H - B - (H - T - B) * c / ymax, bw = (W - L - R) / N;
   let g = "";
   for (let c = 0; c <= ymax; c += step) g += `<line class="ax" x1="${L}" x2="${W - R}" y1="${y(c)}" y2="${y(c)}"/><text class="tk" x="${L - 6}" y="${y(c) + 4}" text-anchor="end">${c}</text>`;
@@ -223,19 +272,21 @@ function hist() {
       g += `<rect class="${cls}" x="${x(i * BIN) + 1}" width="${bw - 2}" y="${y(c + b[k])}" height="${y(c) - y(c + b[k])}"><title>p ${(i * BIN).toFixed(2)}–${((i + 1) * BIN).toFixed(2)}: ${b[k]}</title></rect>`; c += b[k]; } });
   g += `<line class="thr" x1="${x(FLAG)}" x2="${x(FLAG)}" y1="${T - 6}" y2="${H - B}"/><text class="thr-l" x="${x(FLAG) + 5}" y="${T + 2}">flag at ${FLAG}</text>`;
   const above = vals.filter(p => p >= FLAG).length, label = histOf === "max" ? "the highest of its four families" : CAUSES.find(([k]) => k === histOf)[1];
-  document.getElementById("hist").innerHTML = `<div class="eyebrow">How Jev scored every story</div>
-    <p class="note">${vals.length} stories, each scored by ${label}, in bins of ${BIN}. Median ${med.toFixed(2)}, highest ${vals.length ? vals[vals.length - 1].toFixed(2) : "–"}; ${above} at or above the flag. Bars are split by what the top-ECI model said when it wrote a note${D.calibration && D.calibration.pairs.length ? `: of ${D.calibration.pairs.length} notes, ${D.calibration.false_flags} flagged stories it judged not to move the forecast, and ${D.calibration.misses} unflagged ones it judged would` : ""}.</p>
+  $("hist").innerHTML = `<div class="eyebrow">How Jev scored every story</div>
+    <p class="note">${vals.length} stories, each scored by ${label}, in bins of ${BIN}. Median ${med.toFixed(2)}, highest ${vals.length ? vals[vals.length - 1].toFixed(2) : "–"}; ${above} at or above the flag. Bars are split by what the top-ECI model said when it wrote a note${CAL && CAL.pairs.length ? `: of ${CAL.pairs.length} notes, ${CAL.false_flags} flagged stories it judged not to move the forecast, and ${CAL.misses} unflagged ones it judged would` : ""}.</p>
     <div class="controls">${[["max", "Highest family"], ...CAUSES].map(([k, l]) => `<button data-h="${k}" aria-pressed="${k === histOf}">${l}</button>`).join("")}</div>
     <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Histogram of Jev scores">${g}</svg>
-    <div class="key"><span><i class="b-un" style="background:var(--ink-faint);opacity:.45"></i>no note</span><span><i style="background:var(--ink)"></i>note: none or negligible</span><span><i style="background:var(--link)"></i>note: small or more</span></div>`;
+    <div class="key"><span><i style="background:var(--ink-faint);opacity:.45"></i>no note</span><span><i style="background:var(--ink)"></i>note: none or negligible</span><span><i style="background:var(--link)"></i>note: small or more</span></div>`;
   document.querySelectorAll("#hist button").forEach(b => b.addEventListener("click", () => { histOf = b.dataset.h; hist(); }));
 }
-hist();
 
-document.getElementById("fc-day").textContent = FC;
-document.getElementById("dropped").innerHTML = `<summary>${D.dropped.length} items dropped by the AI gate (NYT Technology feed only)</summary><ul>` +
+function footnote() {
+  $("note").textContent =
+    `Built ${when(m.built)} from ${m.polls} polls. A write-up joins a story when Jev puts p(same event) at ${m.same_at} or above. ` +
+    DESC[frame] + ` A story is flagged at p ${FLAG} or above, a deliberately low bar so that few real movers are missed.`;
+}
+
+$("dropped").innerHTML = `<summary>${D.dropped.length} items dropped by the AI gate (feeds not limited to AI)</summary><ul>` +
   D.dropped.map(d => `<li>${esc(d.title)} <span class="n">(p_ai ${d.p?.toFixed(2)})</span></li>`).join("") + "</ul>";
-document.getElementById("note").textContent =
-  `Built ${when(m.built)} from ${m.polls} polls. A write-up joins a story when Jev puts p(same event) at ${m.same_at} or above. ` +
-  `The screen gives Jev the story with the ${FC} ensemble medians and the panel's reasoning, and asks one yes/no per cause family: would a forecaster holding this forecast change it after reading the story? A story is flagged at p ${FLAG} or above, a deliberately low bar so that few real movers are missed.`;
+applyFrame();
 </script>
