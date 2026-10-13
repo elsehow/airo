@@ -46,7 +46,7 @@ def main():
     ap.add_argument("--notes", type=int, default=1, help="explain: newest flagged stories to write notes for")
     ap.add_argument("--audit-below", type=int, default=0,
                     help="explain: also the N highest-p stories just below the threshold")
-    ap.add_argument("--story", action="append", help="fulltext: a story id whose reports to read in full")
+    ap.add_argument("--story", action="append", help="fulltext, explain: a story id to act on (repeatable)")
     ap.add_argument("--dry-run", action="store_true", help="explain: say what would be called, call nothing")
     a = ap.parse_args()
     state = a.state
@@ -92,7 +92,8 @@ def main():
         notes = [n for n in news.read_jsonl(path("notes.jsonl")) if n["forecast"] == fc["run"]]
         if a.step == "explain":
             label, model_id, eci = ns.writer(fc)
-            pick = ns.pick_for_notes(built["stories"], screened, notes, a.notes, a.audit_below)
+            pick = ([s for s in built["stories"] if s["id"] in a.story] if a.story else
+                    ns.pick_for_notes(built["stories"], screened, notes, a.notes, a.audit_below))
             print(f"writer {label} ({model_id}, ECI {eci}); {len(pick)} notes, "
                   f"~${NOTE_COST_USD * len(pick):.2f}", file=sys.stderr)
             for s in pick:

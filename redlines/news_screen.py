@@ -248,7 +248,7 @@ def explain_prompt(story, items, fc, causes, today=None):
     panel's reasoning, and the task, ending in a VERDICT line."""
     today = today or news._now()[:10]
     sections = []
-    for c in causes or ["ai"]:
+    for c in causes or list(FAMILY):   # an audited story the screen passed over: show every family
         qs = [q for q in fc["ladder"]["questions"] if q["cause"] == c]
         sections.append(f"### {qs[0]['cause_label']} ladder\n\nQuestion (one per severity rung): "
                         f"{qs[0]['text']}\n\nResolution criteria (abridged): {qs[0]['criteria'][:1500]}\n\n"
