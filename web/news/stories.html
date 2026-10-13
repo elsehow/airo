@@ -31,16 +31,16 @@
 .hist svg { width: 100%; height: auto; display: block; font-family: var(--mono); font-size: 11px; }
 .hist .ax { stroke: var(--line); }
 .hist .tk { fill: var(--ink-faint); font-variant-numeric: tabular-nums; }
-.hist .b-un { fill: var(--ink-faint); opacity: .45; }
-.hist .b-no { fill: var(--ink); }
-.hist .b-mv { fill: var(--link); }
-.hist .thr { stroke: var(--c-bio); stroke-dasharray: 4 3; stroke-width: 1.5; }
-.hist .thr-l { fill: var(--c-bio); }
+.hist .b-un { fill: var(--c-misalign); }
+.hist .b-no { fill: var(--link); }
+.hist .b-mv { fill: var(--c-bio); }
+.hist .thr { stroke: var(--ink); stroke-dasharray: 4 3; stroke-width: 1.5; }
+.hist .thr-l { fill: var(--ink); }
 .hist .key { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--ink-soft); }
 .hist .key i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
 .notes { display: grid; gap: 14px; }
 .frame { display: grid; gap: 10px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; }
-.hist .b-other { fill: var(--c-misalign); fill-opacity: .16; stroke: var(--c-misalign); stroke-width: 1.2; stroke-dasharray: 3 2; }
+.hist .b-other { fill: var(--ink-faint); fill-opacity: .22; stroke: var(--ink-faint); stroke-width: 1.2; stroke-dasharray: 3 2; }
 .frame .controls button { font-size: 14px; padding: 6px 14px; }
 .chip.p { --c: var(--line); color: var(--ink-soft); }
 .story:not(.quiet) .chip.p { --c: var(--ink); color: var(--ink); }
@@ -285,7 +285,7 @@ function hist() {
     <p class="note">${vals.length} stories, each scored by ${label}, in bins of ${BIN}. ${NAME[frame]}: median ${med.toFixed(2)}, highest ${vals.length ? vals[vals.length - 1].toFixed(2) : "–"}, ${above} at or above the flag.${omed == null ? "" : ` ${NAME[other]}: median ${omed.toFixed(2)}, highest ${ovals[ovals.length - 1].toFixed(2)}, ${oabove} at or above the flag.`} Bars are split by what the top-ECI model said when it wrote a note${CAL && CAL.pairs.length ? `: of ${CAL.pairs.length} notes, ${CAL.false_flags} flagged stories it judged not to move the forecast, and ${CAL.misses} unflagged ones it judged would` : ""}.</p>
     <div class="controls">${[["max", "Highest family"], ...CAUSES].map(([k, l]) => `<button data-h="${k}" aria-pressed="${k === histOf}">${l}</button>`).join("")}</div>
     <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Histogram of Jev scores">${g}</svg>
-    <div class="key"><span><i style="background:color-mix(in srgb, var(--c-misalign) 16%, transparent);outline:1.2px dashed var(--c-misalign);outline-offset:-1px"></i>${NAME[other]} (the other tab)</span><span><i style="background:var(--ink-faint);opacity:.45"></i>no note</span><span><i style="background:var(--ink)"></i>note: none or negligible</span><span><i style="background:var(--link)"></i>note: small or more</span></div>`;
+    <div class="key"><span><i style="background:var(--c-misalign)"></i>${NAME[frame]}: no note</span><span><i style="background:var(--link)"></i>note: none or negligible</span><span><i style="background:var(--c-bio)"></i>note: small or more</span><span><i style="background:color-mix(in srgb, var(--ink-faint) 22%, transparent);outline:1.2px dashed var(--ink-faint);outline-offset:-1px"></i>${NAME[other]} (the other tab)</span></div>`;
   document.querySelectorAll("#hist button").forEach(b => b.addEventListener("click", () => { histOf = b.dataset.h; hist(); }));
 }
 
