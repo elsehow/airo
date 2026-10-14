@@ -50,3 +50,6 @@ data/leap/
 # a clone renders with the fallback stack in web/demo/00-head.html.
 web/fonts/
 
+
+# pi event streams, one folder per call attempt (code/run_unified.py --harness pi)
+results/pi_traces/
