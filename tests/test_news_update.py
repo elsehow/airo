@@ -1,34 +1,39 @@
-"""redlines/news_screen.py: the screen, the notes and the calibration that
-grades one with the other. No network, no keys: a fake Jev, a fake writer,
-and the forecast runs already in results/runs/."""
+"""redlines/news_update.py: the briefs, the one-call read of the week and the
+coherence checks on its odds ratios. No network, no keys: a fake writer, and
+the forecast runs already in results/runs/."""
 import json
 import os
+import re
 import tempfile
 import unittest
-from unittest import mock
 
-from redlines import news, news_screen as ns
+from redlines import news, news_update as nu
 from tests.test_news import item, items_of
+
+RUNGS = ("100", "10k", "1M")
 
 
 def forecast():
     """A two-model forecast in load_forecast's shape, small enough to read."""
     ladder = {"horizons": ["6mo", "12mo", "2030", "2100"], "questions": [
         {"id": f"ladder:{c}:{r}", "cause": c, "cause_label": c.upper() + " incident", "text": "Q?",
-         "criteria": "C.", "severity": {"label": f"{r} deaths"}} for c in ns.FAMILY for r in ("100", "1M")]}
-    cross = {"questions": [{"id": "extinction:ai", "name": "AI extinction", "text": "Extinction?"}]}
-    cells = {q["id"]: {h: [0.1, 0.3] for h in ladder["horizons"]} for q in ladder["questions"]}
+         "criteria": "C.", "severity": {"label": f"{r} deaths"}} for c in ("ai", "bio") for r in RUNGS]}
+    cells = {}
+    for q in ladder["questions"]:
+        k = RUNGS.index(q["id"].rsplit(":", 1)[1])
+        cells[q["id"]] = {h: [0.5 / 4 ** k * (j + 1) / 4, 0.6 / 4 ** k * (j + 1) / 4]
+                          for j, h in enumerate(ladder["horizons"])}
     return {"run": "2026-10-09T1200Z", "day": "2026-10-09", "models": ["Opus 5.5", "GPT-6 Astra"],
             "model_ids": {"Opus 5.5": "anthropic/claude-opus-5-5", "GPT-6 Astra": "openai/gpt-6-astra"},
             "rationales": {"Opus 5.5": "Pause holds.", "GPT-6 Astra": "Agents misbehave."},
-            "cells": cells, "ladder": ladder, "cross": cross, "snapshot": None}
+            "cells": cells, "ladder": ladder, "snapshot": None}
 
 
 def stories():
-    its = items_of(item("Agent worm hits hospitals", "2026-10-12T09:00:00Z"),
+    its = items_of(item("Agent worm hits hospitals", "2026-10-12T09:00:00Z", summary="Three hospitals hit."),
                    item("Lab ships a model", "2026-10-12T10:00:00Z"),
                    item("Chip stocks fall", "2026-10-12T11:00:00Z"),
-                   item("Port volume record", "2026-10-12T12:00:00Z"))
+                   item("Old news from before", "2026-10-08T11:00:00Z"))
     out = []
     for it in its.values():
         s = news._new_story(it)
@@ -38,241 +43,154 @@ def stories():
     return out, its
 
 
-P = {"Agent worm hits hospitals": 0.7, "Lab ships a model": 0.32, "Chip stocks fall": 0.2,
-     "Port volume record": 0.02}
+def join(story, it):
+    """Add a duplicate report to a built story (as reduce does, without the word index)."""
+    story["_words"] = set()
+    news._add_member(story, it, "same", 0.9)
+    del story["_words"]
 
 
-class FakeJev:
-    def __init__(self):
-        self.calls = []
-
-    def __call__(self, state, questions):
-        self.calls.append((state, questions))
-        p = P[state["story"]["reports"][0]["headline"]]
-        return {"model": "jev-fake", "usage": {"input_tokens": 100},
-                "answers": {c: {"type": "noul", "noul": p if c == "cyber" else p / 2} for c in questions}}
+def answer(odds=None, cites="S1"):
+    rows = odds or [[1.0, 1.02, 1.05, 1.01]] * 3
+    return ("The worm matters a little.\n\nODDS RATIOS (6mo, 12mo, 2030, 2100)\n"
+            + "\n".join(f"R{i + 1}: " + ", ".join(str(x) for x in r) for i, r in enumerate(rows))
+            + f"\nSTORIES: {cites}")
 
 
-VERDICT = {"Agent worm hits hospitals": "small", "Lab ships a model": "none",
-           "Chip stocks fall": "moderate", "Port volume record": "none"}
-
-
-def fake_complete(model, system, prompt):
-    title = prompt.split('## The news story\n\n"', 1)[1].split('"', 1)[0]
-    lines = "\n".join(f"VERDICT {c}: {VERDICT[title]}" for c in ns.FAMILY)
-    return {"text": f"Note on {title}.\n\n{lines}", "usage": {"cost_usd": 0.5}}
+def complete_with(text):
+    return lambda model, system, user: {"text": text, "usage": {"input_tokens": len(user) // 4, "cost_usd": 0.5}}
 
 
 class Forecast(unittest.TestCase):
     def test_load_from_repo_runs(self):
-        fc = ns.load_forecast()
+        fc = nu.load_forecast()
         self.assertTrue(fc["models"])
         self.assertEqual(set(fc["model_ids"]), set(fc["models"]))
-        q = next(iter(fc["cells"]))
-        lo_med_hi = ns.ensemble(fc, q, next(iter(fc["cells"][q])))
-        self.assertLessEqual(lo_med_hi[1], lo_med_hi[0])
-        label, model_id, eci = ns.writer(fc)
+        self.assertTrue(nu.rungs(fc))
+        label, model_id, eci = nu.writer(fc)
         self.assertIn(label, fc["models"])
         self.assertEqual(model_id, fc["model_ids"][label])
 
     def test_writer_matches_index_names(self):
         fc = forecast()
         d = tempfile.mkdtemp()
-        path = os.path.join(d, "epoch_capabilities_index_2026-10-09.csv")
-        with open(path, "w") as f:   # the published format redlines.eci reads
+        with open(os.path.join(d, "epoch_capabilities_index_2026-10-09.csv"), "w") as f:
             f.write("Model,eci,Release date,Organization,Country\n"
                     "GPT-6 Astra,166.4,2026-08-01,OpenAI,United States of America\n"
                     "Claude Opus 5.5,167.3,2026-09-01,Anthropic,United States of America\n")
-        fc["snapshot"] = ns.find_snapshot("2026-10-09", [d])
+        fc["snapshot"] = nu.find_snapshot("2026-10-09", [d])
         try:
-            self.assertEqual(ns.writer(fc), ("Opus 5.5", "anthropic/claude-opus-5-5", 167.3))
+            self.assertEqual(nu.writer(fc), ("Opus 5.5", "anthropic/claude-opus-5-5", 167.3))
         except ValueError as e:      # a format redlines.eci does not take: say so, do not guess
             self.skipTest(f"eci format: {e}")
 
-    def test_screen_state_is_small(self):
-        st = ns.screen_state(forecast())
-        self.assertEqual(set(st["ensemble_median_by_family"]), set(ns.FAMILY.values()))
-        self.assertLess(len(json.dumps(st)), 6000)
+    def test_only_the_ai_ladder(self):
+        fc = forecast()
+        self.assertEqual([q["id"] for q in nu.rungs(fc)], [f"ladder:ai:{r}" for r in RUNGS])
+        self.assertEqual(len(nu.base_table(fc)), 3)
 
 
-class Screen(unittest.TestCase):
-    def test_screen_and_reuse(self):
-        ss, its = stories()
-        fc, jev, log = forecast(), FakeJev(), []
-        out = ns.screen(ss, its, fc, [], ask=jev, log=log.append)
-        self.assertEqual(len(jev.calls), 4)
-        self.assertEqual(sorted(ns.flagged(r) for r in out.values()), [False, False, True, True])
-        state, qs = jev.calls[0]
-        self.assertEqual(set(state), {"story", "airo_forecast"})
-        self.assertEqual(set(qs), set(ns.FAMILY))
-        # the log answers a re-run, and a replay calls nothing
-        again = FakeJev()
-        self.assertEqual(ns.screen(ss, its, fc, log, ask=again), out)
-        self.assertEqual(again.calls, [])
-        self.assertEqual(ns.screen(ss, its, fc, log), out)
-        # a new forecast is a new question
-        fc2 = dict(fc, run="2026-10-14T1200Z")
-        self.assertEqual(ns.screen(ss, its, fc2, log), {})
-
-    def test_article_text_goes_to_the_writer_not_jev(self):
-        ss, its = stories()
-        fc, log = forecast(), []
-        ns.screen(ss, its, fc, [], ask=FakeJev(), log=log.append)
-        its[ss[0]["members"][0]["item"]]["text"] = "Full article body."
-        jev = FakeJev()
-        ns.screen(ss, its, fc, log, ask=jev, log=log.append)
-        self.assertEqual(jev.calls, [])                     # Jev's view is unchanged: no new question
-        p = ns.explain_prompt(ss[0], its, fc, ["cyber"], today="2026-10-13")
-        self.assertIn("Full article body.", p)
-        self.assertNotIn("standfirsts only", p)
-
-    def test_new_standfirst_rescreens(self):
-        ss, its = stories()
-        fc, log = forecast(), []
-        ns.screen(ss, its, fc, [], ask=FakeJev(), log=log.append)
-        its[ss[0]["members"][0]["item"]]["summary"] = "A standfirst taken from the article."
-        jev = FakeJev()
-        ns.screen(ss, its, fc, log, ask=jev, log=log.append)
-        self.assertEqual(len(jev.calls), 1)
-        self.assertEqual(jev.calls[0][0]["story"]["reports"][0]["standfirst"], "A standfirst taken from the article.")
-
-    def test_generic_frame_hides_the_forecast(self):
-        ss, its = stories()
-        fc, jev, log = forecast(), FakeJev(), []
-        ns.screen(ss, its, fc, [], ask=FakeJev(), log=log.append)          # the AIRO frame first
-        out = ns.screen(ss, its, fc, [], ask=jev, log=log.append, frame="generic")
-        state, qs = jev.calls[0]
-        self.assertEqual(set(state), {"story"})
-        self.assertNotIn("airo_forecast", json.dumps(qs))
-        self.assertEqual({r["forecast"] for r in out.values()}, {"generic"})
-        # a new forecast run does not re-ask the generic question
-        again = FakeJev()
-        ns.screen(ss, its, dict(fc, run="2026-10-14T1200Z"), log, ask=again, frame="generic")
-        self.assertEqual(again.calls, [])
-
-    def test_new_member_rescreens(self):
-        ss, its = stories()
-        fc, log = forecast(), []
-        ns.screen(ss, its, fc, [], ask=FakeJev(), log=log.append)
-        extra = item("Agent worm: second report", "2026-10-12T13:00:00Z")
-        its[extra["id"]] = extra
-        ss[0]["_words"] = set()
-        news._add_member(ss[0], extra, "jev", 0.9)                       # a second report joins
-        del ss[0]["_words"]
-        jev = FakeJev()
-        ns.screen(ss, its, fc, log, ask=jev, log=log.append)
-        self.assertEqual(len(jev.calls), 1)
-
-
-class Digest(unittest.TestCase):
+class Briefs(unittest.TestCase):
     def setUp(self):
         self.ss, self.its = stories()
-        self.fc = forecast()
-        patch = mock.patch.object(ns, "writer", lambda fc: ("Opus 5.5", "anthropic/claude-opus-5-5", 167.3))
-        patch.start()
-        self.addCleanup(patch.stop)
 
     def test_cutoff(self):
-        self.fc["run"] = "2026-10-12T1030Z"
-        self.assertEqual(ns.forecast_time(self.fc), "2026-10-12T10:30:00Z")
-        self.assertEqual([s["title"] for s in ns.after_forecast(self.ss, self.its, self.fc)],
-                         ["Chip stocks fall", "Port volume record"])
+        post = nu.after_forecast(self.ss, self.its, forecast())
+        self.assertEqual([s["title"] for s in post], ["Agent worm hits hospitals", "Lab ships a model",
+                                                      "Chip stocks fall"])
+
+    def test_headline_only_and_excerpt(self):
+        s = self.ss[1]
+        self.assertIsNone(nu.brief(s, self.its)["excerpt"])
+        self.assertIn("Headline only", nu.brief_text("S1", s, self.its))
+        self.its[s["members"][0]["item"]]["text"] = "Lab ships a model\n\n" + "A long paragraph of prose. " * 200
+        b = nu.brief(s, self.its)
+        self.assertEqual(len(b["excerpt"]["text"].split()), nu.BRIEF_WORDS + 1)   # the words, then "…"
+
+    def test_first_readable_member_in_order(self):
+        s = self.ss[0]
+        later = item("Worm: more hospitals", "2026-10-12T12:00:00Z", source="Other Paper")
+        self.its[later["id"]] = dict(later, text="Worm: more hospitals\n\n" + "Detail of the worm attack here. " * 5)
+        join(s, later)
+        self.assertEqual(nu.brief(s, self.its)["excerpt"]["source"], "Other Paper")
+        self.its[s["members"][0]["item"]]["text"] = "x\n\n" + "The first report's own text, long enough. " * 5
+        self.assertEqual(nu.brief(s, self.its)["excerpt"]["source"], "Synthetic Wire")
+
+    def test_article_standfirst_left_off(self):
+        it = self.its[self.ss[1]["members"][0]["item"]]
+        it.update(summary="From the article.", summary_from="article")
+        self.assertNotIn("standfirst", nu.brief(self.ss[1], self.its)["reports"][0])
+        self.assertEqual(nu.brief(self.ss[0], self.its)["reports"][0]["standfirst"], "Three hospitals hit.")
+
+    def test_fetch_first_readable_stops_at_the_first_read(self):
+        d = tempfile.mkdtemp()
+        s = self.ss[0]
+        for t, src in (("Worm two", "B"), ("Worm three", "C")):
+            it = item(t, "2026-10-12T12:00:00Z", source=src)
+            self.its[it["id"]] = it
+            join(s, it)
+        seen = []
+        def ext(url):
+            seen.append(url)
+            ok = "worm-two" in url
+            return {"url": url, "text": "Body of two." if ok else "", "error": None if ok else "401"}
+        news.fetch_first_readable([s], self.its, state_dir=d, extract=ext)
+        self.assertEqual([u.rsplit("/", 1)[1] for u in seen],
+                         ["agent-worm-hits-hospitals", "agent-worm-hits-hospitals", "worm-two"])   # www retry, then the next
+        news.fetch_first_readable([s], self.its, state_dir=d, extract=ext)
+        self.assertEqual(len(seen), 3)
 
     def test_listing_orders(self):
-        fwd = ns.digest_listing(self.ss, self.its)
-        self.assertEqual(ns.digest_listing(self.ss, self.its, "reversed"), fwd[::-1])   # same labels
-        self.assertEqual(fwd, ns.digest_listing(list(reversed(self.ss)), self.its))     # input order ignored
-
-    def test_digest(self):
-        self.fc["run"] = "2026-10-01T1200Z"
-        seen = {}
-        def complete(model, system, prompt):
-            seen["prompt"] = prompt
-            lab = next(l for l, s in ns.digest_listing(self.ss, self.its) if s["title"] == "Agent worm hits hospitals")
-            return {"text": f"Prose.\nVERDICT ai: small; direction: up; stories: {lab}, S99\n"
-                            "VERDICT cyber: small; direction: up; stories: none\n"
-                            "VERDICT bio: none; direction: none; stories: none\n"
-                            "VERDICT misalign: none; direction: none; stories: none", "usage": {}}
-        row = ns.digest(self.ss, self.its, self.fc, "airo", complete=complete)
-        self.assertEqual(row["stories"], 4)
-        self.assertEqual(row["verdicts"]["ai"], {"size": "small", "direction": "up", "stories": [self.ss[0]["id"]]})
-        self.assertEqual((row["overall"], row["text"]), ("small", "Prose."))
-        self.assertIn("CYBER incident ladder", seen["prompt"])
-        ns.digest(self.ss, self.its, self.fc, "generic", complete=complete)
-        self.assertNotIn("AIRO", seen["prompt"])
-        self.assertNotIn("Agents misbehave.", seen["prompt"])
+        f = nu.listing(self.ss)
+        r = nu.listing(self.ss, order="reversed")
+        self.assertEqual(f[::-1], r)
+        self.assertEqual(f, nu.listing(list(reversed(self.ss))))   # the shuffle does not depend on input order
 
 
-class Notes(unittest.TestCase):
+class Update(unittest.TestCase):
     def setUp(self):
         self.ss, self.its = stories()
         self.fc = forecast()
-        self.fc["snapshot"] = None
-        self.screened = ns.screen(self.ss, self.its, self.fc, [], ask=FakeJev())
-        patch = mock.patch.object(ns, "writer", lambda fc: ("Opus 5.5", "anthropic/claude-opus-5-5", 167.3))
-        patch.start()
-        self.addCleanup(patch.stop)
 
-    def test_parse_verdict(self):
-        self.assertEqual(ns.parse_verdict("Text.\n\nVERDICT: small"), ("Text.", "small"))
-        self.assertEqual(ns.parse_verdict("Text.\n**VERDICT:** Negligible\n"), ("Text.", "negligible"))
-        self.assertEqual(ns.parse_verdict("Text without one."), ("Text without one.", None))
-        self.assertEqual(ns.parse_verdict("VERDICT: huge")[1], None)
+    def test_frames_see_the_same_briefs(self):
+        lst = nu.listing(nu.after_forecast(self.ss, self.its, self.fc))
+        a, g = (nu.prompt(lst, self.its, self.fc, f, today="2026-10-14") for f in nu.FRAMES)
+        block = lambda p: p.split("## The news", 1)[1].split("\n## The ", 1)[0]
+        self.assertEqual(block(a), block(g))
+        self.assertIn("Pause holds.", a)
+        self.assertNotIn("Pause holds.", g)
+        self.assertNotRegex(g, r"\d+(\.\d+)?%")      # no forecast numbers in the generic frame
+        self.assertIn("R3: 1M deaths", g)
+        self.assertNotIn("Old news from before", a)
 
-    def test_prompt_carries_story_forecast_and_verdict_rule(self):
-        s = self.ss[0]
-        p = ns.explain_prompt(s, self.its, self.fc, ["cyber"], today="2026-10-13")
-        self.assertIn('"Agent worm hits hospitals"', p)
-        self.assertIn("CYBER incident ladder", p)
-        self.assertIn("BIO incident ladder", p)            # every family: a verdict for each
-        self.assertIn("AI extinction", p)
-        self.assertIn("Agents misbehave.", p)
-        self.assertIn("VERDICT cyber: <size>", p)
+    def test_update_and_parse(self):
+        row = nu.update(self.ss, self.its, self.fc, "airo", complete=complete_with(answer()), now="2026-10-14T00:00:00Z")
+        self.assertIsNone(row["error"])
+        self.assertEqual(row["odds"][2], [1.0, 1.02, 1.05, 1.01])
+        self.assertEqual(row["cites"], [row["labels"]["S1"]])
+        self.assertNotIn("ODDS RATIOS", row["text"])
+        self.assertEqual(row["text"], "The worm matters a little.")
 
-    def test_per_family_verdicts(self):
-        text = "Note.\n\nVERDICT ai: small\n**VERDICT cyber:** negligible\nVERDICT bio: none\nVERDICT misalign: none"
-        self.assertEqual(ns.parse_verdicts(text),
-                         ("Note.", {"ai": "small", "cyber": "negligible", "bio": "none", "misalign": "none"}))
-        n = ns.explain(self.ss[0], self.its, self.fc, self.screened[self.ss[0]["id"]],
-                       complete=lambda *a: {"text": text, "usage": {}})
-        self.assertEqual((n["verdict"], n["verdicts"]["cyber"], n["text"]), ("small", "negligible", "Note."))
+    def test_unparsable_table_is_logged_with_why(self):
+        bad = answer(odds=[[1.0, 1.0, 1.0, 1.0]] * 2)
+        row = nu.update(self.ss, self.its, self.fc, "generic", complete=complete_with(bad))
+        self.assertIsNone(row["odds"])
+        self.assertIn("2 of 3 rungs", row["error"])
+        self.assertTrue(row["raw"])
 
-    def test_explain(self):
-        s = self.ss[0]
-        n = ns.explain(s, self.its, self.fc, self.screened[s["id"]], complete=fake_complete)
-        self.assertEqual((n["verdict"], n["writer"], n["flagged"]), ("small", "Opus 5.5", True))
-        self.assertEqual(n["causes"], ["ai", "cyber", "bio", "misalign"])   # 0.7 and 0.35 both >= 0.3
-        self.assertNotIn("VERDICT", n["text"])
-
-    def test_explain_generic(self):
-        s = self.ss[0]
-        seen = {}
-        def complete(model, system, prompt):
-            seen.update(system=system, prompt=prompt)
-            return fake_complete(model, system, prompt)
-        n = ns.explain(s, self.its, self.fc, self.screened[s["id"]], complete=complete, frame="generic")
-        self.assertEqual((n["forecast"], n["frame"], n["verdict"]), ("generic", "generic", "small"))
-        self.assertNotIn("AIRO", seen["system"] + seen["prompt"])
-        self.assertNotIn("Agents misbehave.", seen["prompt"])            # no panel reasoning
-        self.assertIn("VERDICT misalign: <size>", seen["prompt"])
-
-    def test_empty_note_raises(self):
+    def test_empty_answer_raises(self):
         with self.assertRaises(RuntimeError):
-            ns.explain(self.ss[0], self.its, self.fc, self.screened[self.ss[0]["id"]],
-                       complete=lambda *a: {"text": None, "usage": {}})
+            nu.update(self.ss, self.its, self.fc, complete=complete_with(""))
 
-    def test_pick_and_calibrate(self):
-        pick = ns.pick_for_notes(self.ss, self.screened, [], flagged_n=5, audit_below=2)
-        self.assertEqual([s["title"] for s in pick],
-                         ["Lab ships a model", "Agent worm hits hospitals",     # flagged, newest first
-                          "Chip stocks fall", "Port volume record"])           # audit: near, then spread
-        notes = [ns.explain(s, self.its, self.fc, self.screened[s["id"]], complete=fake_complete)
-                 for s in pick]
-        self.assertEqual(ns.pick_for_notes(self.ss, self.screened, notes, 5, 2), [])
-        cal = ns.calibrate(self.screened, notes)
-        self.assertEqual((cal["false_flags"], cal["misses"]), (1, 1))   # the launch; the chip slide
-        self.assertEqual(cal["suggest"], 0.2)                           # lowest p the writer said moves
-        self.assertEqual(cal["pairs"][0][:2], (0.7, "small"))
+    def test_violations(self):
+        base = nu.base_table(self.fc)
+        self.assertEqual(nu.violations(base, ["a", "b", "c"], ["1", "2", "3", "4"]), [])
+        odds = [[1.0] * 4, [1.0] * 4, [1.0, 1.0, 1.0, 100.0]]   # 1M deaths by 2100 overtakes 10k
+        v = nu.violations(nu.implied(base, odds), ["a", "b", "c"], ["1", "2", "3", "4"])
+        self.assertEqual(len(v), 1)
+        self.assertIn("c by 4", v[0])
+        odds = [[1.0, 0.1, 1.0, 1.0]] + [[1.0] * 4] * 2   # 100 deaths less likely by 12mo than by 6mo
+        self.assertTrue(any("below 1" in x for x in nu.violations(nu.implied(base, odds), ["a", "b", "c"], ["1", "2", "3", "4"])))
 
     def test_page(self):
         d = tempfile.mkdtemp()
@@ -280,27 +198,26 @@ class Notes(unittest.TestCase):
                  "stats": {"items": 4}, "dropped": [], "stories": self.ss}
         json.dump(built, open(os.path.join(d, "stories.json"), "w"))
         news.append_jsonl(os.path.join(d, "items.jsonl"), list(self.its.values()))
-        news.append_jsonl(os.path.join(d, "screen.jsonl"), list(self.screened.values()))
-        s = self.ss[0]
-        news.append_jsonl(os.path.join(d, "notes.jsonl"),
-                          [ns.explain(s, self.its, self.fc, self.screened[s["id"]], complete=fake_complete)])
-        out = ns.render_page(d, os.path.join(d, "stories.html"), {"day": "2026-10-09", "models": ["Opus 5.5"]})
+        news.append_jsonl(os.path.join(d, nu.LOG),
+                          [nu.update(self.ss, self.its, self.fc, f, o, complete=complete_with(answer()))
+                           for f in nu.FRAMES for o in nu.ORDERS])
+        out = nu.render_page(d, os.path.join(d, "stories.html"), self.fc)
         html = open(out).read()
         self.assertNotIn("__DATA__", html)
         # a top-level const/let named after a window property (top, name, location...)
         # is a SyntaxError in the browser, and the whole page goes blank
-        import re
         script = html.rsplit("<script>", 1)[1]
         clash = re.findall(r"^(?:const|let)\s+(top|name|status|location|parent|self|length|origin|history)\b",
                            script, re.M)
         self.assertEqual(clash, [])
         data = json.loads(html.split('<script id="data" type="application/json">', 1)[1]
                           .split("</script>", 1)[0].replace("<\\/", "</"))
-        self.assertEqual(data["frames"]["airo"]["notes"][s["id"]]["verdict"], "small")
-        self.assertEqual(data["frames"]["generic"]["notes"], {})
-        self.assertEqual(data["meta"]["screen_at"], ns.SCREEN_AT)
-        self.assertEqual(len(data["frames"]["airo"]["calibration"]["pairs"]), 1)
-        self.assertEqual(data["stories"][0]["screens"]["generic"], {})
+        self.assertEqual(set(data["runs"]), set(nu.FRAMES))
+        self.assertEqual(set(data["runs"]["airo"]), set(nu.ORDERS))
+        self.assertEqual(len(data["stories"]), 3)
+        self.assertEqual([s["label"] for s in data["stories"]], ["S1", "S2", "S3"])
+        self.assertEqual(data["ladder"]["rungs"], [f"{r} deaths" for r in RUNGS])
+        self.assertEqual(data["runs"]["airo"]["forward"]["violations"], [])
 
 
 if __name__ == "__main__":

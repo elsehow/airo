@@ -469,9 +469,9 @@ def extract_text(url, key=None, depth="advanced", post=None):
     return {"url": url, "text": text, "chars": len(text)}
 
 
-def lede(text, title=""):
-    """The article's opening paragraph, as a standfirst for a report that came
-    without one (Google News items): the first paragraph of real prose."""
+def _prose(text, title=""):
+    """The article's paragraphs of real prose, cleaned: no headline, byline,
+    dateline-only or sign-up lines, links reduced to their text."""
     head = (title or "").lower()[:40]
     for para in re.split(r"\n+", text or ""):
         p = re.sub(r"\[([^\]]*)\]\([^)]*\)", r"\1", para)          # markdown links -> their text
@@ -481,8 +481,25 @@ def lede(text, title=""):
             continue
         if re.match(r"(by |reporting by|editing by|sign up|updated |share |\w+ \d+ \(reuters\) -$)", p.lower()):
             continue
-        return p[:SUMMARY_CHARS]
-    return ""
+        yield p
+
+
+def lede(text, title=""):
+    """The article's opening paragraph, as a standfirst for a report that came
+    without one (Google News items): the first paragraph of real prose."""
+    return next(_prose(text, title), "")[:SUMMARY_CHARS]
+
+
+def opening(text, title="", words=250):
+    """The article's first `words` words of prose, cut mid-sentence if need be
+    ("…" marks a cut): the same length for every story, so that no story reads
+    as weightier for having more text."""
+    out = []
+    for p in _prose(text, title):
+        out += p.split()
+        if len(out) >= words:
+            return " ".join(out[:words]) + " …"
+    return " ".join(out)
 
 
 def fetch_fulltext(item_ids, items, state_dir=STATE_DIR, extract=extract_text, now=None):
@@ -503,6 +520,32 @@ def fetch_fulltext(item_ids, items, state_dir=STATE_DIR, extract=extract_text, n
         r = dict(r, item=i, at=now or _now())
         append_jsonl(os.path.join(state_dir, FULLTEXT_LOG), [r])
         rows.append(r)
+    return rows
+
+
+def first_readable(story, items):
+    """The story's first report, in member order, whose article text was read; else None."""
+    return next((items[m["item"]] for m in story["members"] if items[m["item"]].get("text")), None)
+
+
+def fetch_first_readable(stories, items, state_dir=STATE_DIR, extract=extract_text, now=None):
+    """For each story with no readable report yet, try its reports in member
+    order until one's article is read. A report already tried is not tried
+    again. Returns the rows logged."""
+    tried = {r["item"] for r in read_jsonl(os.path.join(state_dir, FULLTEXT_LOG))}
+    rows = []
+    for s in stories:
+        if first_readable(s, items):
+            continue
+        for m in s["members"]:
+            if m["item"] in tried:
+                continue
+            r = fetch_fulltext([m["item"]], items, state_dir, extract, now)[0]
+            tried.add(m["item"])
+            rows.append(r)
+            if r.get("text"):
+                items[m["item"]]["text"] = r["text"]
+                break
     return rows
 
 

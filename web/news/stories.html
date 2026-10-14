@@ -1,8 +1,9 @@
-<title>AIRO News Stories</title>
+<title>AIRO News Read</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Source+Serif+4:opsz,wght@8..60,500;8..60,600&display=swap">
 <style>
-/* Layout: one reading column, a summary band, then a dense story list; relevance is shown by fading, cause by coloured chips. */
+/* Layout: one reading column. Four small odds-ratio tables side by side, then the chosen one large,
+   its rationale, and the stories exactly as the model read them. Up is warm, down is cool. */
 :root {
   --bg: #f6f8f1;          /* FRI stone, from the AIRO dashboard */
   --panel: #ffffff;
@@ -12,131 +13,106 @@
   --line: #d9ded3;
   --link: #115633;        /* AIRO green */
   --chip-bg: #eef1e8;
-  --c-ai: #3a4150; --c-bio: #a63d76; --c-cyber: #a1801a; --c-misalign: #2a8a9c;
+  --up: #b4462b;          /* odds up */
+  --down: #2c66a8;        /* odds down */
+  --warn: #9a6a00;
   --display: "Source Serif 4", Georgia, "Times New Roman", serif;
   --body: system-ui, -apple-system, "Segoe UI", sans-serif;
   --mono: "DM Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
 }
-.notecard { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 18px 20px; display: grid; gap: 10px; }
-.notecard h2 { font-family: var(--display); font-weight: 600; font-size: 1.25rem; line-height: 1.25; margin: 0; text-wrap: balance; }
-.notecard .by { font-size: 12.5px; color: var(--ink-soft); }
-.notetext { display: grid; gap: 10px; max-width: 68ch; font-size: 15px; line-height: 1.6; }
-.notetext p, .notetext ul { margin: 0; }
-.notetext ul { padding-left: 20px; display: grid; gap: 3px; }
-.notecard a { color: var(--link); }
-.story .notetext { font-size: 14px; border-left: 2px solid var(--link); padding-left: 12px; }
-.chip.note { --c: var(--link); }
-.hist { display: grid; gap: 8px; }
-.hist .controls { margin: 0; }
-.hist svg { width: 100%; height: auto; display: block; font-family: var(--mono); font-size: 11px; }
-.hist .ax { stroke: var(--line); }
-.hist .tk { fill: var(--ink-faint); font-variant-numeric: tabular-nums; }
-.hist .b-un { fill: var(--c-misalign); }
-.hist .b-no { fill: var(--link); }
-.hist .b-mv { fill: var(--c-bio); }
-.hist .thr { stroke: var(--ink); stroke-dasharray: 4 3; stroke-width: 1.5; }
-.hist .thr-l { fill: var(--ink); }
-.hist .key { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--ink-soft); }
-.hist .key i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
-.notes { display: grid; gap: 14px; }
-.frame { display: grid; gap: 10px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; }
-.hist .b-other { fill: var(--ink-faint); fill-opacity: .22; stroke: var(--ink-faint); stroke-width: 1.2; stroke-dasharray: 3 2; }
-.frame .controls button { font-size: 14px; padding: 6px 14px; }
-.frame.sub { background: var(--bg); }
-.stories { display: grid; gap: 8px; }
-.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); }
-.tabs button { font: inherit; font-size: 15px; background: none; border: 0; border-bottom: 2px solid transparent; color: var(--ink-soft); padding: 8px 14px; cursor: pointer; margin-bottom: -1px; }
-.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--link); font-weight: 600; }
-.tabs button:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
-#tab-explore { display: grid; gap: 18px; }
-#tab-explore[hidden] { display: none; }
-.summary { display: grid; gap: 14px; }
-.tablewrap { overflow-x: auto; }
-table.grid { border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
-table.grid th, table.grid td { padding: 6px 10px; text-align: center; white-space: nowrap; }
-table.grid thead th { font-family: var(--mono); font-size: 11px; font-weight: 500; color: var(--ink-faint); text-transform: uppercase; letter-spacing: 0.05em; }
-table.grid thead th.grp { color: var(--ink); text-transform: none; letter-spacing: 0; font-family: var(--body); font-size: 13px; font-weight: 600; }
-table.grid tbody th { text-align: left; font-weight: 600; padding-right: 16px; }
-table.grid tbody tr + tr > * { border-top: 1px solid var(--line); }
-table.grid .grp { border-left: 1px solid var(--line); }
-table.grid td { font-family: var(--mono); background: color-mix(in srgb, var(--c, transparent) 22%, transparent); }
-table.grid.cost td { text-align: left; background: none; }
-table.grid.cost td b { display: block; font-size: 15px; font-weight: 500; }
-table.grid.cost td span { font-size: 11.5px; color: var(--ink-soft); }
-.vgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
-.vcell { border: 1px solid var(--line); border-left: 3px solid var(--c); border-radius: 6px; padding: 8px 10px; display: grid; gap: 2px; background: var(--panel); min-width: 0; }
-.vcell b { font-family: var(--mono); font-weight: 500; font-size: 15px; }
-.vcell span { font-size: 12px; color: var(--ink-soft); }
-.vcell .cites { font-size: 12px; }
-.vcell .cites a { color: var(--link); }
-.chip.dg { --c: var(--c-bio); }
-.story.pre { opacity: .32; }
-.chip.pre { --c: var(--line); color: var(--ink-faint); }
-table.robust { border-collapse: collapse; font-size: 13px; }
-table.robust th, table.robust td { text-align: left; padding: 4px 14px 4px 0; border-bottom: 1px solid var(--line); }
-table.robust th { font-family: var(--mono); font-size: 11px; font-weight: 500; color: var(--ink-faint); text-transform: uppercase; letter-spacing: 0.06em; }
-.sec { font-family: var(--display); font-weight: 600; font-size: 1.2rem; line-height: 1.2; margin: 0; }
-h3.sec { font-size: 1.05rem; }
-.chip.p { --c: var(--line); color: var(--ink-soft); }
-.story:not(.quiet) .chip.p { --c: var(--ink); color: var(--ink); }
-.tablewrap { overflow-x: auto; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
   --bg: #141713; --panel: #1c201b; --ink: #e6e9e1; --ink-soft: #a8afa4; --ink-faint: #7f877c;
-  --line: #2f352d; --link: #7fc79b; --chip-bg: #252a23;
-  --c-ai: #aeb7c7; --c-bio: #e08abb; --c-cyber: #d8b44a; --c-misalign: #5cc6d8; color-scheme: dark } }
+  --line: #2f352d; --link: #7fc79b; --chip-bg: #252a23; --up: #f08a6c; --down: #79aef0; --warn: #e2b84d; color-scheme: dark } }
 :root[data-theme="dark"] {
   --bg: #141713; --panel: #1c201b; --ink: #e6e9e1; --ink-soft: #a8afa4; --ink-faint: #7f877c;
-  --line: #2f352d; --link: #7fc79b; --chip-bg: #252a23;
-  --c-ai: #aeb7c7; --c-bio: #e08abb; --c-cyber: #d8b44a; --c-misalign: #5cc6d8; color-scheme: dark }
+  --line: #2f352d; --link: #7fc79b; --chip-bg: #252a23; --up: #f08a6c; --down: #79aef0; --warn: #e2b84d; color-scheme: dark }
 
 body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 15px; line-height: 1.5; }
-.wrap { max-width: 860px; margin: 0 auto; padding-inline: 20px; padding-block: 28px 64px; display: grid; gap: 22px; }
+.wrap { max-width: 900px; margin: 0 auto; padding-inline: 20px; padding-block: 28px 64px; display: grid; gap: 24px; }
 h1 { font-family: var(--display); font-weight: 600; font-size: 1.9rem; line-height: 1.15; margin: 0; text-wrap: balance; letter-spacing: -0.01em; }
-.lede { color: var(--ink-soft); margin: 6px 0 0; max-width: 65ch; }
+.sec { font-family: var(--display); font-weight: 600; font-size: 1.2rem; line-height: 1.2; margin: 0; text-wrap: balance; }
+.lede { color: var(--ink-soft); margin: 6px 0 0; max-width: 68ch; }
 .eyebrow { font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-faint); }
+.note { font-size: 13px; color: var(--ink-soft); max-width: 68ch; margin: 0; }
+a { color: var(--link); }
+a:focus-visible, button:focus-visible, summary:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
 .band { display: flex; flex-wrap: wrap; gap: 8px 28px; padding-block: 14px; border-block: 1px solid var(--line); font-variant-numeric: tabular-nums; }
 .band div { display: grid; }
 .band b { font-family: var(--mono); font-weight: 500; font-size: 1.25rem; }
 .band span { font-size: 12px; color: var(--ink-soft); }
+section { display: grid; gap: 12px; }
+
+/* the four small tables */
+.multiples { display: grid; grid-template-columns: auto 1fr 1fr; gap: 8px 14px; align-items: center; }
+.multiples .rh { font-size: 13px; font-weight: 600; max-width: 13ch; }
+.multiples .ch { font-family: var(--mono); font-size: 11px; color: var(--ink-faint); text-transform: uppercase; letter-spacing: 0.06em; }
+.mini { font: inherit; text-align: left; border: 1px solid var(--line); background: var(--panel); border-radius: 8px; padding: 8px; cursor: pointer; display: grid; gap: 6px; min-width: 0; color: var(--ink); }
+.mini[aria-pressed="true"] { border-color: var(--ink); box-shadow: 0 0 0 1px var(--ink); }
+.mini .g { display: grid; gap: 2px; }
+.mini .g i { display: block; height: 11px; border-radius: 2px; background: var(--cell, var(--chip-bg)); }
+.mini .cap { font-family: var(--mono); font-size: 11px; color: var(--ink-soft); display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.mini .cap .w { color: var(--warn); }
+.mini.empty { cursor: default; color: var(--ink-faint); font-size: 12px; min-height: 80px; place-content: center; }
+
+/* the large table */
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 16px 18px; display: grid; gap: 14px; }
 .controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .controls button { font: inherit; font-size: 13px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); border-radius: 999px; padding: 4px 12px; cursor: pointer; }
 .controls button[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
-.controls button:focus-visible, summary:focus-visible, a:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
-.legend { margin-left: auto; display: flex; gap: 10px; flex-wrap: wrap; font-size: 12px; color: var(--ink-soft); }
+.controls .gap { width: 10px; }
+.tablewrap { overflow-x: auto; }
+table.heat { border-collapse: separate; border-spacing: 3px; font-variant-numeric: tabular-nums; width: 100%; min-width: 560px; }
+table.heat th { font-family: var(--mono); font-size: 11px; font-weight: 500; color: var(--ink-faint); text-align: center; padding: 2px 4px; }
+table.heat tbody th { text-align: right; font-family: var(--body); font-size: 12.5px; color: var(--ink-soft); white-space: nowrap; padding-right: 8px; }
+table.heat td { background: var(--cell, var(--chip-bg)); border-radius: 4px; padding: 6px 4px; text-align: center; line-height: 1.2; }
+table.heat td b { display: block; font-family: var(--mono); font-weight: 500; font-size: 13px; }
+table.heat td span { display: block; font-size: 10.5px; color: var(--ink-soft); }
+table.heat td.dark b, table.heat td.dark span { color: #fff; }
+table.heat td.bad { outline: 2px dashed var(--warn); outline-offset: -2px; }
+.scale { display: flex; align-items: center; gap: 8px; font-family: var(--mono); font-size: 11px; color: var(--ink-soft); flex-wrap: wrap; }
+.scale .bar { display: flex; height: 10px; width: 220px; max-width: 60vw; border-radius: 2px; overflow: hidden; }
+.scale .bar i { flex: 1; background: var(--cell); }
+details.warn { border-left: 3px solid var(--warn); padding-left: 10px; font-size: 13px; }
+details.warn summary { cursor: pointer; color: var(--warn); font-weight: 600; }
+details.warn ul { margin: 6px 0 0; padding-left: 18px; color: var(--ink-soft); }
+.err { border-left: 3px solid var(--warn); padding-left: 10px; font-size: 13px; }
+.err pre { white-space: pre-wrap; font-size: 12px; max-height: 260px; overflow: auto; }
+.prose { display: grid; gap: 10px; max-width: 68ch; font-size: 15px; line-height: 1.6; }
+.prose p, .prose ul { margin: 0; }
+.prose ul { padding-left: 20px; }
+.prose a { font-family: var(--mono); font-size: 13px; text-decoration: none; border-bottom: 1px solid currentColor; }
+.by { font-size: 12.5px; color: var(--ink-soft); }
+
+/* stories */
 .list { display: grid; }
-.story { border-bottom: 1px solid var(--line); padding-block: 12px; transition: opacity .15s; }
-.story.quiet { opacity: 0.42; }
+.story { border-bottom: 1px solid var(--line); padding-block: 10px; transition: opacity .15s; scroll-margin-top: 16px; }
+.story.quiet { opacity: .5; }
 .story.quiet:hover, .story.quiet:focus-within, .story.quiet[open] { opacity: 1; }
-.story > summary { list-style: none; cursor: pointer; display: grid; grid-template-columns: 1fr auto; gap: 4px 14px; }
+.story:target { background: var(--chip-bg); }
+.story > summary { list-style: none; cursor: pointer; display: grid; grid-template-columns: 44px 1fr auto; gap: 2px 12px; }
 .story > summary::-webkit-details-marker { display: none; }
+.lab { font-family: var(--mono); font-size: 12px; color: var(--ink-soft); padding-top: 3px; }
 .head { min-width: 0; }
-.headline { font-family: var(--display); font-weight: 500; font-size: 1.08rem; line-height: 1.3; text-wrap: balance; }
+.headline { font-family: var(--display); font-weight: 500; font-size: 1.05rem; line-height: 1.3; text-wrap: balance; }
 .story:not(.quiet) .headline { font-weight: 600; }
-.meta { font-size: 12.5px; color: var(--ink-soft); margin-top: 3px; display: flex; flex-wrap: wrap; gap: 2px 10px; }
-.meta .n { font-family: var(--mono); font-variant-numeric: tabular-nums; }
-.chips { display: flex; gap: 5px; flex-wrap: wrap; justify-content: flex-end; align-content: start; max-width: 220px; }
-.chip { font-family: var(--mono); font-size: 11px; padding: 1px 7px; border-radius: 4px; background: var(--chip-bg); color: var(--ink); border-left: 3px solid var(--c); white-space: nowrap; }
-.dot { display: inline-block; width: 9px; height: 9px; border-radius: 2px; background: var(--c); margin-right: 4px; vertical-align: -1px; }
-.detail { margin-top: 10px; display: grid; gap: 10px; }
-.members { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
-.members li { display: grid; grid-template-columns: 74px 1fr; gap: 10px; font-size: 13.5px; }
-.members .p { font-family: var(--mono); font-size: 11.5px; color: var(--ink-soft); font-variant-numeric: tabular-nums; padding-top: 2px; }
-.members a { color: var(--link); text-decoration: none; overflow-wrap: anywhere; }
-.members a:hover { text-decoration: underline; }
-.src { color: var(--ink-soft); }
+.meta { font-size: 12.5px; color: var(--ink-soft); margin-top: 2px; display: flex; flex-wrap: wrap; gap: 2px 10px; }
+.chips { display: flex; gap: 5px; flex-wrap: wrap; justify-content: flex-end; align-content: start; }
+.chip { font-family: var(--mono); font-size: 11px; padding: 1px 7px; border-radius: 4px; background: var(--chip-bg); color: var(--ink-soft); white-space: nowrap; }
+.chip.cited { background: var(--ink); color: var(--bg); }
+.chip.ho { border: 1px dashed var(--ink-faint); background: none; }
+.brief { margin: 10px 0 0 56px; display: grid; gap: 8px; font-size: 13.5px; }
+.brief ul { margin: 0; padding-left: 18px; display: grid; gap: 3px; }
+.brief blockquote { margin: 0; padding-left: 12px; border-left: 2px solid var(--line); color: var(--ink-soft); max-width: 68ch; }
+.brief .src { color: var(--ink-soft); }
 .pay { font-family: var(--mono); font-size: 10.5px; color: var(--ink-faint); border: 1px solid var(--line); border-radius: 3px; padding: 0 4px; margin-left: 4px; }
-.scores { display: flex; flex-wrap: wrap; gap: 6px 16px; font-family: var(--mono); font-size: 11.5px; color: var(--ink-soft); }
-.bar { display: inline-block; width: 48px; height: 6px; background: var(--chip-bg); border-radius: 3px; vertical-align: 1px; margin-left: 4px; overflow: hidden; }
-.bar i { display: block; height: 100%; background: var(--c); }
-.related { font-size: 12.5px; color: var(--ink-soft); }
-.note { font-size: 13px; color: var(--ink-soft); max-width: 65ch; }
-details.dropped summary { cursor: pointer; font-size: 13px; color: var(--ink-soft); }
-details.dropped ul { font-size: 13px; color: var(--ink-soft); padding-left: 18px; }
-@media (max-width: 560px) {
-  .story > summary { grid-template-columns: 1fr; }
-  .chips { justify-content: flex-start; max-width: none; }
-  .legend { margin-left: 0; }
-  .members li { grid-template-columns: 1fr; gap: 0; }
+details.more summary { cursor: pointer; font-size: 13px; color: var(--ink-soft); }
+@media (max-width: 600px) {
+  .multiples { grid-template-columns: 1fr 1fr; }
+  .multiples .rh { grid-column: 1 / -1; max-width: none; }
+  .multiples .corner { display: none; }
+  .story > summary { grid-template-columns: 36px 1fr; }
+  .chips { grid-column: 2; justify-content: flex-start; }
+  .brief { margin-left: 0; }
 }
 @media (prefers-reduced-motion: reduce) { .story { transition: none; } }
 </style>
@@ -144,319 +120,187 @@ details.dropped ul { font-size: 13px; color: var(--ink-soft); padding-left: 18px
 <main class="wrap">
   <header>
     <div class="eyebrow">AIRO · news pipeline</div>
-    <h1>AI news, one story per event</h1>
-    <p class="lede">Every unique story the feeds produced, after Jev folded duplicate write-ups together. Jev then asked of each story whether it would change a forecast of AI catastrophic risk. Stories in full ink might, for at least one cause family; faded stories are not expected to. Click a story for its sources and Jev's probabilities.</p>
+    <h1>How much does this week's news move the forecast?</h1>
+    <p class="lede" id="lede"></p>
   </header>
-  <div class="tabs" role="tablist" aria-label="View">
-    <button role="tab" id="t-summary" aria-controls="tab-summary" aria-selected="true">Summary</button>
-    <button role="tab" id="t-explore" aria-controls="tab-explore" aria-selected="false">Explore</button>
-  </div>
-  <section id="tab-summary" role="tabpanel" aria-labelledby="t-summary" class="summary"></section>
-  <div id="tab-explore" role="tabpanel" aria-labelledby="t-explore" hidden>
   <section class="band" id="band"></section>
-  <section class="frame" aria-labelledby="jev-h">
-    <h2 class="sec" id="jev-h">Jev screen</h2>
-    <div class="controls" role="group" aria-label="What Jev was shown">
-      <button data-f="airo" aria-pressed="true">Sees the AIRO forecast</button>
-      <button data-f="generic" aria-pressed="false">Generic: no forecast</button>
-      <button data-f="none" aria-pressed="false">No Jev gate</button>
-    </div>
-    <p class="note" id="frame-desc"></p>
-    <div class="hist" id="hist"></div>
-    <section class="frame sub" aria-labelledby="rat-h">
-      <h3 class="sec" id="rat-h">Rationales · the top-ECI model</h3>
-      <div class="controls" role="group" aria-label="What the writer was shown">
-        <button data-r="airo" aria-pressed="true">Sees the AIRO forecast</button>
-        <button data-r="generic" aria-pressed="false">Generic: no forecast</button>
-      </div>
-      <p class="note" id="rat-desc"></p>
-      <div class="notes" id="notes"></div>
-    </section>
-    <section class="stories" aria-labelledby="list-h">
-      <h3 class="sec" id="list-h">Stories</h3>
-      <p class="note" id="list-desc"></p>
-      <div class="controls" role="group" aria-label="Filter">
-        <button id="f-all" aria-pressed="true">All stories</button>
-        <button id="f-rel" aria-pressed="false">Above the threshold</button>
-        <button id="f-multi" aria-pressed="false">Multi-source only</button>
-        <div class="legend" id="legend"></div>
-      </div>
-      <div class="list" id="list" aria-live="polite"></div>
-      <details class="dropped" id="pre"></details>
-    </section>
+
+  <section aria-labelledby="cmp-h">
+    <h2 class="sec" id="cmp-h">Four reads of the same news</h2>
+    <p class="note">Each small table is one call: the top-ECI model's odds ratio for every severity rung (rows, least severe at the top) and horizon (columns). Warm: more likely; cool: less likely; pale: about no change. Choose one to see it in full.</p>
+    <div class="multiples" id="multiples"></div>
   </section>
-  <details class="dropped" id="dropped"></details>
-  <p class="note" id="note"></p>
-  </div>
+
+  <section class="panel" aria-labelledby="sel-h">
+    <h2 class="sec" id="sel-h"></h2>
+    <div class="controls" role="group" aria-label="Which read">
+      <button data-f="airo">Writer sees the AIRO forecast</button>
+      <button data-f="generic">Generic: no forecast</button>
+      <span class="gap"></span>
+      <button data-o="forward">Shuffled order</button>
+      <button data-o="reversed">Reversed</button>
+    </div>
+    <p class="note" id="sel-desc"></p>
+    <div id="detail"></div>
+  </section>
+
+  <section aria-labelledby="list-h">
+    <h2 class="sec" id="list-h">The stories, as the model read them</h2>
+    <p class="note" id="list-desc"></p>
+    <div class="controls" role="group" aria-label="Filter">
+      <button id="f-all" aria-pressed="true">All</button>
+      <button id="f-cited" aria-pressed="false">Cited by this read</button>
+      <button id="f-ho" aria-pressed="false">Headline only</button>
+    </div>
+    <div class="list" id="list" aria-live="polite"></div>
+  </section>
+  <p class="note" id="foot"></p>
 </main>
 
 <script id="data" type="application/json">__DATA__</script>
 <script>
 const D = JSON.parse(document.getElementById("data").textContent);
-const CAUSES = [["ai", "AI incident"], ["cyber", "Cyber"], ["bio", "Bio"], ["misalign", "Misalignment"]];
-const MOVES = ["small", "moderate", "large"];
-const GAPS = D.gaps || {};   // "frame:story" -> why a rationale is missing
-const FLAG = D.meta.screen_at;
-const FC = D.meta.forecast;
-const m = D.meta;
-const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-const when = iso => { const d = new Date(iso); return d.toLocaleString(undefined, {month: "short", day: "numeric", hour: "2-digit", minute: "2-digit"}); };
+const M = D.meta, L = D.ladder;
 const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const when = iso => new Date(iso).toLocaleString(undefined, {month: "short", day: "numeric", hour: "2-digit", minute: "2-digit"});
+const day = iso => new Date(iso).toLocaleDateString(undefined, {month: "short", day: "numeric"});
+const FNAME = {airo: "Writer sees the AIRO forecast", generic: "Generic: no forecast"};
+const ONAME = {forward: "shuffled order", reversed: "reversed order"};
+const BY_ID = Object.fromEntries(D.stories.map(s => [s.id, s]));
+const BY_LABEL = Object.fromEntries(D.stories.map(s => [s.label, s]));
 
-// The frame: what Jev and the writer were shown. Everything below the toggle is drawn from it.
-let frame = "airo", rframe = "airo";   // Jev's frame ("none": no gate, the writer reads the whole week), and the writer's
-try { const f = localStorage.getItem("news-frame"); if (f === "generic" || f === "none") frame = f;
-      if (localStorage.getItem("news-rframe") === "generic") rframe = "generic"; } catch (e) {}
-let NOTES = {}, mode = "all", histOf = "ai";
-const NAME = {airo: "Sees the AIRO forecast", generic: "Generic", none: "No Jev gate"};
-const RNAME = {airo: "writer sees the forecast", generic: "generic writer"};
-const AGAINST = {
-  airo: `the ${FC} AIRO ensemble forecast`,
-  generic: "forecasts of AI catastrophic risk in general",
-};
-const DESC = {
-  none: "No Jev screen. The top-ECI model reads every story published after the forecast, each as Jev would see it, in one call, and judges how much the week as a whole moves each family. Its verdicts are below; the stories it cites are in full ink in the list.",
-  airo: `Jev saw each story with the ${FC} AIRO ensemble medians and the panel's reasoning, and was asked per cause family whether a forecaster holding that forecast would change it.`,
-  generic: "Jev saw only the story, and was asked per cause family whether a careful forecaster of catastrophic risk from AI would change their probabilities. No AIRO numbers or reasoning.",
-};
-const RDESC = {
-  airo: `The writer saw the story with the ${FC} AIRO ensemble forecast (medians and ranges) and each panel model's rationale, and wrote a note on whether it should move that forecast. One call, thinking only: no tools, no search.`,
-  generic: "The writer saw only the story, and wrote a note on whether it should move forecasts of AI catastrophic risk in general. One call, thinking only: no tools, no search.",
-};
+let sel = {f: "airo", o: "forward"}, filter = "all";
+try { const v = JSON.parse(localStorage.getItem("news-read") || "null");
+      if (v && FNAME[v.f] && ONAME[v.o]) sel = v; } catch (e) {}
+const runOf = (f, o) => ((D.runs || {})[f] || {})[o];
 
-const POST = D.stories.filter(s => s.post);
-const TOPN = 3;
-function applyFrame() {
-  const tops = new Set(FRAMES.flatMap(f => topStories(f).map(s => s.id)));
-  NOTES = Object.fromEntries(Object.entries((D.frames[rframe] || {}).notes || {}).filter(([id]) => tops.has(id)));
-  const dg = ((D.digests || {})[rframe] || {}).forward || ((D.digests || {})[rframe] || {}).reversed;
-  const cites = new Set(dg ? CAUSES.flatMap(([k]) => (dg.verdicts[k] || {}).stories || []) : []);
-  D.stories.forEach(s => {
-    s.cited = cites.has(s.id);
-    s.screen = frame === "none" ? {} : s.screens[frame] || {};
-    s.scored = Object.keys(s.screen).length > 0;
-    s.flags = CAUSES.filter(([k]) => (s.screen[k] ?? 0) >= FLAG);
-    s.relevant = frame === "none" ? s.cited : s.flags.length > 0;
-    s.pmax = Math.max(0, ...CAUSES.map(([k]) => s.screen[k] ?? 0));
-  });
-  document.querySelectorAll(".frame button[data-f]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.f === frame)));
-  document.querySelectorAll(".frame button[data-r]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.r === rframe)));
-  $("frame-desc").textContent = DESC[frame];
-  $("rat-desc").textContent = RDESC[rframe];
-  $("hist").hidden = frame === "none";
-  band(); notes(); hist(); render(); footnote();
+// colour: log odds ratio, full strength at x1.5 (or /1.5); a square root lifts the small ones
+const FULL = Math.log(1.5);
+function shade(or) {
+  if (or == null) return {bg: "var(--chip-bg)", dark: false};
+  const t = Math.min(1, Math.sqrt(Math.abs(Math.log(or)) / FULL));
+  if (t < 0.02) return {bg: "var(--chip-bg)", dark: false};
+  const pct = Math.round(8 + 82 * t);
+  return {bg: `color-mix(in srgb, var(${or > 1 ? "--up" : "--down"}) ${pct}%, var(--panel))`, dark: pct > 55};
 }
-document.querySelectorAll(".frame button[data-f]").forEach(b => b.addEventListener("click", () => {
-  frame = b.dataset.f;
-  try { localStorage.setItem("news-frame", frame); } catch (e) {}
-  applyFrame();
-}));
-document.querySelectorAll(".frame button[data-r]").forEach(b => b.addEventListener("click", () => {
-  rframe = b.dataset.r;
-  try { localStorage.setItem("news-rframe", rframe); } catch (e) {}
-  applyFrame();
-}));
+const fmtOR = x => "×" + (x >= 10 ? x.toFixed(0) : x >= 1.995 || x < 0.5 ? x.toFixed(1) : x.toFixed(2));
+function pct(p) {
+  if (p == null) return "–";
+  const v = p * 100;
+  return v >= 10 ? v.toFixed(0) + "%" : v >= 1 ? v.toFixed(1) + "%" : v >= 0.1 ? v.toFixed(2) + "%" : v.toPrecision(1) + "%";
+}
+const implied = (p, o) => p == null ? null : o * p / (1 - p + o * p);
 
 function band() {
-  const rel = POST.filter(s => s.relevant).length, multi = D.stories.filter(s => s.sources.length > 1).length;
+  const ex = D.stories.filter(s => s.brief.excerpt).length;
+  $("lede").textContent = `Every AI news story first reported after the ${M.forecast} AIRO forecast, read in one call by the highest-ECI model on its panel, which gives an odds ratio for each cell of the forecast's table for AI-related incidents of any kind: by how much the odds should be multiplied in light of the news. No screen in front: the model sees every story, each as the same short brief.`;
   $("band").innerHTML = [
-    [m.items, "items from " + m.feeds + " feeds"], [m.stories, "unique stories"], [POST.length, "after the forecast"], [multi, "multi-source stories"],
-    [rel, frame === "none" ? "cited by the week's read" : "flagged by Jev (after the forecast)"], [Object.keys(NOTES).length, "rationales (" + RNAME[rframe] + ")"], [D.dropped.length, "dropped as not AI"]
-  ].map(([n, l]) => `<div><b>${n}</b><span>${l}</span></div>`).join("");
+    [D.stories.length, "stories after the forecast"], [ex, `with an article opening (${M.brief_words} words)`],
+    [D.stories.length - ex, "headline only"], [M.items, `items from ${M.feeds} feeds`], [M.stories, "stories in all"]
+  ].map(([n, l]) => `<div><b>${n}</b><span>${esc(l)}</span></div>`).join("");
 }
-$("legend").innerHTML = CAUSES.map(([k, l]) => `<span><span class="dot" style="--c:var(--c-${k})"></span>${l}</span>`).join("");
 
-function noteHTML(text) {
+function mini(f, o) {
+  const r = runOf(f, o), on = f === sel.f && o === sel.o;
+  if (!r) return `<div class="mini empty">Not run yet</div>`;
+  const cols = L.horizons.length;
+  const cells = r.odds ? r.odds.flat().map(x => `<i style="--cell:${shade(x).bg}"></i>`).join("")
+                       : `<span>${esc(r.error || "no table")}</span>`;
+  const w = r.violations.length ? `<span class="w">⚠ ${r.violations.length}</span>` : "";
+  return `<button class="mini" data-pick="${f}:${o}" aria-pressed="${on}" aria-label="${esc(FNAME[f] + ", " + ONAME[o])}">
+    <div class="g" style="grid-template-columns:repeat(${cols},1fr)">${cells}</div>
+    <div class="cap"><span>${r.cites.length} cited · $${(r.usage.usd ?? 0).toFixed(2)}</span>${w}</div></button>`;
+}
+function multiples() {
+  $("multiples").innerHTML = `<span class="corner"></span><span class="ch">Shuffled order</span><span class="ch">Reversed</span>` +
+    ["airo", "generic"].map(f => `<span class="rh">${esc(FNAME[f])}</span>${mini(f, "forward")}${mini(f, "reversed")}`).join("");
+  document.querySelectorAll("[data-pick]").forEach(b => b.addEventListener("click", () => {
+    const [f, o] = b.dataset.pick.split(":"); choose(f, o); }));
+}
+
+function heat(r) {
+  const head = `<tr><th></th>${L.horizons.map(h => `<th>${esc(h)}</th>`).join("")}</tr>`;
+  const bad = new Set();
+  r.violations.forEach(v => L.rungs.forEach((n, i) => L.horizons.forEach((h, j) => { if (v.startsWith(`${n} by ${h} `)) bad.add(i + ":" + j); })));
+  const rows = L.rungs.map((n, i) => `<tr><th>${esc(n)}</th>${L.horizons.map((h, j) => {
+    const o = r.odds[i][j], p = L.base[i][j], q = implied(p, o), s = shade(o);
+    const tip = `${n}, by ${h}: odds ×${o}. Applied to the AIRO forecast: ${pct(p)} → ${pct(q)}`;
+    return `<td class="${s.dark ? "dark" : ""}${bad.has(i + ":" + j) ? " bad" : ""}" style="--cell:${s.bg}" title="${esc(tip)}"><b>${fmtOR(o)}</b><span>${pct(p)}→${pct(q)}</span></td>`;
+  }).join("")}</tr>`).join("");
+  const ticks = [1 / 1.5, 1 / 1.2, 1 / 1.05, 1, 1.05, 1.2, 1.5];
+  const steps = Array.from({length: 21}, (_, k) => Math.exp(FULL * (k - 10) / 10 * Math.abs(k - 10) / 10));
+  return `<div class="tablewrap"><table class="heat"><thead>${head}</thead><tbody>${rows}</tbody></table></div>
+    <div class="scale"><span>less likely</span><span class="bar">${steps.map(x => `<i style="--cell:${shade(x).bg}"></i>`).join("")}</span><span>more likely</span>
+      <span>· full colour at ×${(1 / 1.5).toFixed(2)} and ×1.5 · small text: the AIRO forecast's median, then with this odds ratio applied</span></div>`;
+}
+
+function proseHTML(text) {
+  const link = s => esc(s).replace(/\bS(\d+)\b/g, (m, n) => BY_LABEL["S" + n] ? `<a href="#${BY_LABEL["S" + n].id}" title="${esc(BY_LABEL["S" + n].title)}">${m}</a>` : m);
   const out = []; let list = [];
   for (const line of text.split("\n").map(l => l.trim()).filter(Boolean)) {
-    if (line.startsWith("- ")) { list.push(`<li>${esc(line.slice(2))}</li>`); continue; }
+    if (/^[-*] /.test(line)) { list.push(`<li>${link(line.slice(2))}</li>`); continue; }
     if (list.length) { out.push(`<ul>${list.join("")}</ul>`); list = []; }
-    out.push(`<p>${esc(line)}</p>`);
+    out.push(`<p>${link(line.replace(/^#+\s*/, "").replace(/\*\*/g, ""))}</p>`);
   }
   if (list.length) out.push(`<ul>${list.join("")}</ul>`);
-  return `<div class="notetext">${out.join("")}</div>`;
+  return `<div class="prose">${out.join("")}</div>`;
 }
 
-function storyHTML(s) {
-  const n = NOTES[s.id];
-  const chips = (s.post ? "" : `<span class="chip pre">before the forecast</span>`) + (s.cited && frame === "none" ? `<span class="chip dg">Cited</span>` : "") + (frame === "none" ? "" : s.scored ? `<span class="chip p" title="Jev p(story would change the forecast), highest family">p ${s.pmax.toFixed(2)}</span>` : `<span class="chip p">not screened</span>`)
-    + (n ? `<span class="chip note">Rationale: ${esc(n.verdict || "?")}</span>` : "")
-    + s.flags.map(([k, l]) => `<span class="chip" style="--c:var(--c-${k})">${l} ${s.screen[k].toFixed(2)}</span>`).join("");
-  const span = s.first === s.last ? when(s.first) : `${when(s.first)} – ${when(s.last)}`;
-  const members = s.members.map(x => `<li><span class="p">${x.p == null ? "first" : "p " + x.p.toFixed(2)}</span>
-    <span><span class="src">${esc(x.source)}</span>${x.open ? "" : '<span class="pay">paywall</span>'}${x.full ? '<span class="pay">text read</span>' : ""} · <a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.title)}</a></span></li>`).join("");
-  const scores = CAUSES.map(([k, l]) => { const p = s.screen[k]; return p == null ? "" :
-    `<span>${l} ${p.toFixed(2)}<span class="bar"><i style="--c:var(--c-${k});width:${Math.round(p*100)}%"></i></span></span>`; }).join("");
-  const note = n ? `<div class="eyebrow">Rationale (${RNAME[rframe]}) · ${esc(n.writer)} · verdict: ${esc(n.verdict || "unparsed")}</div>${noteHTML(n.text)}` : "";
-  const verdict = frame === "none" ? `<div class="related">${s.cited ? "Cited" : "Not cited"} by the top-ECI model's read of the whole week (${esc(RNAME[rframe])}).</div>` : `<div class="related">${s.relevant ? "Might move " + AGAINST[frame] + " for: " + s.flags.map(([k, l]) => l).join(", ") : "Checked against " + AGAINST[frame] + ": not expected to move it"} (Jev, flagged at ${FLAG}).</div>`;
-  const related = s.related.map(r => `<div class="related">Possible follow-up to: ${esc(r.title)} (p ${r.p.toFixed(2)})</div>`).join("");
-  return `<details class="story${s.relevant ? "" : " quiet"}" id="${s.id}"><summary>
+function detail() {
+  const r = runOf(sel.f, sel.o);
+  $("sel-h").textContent = `${FNAME[sel.f]}, ${ONAME[sel.o]}`;
+  document.querySelectorAll("[data-f]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.f === sel.f)));
+  document.querySelectorAll("[data-o]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.o === sel.o)));
+  $("sel-desc").textContent = sel.f === "airo"
+    ? `The writer saw the ${M.forecast} ensemble table (medians and the panel's range) and each panel model's rationale, and was asked how the news should move it.`
+    : "The writer saw the same questions without any numbers or rationales, and was asked how the news should move a careful forecaster's probabilities. The small text applies its odds ratios to the AIRO forecast for comparison.";
+  if (!r) { $("detail").innerHTML = `<p class="note">Not run yet.</p>`; return; }
+  const warn = r.violations.length ? `<details class="warn"><summary>⚠ ${r.violations.length} coherence warning${r.violations.length > 1 ? "s" : ""}</summary>
+      <p class="note">Applied to the AIRO forecast, these odds ratios break the ladder's logic: a more severe rung can't be likelier than a less severe one, and a later horizon can't be less likely than an earlier one (both count cumulative incidents).</p>
+      <ul>${r.violations.map(v => `<li>${esc(v)}</li>`).join("")}</ul></details>` : "";
+  const baseWarn = L.base_violations.length ? `<p class="note">The AIRO forecast itself has ${L.base_violations.length} such inconsistencies; they are not counted above.</p>` : "";
+  const u = r.usage;
+  const by = `<div class="by">${esc(r.writer)} (ECI ${r.eci}), one call, thinking only: ${r.stories} stories, ${Math.round((u.in || 0) / 1000)}k tokens in, ${Math.round((u.out || 0) / 1000)}k out (${Math.round((u.thinking || 0) / 1000)}k thinking), $${(u.usd ?? 0).toFixed(2)}. ${when(r.at)}.</div>`;
+  const table = r.odds ? heat(r) : `<div class="err"><b>The table could not be read: ${esc(r.error)}.</b> The answer as written:<pre>${esc(r.raw || "")}</pre></div>`;
+  const cites = r.cites.length ? `<p class="note">Stories it says drive the change: ${r.cites.map(id => BY_ID[id] ? `<a href="#${id}">${BY_ID[id].label}</a> ${esc(BY_ID[id].title)}` : "").join("; ")}.</p>` : `<p class="note">It names no story as driving a change.</p>`;
+  $("detail").innerHTML = table + warn + baseWarn + by + proseHTML(r.text) + cites;
+}
+
+function storyHTML(s, cited) {
+  const b = s.brief, n = s.members.length;
+  const chips = (cited.has(s.id) ? `<span class="chip cited">cited</span>` : "") +
+    (b.excerpt ? `<span class="chip">article: ${esc(b.excerpt.source)}</span>` : `<span class="chip ho">headline only</span>`);
+  const reports = b.reports.map(r => `<li><span class="src">${esc(r.source)} (${esc(r.published)}):</span> “${esc(r.headline)}”${r.standfirst ? " — " + esc(r.standfirst) : ""}</li>`).join("");
+  const ex = b.excerpt ? `<div class="eyebrow">Opening of the ${esc(b.excerpt.source)} article</div><blockquote>${esc(b.excerpt.text)}</blockquote>`
+                       : `<p class="note">(Headline only: no article could be read.)</p>`;
+  const links = s.members.map(m => `<li><span class="src">${esc(m.source)}</span>${m.open ? "" : '<span class="pay">paywall</span>'} · <a href="${esc(m.url)}" target="_blank" rel="noopener">${esc(m.title)}</a></li>`).join("");
+  const span = s.first === s.last ? when(s.first) : `${day(s.first)} – ${day(s.last)}`;
+  return `<details class="story${cited.size && !cited.has(s.id) ? " quiet" : ""}" id="${s.id}"><summary>
+      <span class="lab">${s.label}</span>
       <div class="head"><div class="headline">${esc(s.title)}</div>
-      <div class="meta"><span>${span}</span><span>${esc(s.sources.join(", "))}</span><span class="n">${s.members.length} item${s.members.length > 1 ? "s" : ""}</span></div></div>
+      <div class="meta"><span>${span}</span><span>${esc(s.sources.join(", "))}</span><span>${n} report${n > 1 ? "s" : ""}</span></div></div>
       <div class="chips">${chips}</div></summary>
-    <div class="detail">${note}<ul class="members">${members}</ul>${verdict}<div class="scores">${scores}</div>${related}</div></details>`;
+    <div class="brief"><div class="eyebrow">What the model saw</div><ul>${reports}</ul>${ex}
+      <details class="more"><summary>All ${n} report${n > 1 ? "s" : ""}, with links</summary><ul>${links}</ul></details></div></details>`;
 }
+function list() {
+  const r = runOf(sel.f, sel.o), cited = new Set(r ? r.cites : []);
+  const keep = s => filter === "all" || (filter === "cited" ? cited.has(s.id) : !s.brief.excerpt);
+  $("list").innerHTML = D.stories.filter(keep).map(s => storyHTML(s, cited)).join("") || `<p class="note">No stories match.</p>`;
+  $("list-desc").textContent = `${D.stories.length} stories in the order the model read them in the shuffled read (S1 first; the reversed read starts at S${D.stories.length}). In full ink: the stories this read cites (${FNAME[sel.f].toLowerCase()}, ${ONAME[sel.o]}). Open one to see its brief exactly as the model saw it.`;
+  for (const [id, v] of [["f-all", "all"], ["f-cited", "cited"], ["f-ho", "ho"]]) $(id).setAttribute("aria-pressed", String(filter === v));
+}
+for (const [id, v] of [["f-all", "all"], ["f-cited", "cited"], ["f-ho", "ho"]]) $(id).addEventListener("click", () => { filter = v; list(); });
 
-function render() {
-  const keep = s => mode === "all" || (mode === "rel" ? s.relevant : s.sources.length > 1);
-  const pick = POST.filter(keep), pre = D.stories.filter(s => !s.post && keep(s));
-  $("list").innerHTML = pick.map(storyHTML).join("") || '<p class="note">No stories match this filter.</p>';
-  $("pre").innerHTML = `<summary>${pre.length} stories first reported before the forecast (${esc(when(m.cutoff))}): left out of the screen above</summary>` + pre.map(storyHTML).join("");
-  $("f-rel").textContent = frame === "none" ? "Cited by the read" : "Above the threshold";
-  $("list-desc").textContent = frame === "none"
-    ? `The ${POST.length} stories published after the forecast. In full ink: the stories the top-ECI model's read of the week cites (${RNAME[rframe]}). No Jev scores in this condition.`
-    : `The ${POST.length} stories published after the forecast, with Jev's p (${NAME[frame]}). In full ink: at or above the threshold of ${FLAG} for at least one family; greyed: below it.`;
-  for (const [id, v] of [["f-all", "all"], ["f-rel", "rel"], ["f-multi", "multi"]])
-    $(id).setAttribute("aria-pressed", String(mode === v));
+function choose(f, o) {
+  sel = {f, o};
+  try { localStorage.setItem("news-read", JSON.stringify(sel)); } catch (e) {}
+  multiples(); detail(); list();
 }
-for (const [id, v] of [["f-all", "all"], ["f-rel", "rel"], ["f-multi", "multi"]])
-  $(id).addEventListener("click", () => { mode = v; render(); });
+document.querySelectorAll("[data-f]").forEach(b => b.addEventListener("click", () => choose(b.dataset.f, sel.o)));
+document.querySelectorAll("[data-o]").forEach(b => b.addEventListener("click", () => choose(sel.f, b.dataset.o)));
 
-// the newest flagged story's note, and the note last written on a story the screen passed over
-// The pipeline: Jev's top story in its frame goes to the top-ECI model, whose rationale is
-// written in its own frame. Rationales on other stories (the calibration run) are left off.
-function pOf(f, s) { const sc = s.screens[f] || {}; return Math.max(-1, ...CAUSES.map(([k]) => sc[k] ?? -1)); }
-function topStories(f) {   // Jev's top stories after the forecast; ties in list order, as the pipeline picks them
-  return [...POST].sort((a, b) => pOf(f, b) - pOf(f, a)).slice(0, TOPN);
-}
-const VCOLOR = {none: "var(--line)", negligible: "var(--link)", small: "var(--c-bio)", moderate: "var(--c-bio)", large: "var(--c-bio)"};
-function verdictGrid(vs, cites) {
-  return `<div class="vgrid">${CAUSES.map(([k, l]) => { const v = vs[k]; const size = v && (v.size || v); return `<div class="vcell" style="--c:${VCOLOR[size] || "var(--line)"}">
-    <span>${l}</span><b>${esc(size || "–")}${v && v.direction && v.direction !== "none" ? " · " + esc(v.direction) : ""}</b>
-    ${cites && v && v.stories && v.stories.length ? `<span class="cites">${v.stories.map(id => { const st = D.stories.find(x => x.id === id); return st ? `<a href="#${id}">${esc(st.title)}</a>` : ""; }).join("; ")}</span>` : ""}</div>`; }).join("")}</div>`;
-}
-const FRAMES = ["airo", "generic"];
-
-function notes() {
-  if (frame === "none") return digest();
-  const el = $("notes");
-  const shown = rframe === "airo" ? `shown the ensemble forecast of ${esc(FC)} and the panel's rationales` : "shown no forecast, asked about AI catastrophic-risk forecasts in general";
-  el.innerHTML = `<p class="note">Jev's top ${TOPN} stories published after the forecast (${esc(NAME[frame])}), each with the top-ECI model's rationale (${esc(RNAME[rframe])}).</p>` + topStories(frame).map((s, i) => {
-    const n = NOTES[s.id];
-    return `<article class="notecard">
-    <div class="eyebrow">Jev's #${i + 1} · ${esc(NAME[frame])} · p ${s.pmax.toFixed(2)}</div>
-    <h2>${esc(s.title)}</h2>
-    <div class="by">${s.flags.map(([k, l]) => `${l} ${s.screen[k].toFixed(2)}`).join(", ") || "Not flagged"}. ${s.members.length} report${s.members.length > 1 ? "s" : ""} (${esc(s.sources.join(", "))}), first ${when(s.first)}. <a href="#${s.id}">Sources</a>.</div>
-    ${n ? `<div class="by">Rationale by ${esc(n.writer)}, the highest-ECI model on the panel (ECI ${n.eci}), ${shown}.</div>
-    ${verdictGrid(n.verdicts || {}, false)}${noteHTML(n.text)}`
-        : `<p class="note">No rationale in this condition. ${GAPS[rframe + ":" + s.id] || "Not written yet."}</p>`}
-  </article>`; }).join("");
-}
-
-function digest() {
-  const el = $("notes"), d = (D.digests || {})[rframe] || {}, fwd = d.forward, rev = d.reversed;
-  if (!fwd && !rev) { el.innerHTML = `<p class="note">Not run yet in this condition.</p>`; return; }
-  const main = fwd || rev;
-  const robust = fwd && rev ? `<div class="tablewrap"><table class="robust"><thead><tr><th>family</th><th>listed in shuffle</th><th>listed reversed</th></tr></thead><tbody>${CAUSES.map(([k, l]) =>
-      `<tr><td>${l}</td><td>${esc((fwd.verdicts[k] || {}).size || "–")} ${esc((fwd.verdicts[k] || {}).direction || "")}</td><td>${esc((rev.verdicts[k] || {}).size || "–")} ${esc((rev.verdicts[k] || {}).direction || "")}</td></tr>`).join("")}</tbody></table></div>
-      <p class="note">Robustness: the same ${main.stories} stories, once in a fixed shuffle and once reversed.</p>` : "";
-  el.innerHTML = `<article class="notecard">
-    <div class="eyebrow">${main.stories} stories since ${when(main.cutoff)} · overall: ${esc(main.overall || "–")}</div>
-    <div class="by">No Jev gate: ${esc(main.writer)}, the highest-ECI model on the panel (ECI ${main.eci}), read every story in one call (${esc(RNAME[rframe])})${fwd ? ", in a fixed shuffle" : ", reversed"}, and judged how much the week moves each family. Stories it cites are linked, and in full ink in the list.</div>
-    ${verdictGrid(main.verdicts, true)}${noteHTML(main.text)}${robust}</article>`;
-}
-
-function hist() {
-  const BIN = 0.05, N = 20, W = 640, H = 220, L = 34, R = 8, T = 18, B = 30;
-  const other = frame === "airo" ? "generic" : "airo";
-  const valIn = (f, s) => { const sc = s.screens[f] || {}; if (!Object.keys(sc).length) return null;
-    return sc[histOf]; };
-  const binOf = p => Math.min(N - 1, Math.floor(p / BIN + 1e-9));
-  const bins = Array.from({length: N}, () => ({un: 0, no: 0, mv: 0})), ghost = Array(N).fill(0);
-  const vals = [], ovals = [];
-  for (const s of POST) {
-    const q = valIn(other, s); if (q != null) { ovals.push(q); ghost[binOf(q)]++; }
-    const p = valIn(frame, s); if (p == null) continue; vals.push(p);
-    const n = NOTES[s.id], b = bins[binOf(p)];
-    if (!n) b.un++; else if (MOVES.includes(n.verdict)) b.mv++; else b.no++;
-  }
-  ovals.sort((a, b) => a - b);
-  vals.sort((a, b) => a - b);
-  const med = vals.length ? vals[Math.floor((vals.length - 1) / 2)] : 0;
-  const tallest = Math.max(1, ...bins.map(b => b.un + b.no + b.mv), ...ghost), step = tallest > 40 ? 10 : 5, ymax = Math.ceil(tallest / step) * step;
-  const x = p => L + (W - L - R) * p, y = c => H - B - (H - T - B) * c / ymax, bw = (W - L - R) / N;
-  let g = "";
-  for (let c = 0; c <= ymax; c += step) g += `<line class="ax" x1="${L}" x2="${W - R}" y1="${y(c)}" y2="${y(c)}"/><text class="tk" x="${L - 6}" y="${y(c) + 4}" text-anchor="end">${c}</text>`;
-  for (let i = 0; i <= 10; i++) g += `<text class="tk" x="${x(i / 10)}" y="${H - B + 16}" text-anchor="middle">${(i / 10).toFixed(1)}</text>`;
-  g += `<text class="tk" x="${(L + W - R) / 2}" y="${H - 2}" text-anchor="middle">Jev p(story would change the forecast)</text>`;
-  ghost.forEach((c, i) => { if (c) g += `<rect class="b-other" x="${x(i * BIN) + 0.5}" width="${bw - 1}" y="${y(c)}" height="${y(0) - y(c)}"><title>${NAME[other]}: p ${(i * BIN).toFixed(2)}–${((i + 1) * BIN).toFixed(2)}: ${c}</title></rect>`; });
-  bins.forEach((b, i) => { let c = 0;
-    for (const [k, cls] of [["un", "b-un"], ["no", "b-no"], ["mv", "b-mv"]]) if (b[k]) {
-      g += `<rect class="${cls}" x="${x(i * BIN) + 4}" width="${bw - 8}" y="${y(c + b[k])}" height="${y(c) - y(c + b[k])}"><title>p ${(i * BIN).toFixed(2)}–${((i + 1) * BIN).toFixed(2)}: ${b[k]}</title></rect>`; c += b[k]; } });
-  g += `<line class="thr" x1="${x(FLAG)}" x2="${x(FLAG)}" y1="${T - 6}" y2="${H - B}"/><text class="thr-l" x="${x(FLAG) + 5}" y="${T + 2}">flag at ${FLAG}</text>`;
-  const above = vals.filter(p => p >= FLAG).length, label = `its ${CAUSES.find(([k]) => k === histOf)[1]} score`;
-  const omed = ovals.length ? ovals[Math.floor((ovals.length - 1) / 2)] : null, oabove = ovals.filter(p => p >= FLAG).length;
-  $("hist").innerHTML = `<div class="eyebrow">How Jev scored every story · ${NAME[frame]}, with ${NAME[other]} behind it</div>
-    <p class="note">${vals.length} stories published after the forecast, each scored by ${label}, in bins of ${BIN}. ${NAME[frame]}: median ${med.toFixed(2)}, highest ${vals.length ? vals[vals.length - 1].toFixed(2) : "–"}, ${above} at or above the flag.${omed == null ? "" : ` ${NAME[other]}: median ${omed.toFixed(2)}, highest ${ovals[ovals.length - 1].toFixed(2)}, ${oabove} at or above the flag.`}</p>
-    <div class="controls">${CAUSES.map(([k, l]) => `<button data-h="${k}" aria-pressed="${k === histOf}">${l}</button>`).join("")}</div>
-    <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Histogram of Jev scores">${g}</svg>
-    <div class="key"><span><i style="background:var(--c-misalign)"></i>${NAME[frame]}</span><span><i style="background:var(--link)"></i>Jev's top story, rationale: none or negligible</span><span><i style="background:var(--c-bio)"></i>rationale: small or more</span><span><i style="background:color-mix(in srgb, var(--ink-faint) 22%, transparent);outline:1.2px dashed var(--ink-faint);outline-offset:-1px"></i>${NAME[other]} (the other tab)</span></div>`;
-  document.querySelectorAll("#hist button").forEach(b => b.addEventListener("click", () => { histOf = b.dataset.h; hist(); }));
-}
-
-function footnote() {
-  $("note").textContent =
-    `Built ${when(m.built)} from ${m.polls} polls. A write-up joins a story when Jev puts p(same event) at ${m.same_at} or above. ` +
-    DESC[frame] + " " + RDESC[rframe] + ` A story is flagged at p ${FLAG} or above, a deliberately low bar so that few real movers are missed.`;
-}
-
-// ---- Summary: every Jev condition x writer condition side by side
-const fmtK = n => n == null ? "–" : n >= 1000 ? Math.round(n / 1000) + "k" : String(n);
-const usd = x => x == null ? "–" : "$" + x.toFixed(x < 0.1 ? 3 : 2);
-const RANK = ["none", "negligible", "small", "moderate", "large"];
-function cell(jf, rf) {
-  // {fam: {size, dir}} and usage for one gate x writer pairing
-  if (jf === "none") {
-    const f = ((D.digests || {})[rf] || {}).forward;
-    return {fam: Object.fromEntries(CAUSES.map(([k]) => [k, f && f.verdicts[k] ? {size: f.verdicts[k].size, dir: f.verdicts[k].direction} : null])),
-            usd: f && f.usage.usd, wIn: f && f.usage.in, wOut: f && f.usage.out, jIn: 0, n: f ? 1 : 0};
-  }
-  const tops = topStories(jf), notes = (D.frames[rf] || {}).notes || {}, ns = tops.map(s => notes[s.id]).filter(Boolean);
-  const ju = (D.jev_usage || {})[jf] || {};
-  const sum = key => ns.reduce((t, n) => t + ((n.usage || {})[key] || 0), 0);
-  return {fam: Object.fromEntries(CAUSES.map(([k]) => { const best = ns.map(n => (n.verdicts || {})[k]).filter(Boolean)
-            .sort((a, b) => RANK.indexOf(b) - RANK.indexOf(a))[0]; return [k, best ? {size: best} : null]; })),
-          usd: sum("usd") + (ju.usd || 0), wIn: sum("in"), wOut: sum("out"), jIn: ju.in || 0, n: ns.length};
-}
-const SHORT = {none: "none", negligible: "negl.", small: "small", moderate: "mod.", large: "large"};
-function summary() {
-  const gates = [["airo", "Jev, sees forecast"], ["generic", "Jev, generic"], ["none", "No gate"]];
-  const writers = [["airo", "Writer sees the AIRO forecast"], ["generic", "Writer generic"]];
-  const C = Object.fromEntries(gates.map(([g]) => [g, Object.fromEntries(writers.map(([w]) => [w, cell(g, w)]))]));
-  const vt = `<div class="tablewrap"><table class="grid"><thead>
-      <tr><th></th>${writers.map(([, l]) => `<th colspan="4" class="grp">${l}</th>`).join("")}</tr>
-      <tr><th></th>${writers.map(() => CAUSES.map(([, l]) => `<th>${l}</th>`).join("")).join("")}</tr></thead><tbody>
-      ${gates.map(([g, gl]) => `<tr><th>${gl}</th>${writers.map(([w]) => CAUSES.map(([k], i) => { const v = C[g][w].fam[k];
-        return `<td class="${i === 0 ? "grp" : ""}" style="--c:${v ? VCOLOR[v.size] : "transparent"}">${v ? SHORT[v.size] + (v.dir === "up" ? " ↑" : v.dir === "down" ? " ↓" : "") : "–"}</td>`; }).join("")).join("")}</tr>`).join("")}
-    </tbody></table></div>`;
-  const ct = `<div class="tablewrap"><table class="grid cost"><thead><tr><th></th>${writers.map(([, l]) => `<th class="grp">${l}</th>`).join("")}</tr></thead><tbody>
-      ${gates.map(([g, gl]) => `<tr><th>${gl}</th>${writers.map(([w]) => { const c = C[g][w];
-        return `<td class="grp"><b>${usd(c.usd)}</b><span>${g === "none" ? "" : `Jev ${fmtK(c.jIn)} in · `}writer ${fmtK(c.wIn)} in / ${fmtK(c.wOut)} out</span></td>`; }).join("")}</tr>`).join("")}
-    </tbody></table></div>`;
-  const jevRows = FRAMES.map(f => { const v = POST.map(s => pOf(f, s)).filter(p => p >= 0).sort((a, b) => a - b);
-    return `<tr><th>${esc(NAME[f])}</th><td>${v.length ? v[Math.floor((v.length - 1) / 2)].toFixed(2) : "–"}</td><td>${v.length ? v[v.length - 1].toFixed(2) : "–"}</td><td>${v.filter(p => p >= FLAG).length}</td></tr>`; }).join("");
-  $("tab-summary").innerHTML = `
-    <div class="eyebrow">How much this week moves each family</div>
-    ${vt}
-    <p class="note">${POST.length} stories published after the ${esc(FC)} forecast. With a Jev gate: the largest verdict across Jev's top ${TOPN} stories. No gate: one read of all ${POST.length}. ↑ up, ↓ down.</p>
-    <div class="eyebrow">Cost of each pipeline, this week</div>
-    ${ct}
-    <div class="eyebrow">Jev's scores</div>
-    <div class="tablewrap"><table class="grid"><thead><tr><th></th><th>median p</th><th>highest</th><th>≥ ${FLAG}</th></tr></thead><tbody>${jevRows}</tbody></table></div>`;
-}
-
-let tab = "summary";
-try { if (localStorage.getItem("news-tab") === "explore") tab = "explore"; } catch (e) {}
-function showTab(t) {
-  tab = t;
-  for (const x of ["summary", "explore"]) { $("t-" + x).setAttribute("aria-selected", String(x === t)); $("tab-" + x).hidden = x !== t; }
-  try { localStorage.setItem("news-tab", t); } catch (e) {}
-}
-for (const x of ["summary", "explore"]) $("t-" + x).addEventListener("click", () => showTab(x));
-
-$("dropped").innerHTML = `<summary>${D.dropped.length} items dropped by the AI gate (feeds not limited to AI)</summary><ul>` +
-  D.dropped.map(d => `<li>${esc(d.title)} <span class="n">(p_ai ${d.p?.toFixed(2)})</span></li>`).join("") + "</ul>";
-applyFrame();
-summary();
-showTab(tab);
+$("foot").textContent = `Built ${when(M.built)} from ${M.polls} polls of ${M.feeds} feeds; ${M.dropped} items dropped as not about AI. Jev folds write-ups of the same event into one story (p(same event) ≥ ${M.same_at}). Cutoff: the forecast run ${M.run}. A brief: the headline, outlet and date of up to three reports, the publisher's standfirst where the feed gave one, and the first ${M.brief_words} words of the first report whose article could be read.`;
+band(); choose(sel.f, sel.o);
 </script>
