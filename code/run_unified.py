@@ -389,6 +389,57 @@ rationale for its numbers naming the mechanism at that severity and the anchor
 you used, the sources that mattered most to it, and the assumption you are least
 sure of -- research with those questions in mind."""
 
+# PROMPT VARIANTS (--variant; Jason's five, 2026-10-14). The dashboard may
+# draw several "reasonable" elicitations as a range rather than one line, so
+# each variant is the same instrument with ONE added instruction, verbatim
+# from Jason, printed as its own block just ahead of the research paragraph.
+# `none` adds nothing: its prompt is byte-for-byte the published one. Any
+# other variant is a different elicitation, so its rows carry the variant id
+# and a protocol tag of their own, and main_joint keeps it out of the series.
+VARIANTS = {
+    "none": None,
+    "independent": (
+        "Try to make your own forecasts. Do not take into account external surveys "
+        "assessing extinction or catastrophic risk, or other probabilities given by "
+        "prominent figures. The goal is to reach your own independent conclusion."),
+    "recent": (
+        "If you search external information, focus on information that arrived within "
+        "the past year, and weight more heavily sources that are more up to date about "
+        "recent developments."),
+    "critical": (
+        "Evaluate existing information critically. If you take into account forecasts by "
+        "specific people or surveyed groups, consider their recent and historical "
+        "forecasting accuracy, as well as the information available to the forecasters "
+        "when they made their forecasts."),
+    "two-step": (
+        "Proceed in two steps. First, make the best predictions you can about model "
+        "capability progress over the relevant time frame, via human generated "
+        "improvement or recursive self-improvement. Consider the distribution, not only "
+        "the modal outcome. Then, given possible model capabilities, evaluate the risk "
+        "posed and put these pieces together."),
+}
+DEFAULT_VARIANT = "none"
+VARIANT_BLOCK = """===== APPROACH =====
+
+{text}
+
+"""
+
+
+def variant_protocol(proto, variant):
+    """The protocol tag for a variant: the set's own for `none`, suffixed else."""
+    return proto if not VARIANTS.get(variant) else f"{proto}+{variant}"
+
+
+def apply_variant(prompt, variant):
+    """Insert the variant's instruction ahead of the research paragraph."""
+    text = VARIANTS[variant]
+    if not text:
+        return prompt
+    at = prompt.index("Research before answering, in rounds")
+    return prompt[:at] + VARIANT_BLOCK.format(text=text) + prompt[at:]
+
+
 GROUP_BLOCK = """
 ===== {heading} =====
 
@@ -1094,7 +1145,8 @@ def clean_elicit(raw, elicit):
     return out
 
 
-def build_prompt_joint(groups, by_group, horizons, spec, conds, policies, today=None):
+def build_prompt_joint(groups, by_group, horizons, spec, conds, policies, today=None,
+                       variant=DEFAULT_VARIANT):
     """The whole set, and the whole condition set, in one prompt.
 
     The question blocks are exactly build_prompt's (same criteria, same shared
@@ -1119,15 +1171,15 @@ def build_prompt_joint(groups, by_group, horizons, spec, conds, policies, today=
     if groups:
         present = [g for g in groups if any(c.get("group") == g["key"] for c in conds)]
         kinds = " and ".join(f"{g['kind']} conditions" for g in present)
-        return PROMPT_JOINT_GROUPED.format(
+        return apply_variant(PROMPT_JOINT_GROUPED.format(
             today=today.isoformat(), n=n, k=k, blocks=blocks, ngroups=len(present),
             kinds=kinds, extra=submit_extra(policies),
             conditions=conditions_block(conds, policies),
-            horizons=hz, cells=cells, total=cells * k), n, cells
-    return PROMPT_JOINT.format(today=today.isoformat(), n=n, k=k, blocks=blocks,
+            horizons=hz, cells=cells, total=cells * k), variant), n, cells
+    return apply_variant(PROMPT_JOINT.format(today=today.isoformat(), n=n, k=k, blocks=blocks,
                                kind=set_kind(policies), extra=submit_extra(policies),
                                conditions=conditions_block(conds, policies),
-                               horizons=hz, cells=cells, total=cells * k), n, cells
+                               horizons=hz, cells=cells, total=cells * k), variant), n, cells
 
 
 def _as_list(raw):
@@ -1201,13 +1253,14 @@ def coverage_line(rows):
 
 
 def run_one_joint(label, model_id, groups, by_group, horizons, run_id, retries, spec,
-                  conds, policies, experiment=None, arm=None, panel=None, today=None):
+                  conds, policies, experiment=None, arm=None, panel=None, today=None,
+                  variant=DEFAULT_VARIANT):
     """One call: the full instrument. -> rows, one per (question, condition)."""
     today = today or datetime.now(timezone.utc).date()
     policies = resolve_set(policies, today)
     conds = [c for c in policies["conditions"] if c["id"] in {x["id"] for x in conds}]
     prompt, n, want_cells = build_prompt_joint(groups, by_group, horizons, spec,
-                                               conds, policies, today)
+                                               conds, policies, today, variant)
     block = conditions_block(conds, policies)
     sha = hashlib.sha256(block.encode()).hexdigest()
     cond_ids = [c["id"] for c in conds]
@@ -1303,6 +1356,8 @@ def run_one_joint(label, model_id, groups, by_group, horizons, run_id, retries, 
     unread = [u for u in (answer.get("key_sources") or []) if isinstance(u, str) and u not in read]
     stamp = datetime.now(timezone.utc).isoformat(timespec="seconds")
     call_id = f"{run_id}:{set_slug(policies)}:{arm}:{label}"
+    if VARIANTS[variant]:
+        call_id += f":{variant}"
     rows, first = [], True
     for key in [UNCONDITIONAL_KEY] + cond_ids:
         grid = (grids or {}).get(key) or {}
@@ -1333,7 +1388,7 @@ def run_one_joint(label, model_id, groups, by_group, horizons, run_id, retries, 
                     "prompt_sha256": hashlib.sha256(prompt.encode()).hexdigest(),
                     "prompt": prompt if first else None,
                     "system_prompt": SYSTEM if first else None,
-                    "protocol": set_protocol(policies),
+                    "protocol": variant_protocol(set_protocol(policies), variant),
                     "condition_set": set_slug(policies),
                     "call_id": call_id, "attempts": attempts,
                     "batch_size": len(qids),
@@ -1353,6 +1408,9 @@ def run_one_joint(label, model_id, groups, by_group, horizons, run_id, retries, 
                                   "targets": {e["key"]: e.get("target_date") for e in elicits}}
                                  if elicits else None),
                     "experiment": experiment, "arm": arm,
+                    # Which prompt variant (VARIANTS) asked: "none" is the
+                    # published prompt.
+                    "variant": variant,
                     # Which conditions this call was asked, so a partial
                     # submission is visibly partial.
                     "joint_conditions": [UNCONDITIONAL_KEY] + cond_ids,
@@ -1581,6 +1639,11 @@ def main():
                          "for another)")
     ap.add_argument("--experiment",
                     help="tag every row with this experiment name (needs --out)")
+    ap.add_argument("--variant", action="append", choices=sorted(VARIANTS),
+                    help="with --joint: the PROMPT VARIANT (VARIANTS; repeatable, one "
+                         "call per model per variant). Default none, the published "
+                         "prompt; any other needs --experiment, so it never writes "
+                         "into the published series")
     ap.add_argument("--dry-run", action="store_true",
                     help="print each arm's prompt and exit; no model is called")
     args = ap.parse_args()
@@ -1726,6 +1789,10 @@ def main_joint(args):
                  "is one dated file per run under results/runs/ (see cron_run.sh)")
     if args.repeats < 1:
         sys.exit("--repeats must be >= 1")
+    variants = args.variant or [DEFAULT_VARIANT]
+    if any(VARIANTS[v] for v in variants) and not args.experiment and not args.dry_run:
+        sys.exit("refusing: a prompt variant is not the published elicitation; "
+                 "tag the run with --experiment <name>")
     # A smoke or an experiment is not the published series. The plain path
     # refuses to write those into the run log; this path routes them by
     # default, so a hand smoke never appends to results/runs/ or the
@@ -1770,27 +1837,33 @@ def main_joint(args):
         sys.exit("--conditional-out must differ from --out")
     groups, by_group, horizons, skipped, spec = load_batch(LADDER, CROSS, UNBATCHED)
     horizons = set_horizons(policies, horizons)
+    prompts = {v: build_prompt_joint(groups, by_group, horizons, spec, conds,
+                                     policies, today, v)[0] for v in variants}
     prompt, n, cells = build_prompt_joint(groups, by_group, horizons, spec, conds,
-                                          policies, today)
+                                          policies, today, variants[0])
     for el in set_elicits(resolve_set(policies, today)):
         print(f"    elicits {el['key']} {el['fields']} for {el.get('target_date')}"
               + (f" (run date + {el['target_months']} months)" if el.get("target_months") else ""))
     if args.dry_run:
-        print(f"##### JOINT [{slug}: {proto}]: {n} questions, {cells} cells x {len(conds) + 1} "
-              f"conditions = {cells * (len(conds) + 1)} probabilities, {len(prompt)} chars #####")
-        print(prompt)
+        for v, p in prompts.items():
+            print(f"##### JOINT [{slug}: {variant_protocol(proto, v)}]: {n} questions, {cells} cells x "
+                  f"{len(conds) + 1} conditions = {cells * (len(conds) + 1)} probabilities, "
+                  f"{len(p)} chars #####")
+            print(p)
         return
     load_keys()
     if not os.environ.get("TAVILY_API_KEY") and not args.allow_ungrounded:
         sys.exit("refusing to run: TAVILY_API_KEY is unset (see the unconditional path)")
     models, panel = select_models(args)
-    print(f"run {run_id} protocol {proto} [set {slug}]: {len(models) * len(arms)} calls "
-          f"({len(models)} models x {len(arms)} repeat(s)), {n} questions x "
+    print(f"run {run_id} protocol {proto} [set {slug}]: {len(models) * len(arms) * len(variants)} calls "
+          f"({len(models)} models x {len(arms)} repeat(s) x {len(variants)} variant(s)), {n} questions x "
           f"{len(horizons)} horizons = {cells} cells x {len(conds) + 1} conditions "
           f"= {cells * (len(conds) + 1)} probabilities each")
     print(f"    harness: research floor {MIN_RESEARCH} calls, coverage "
           f"{', '.join(g['key'] for g in groups)}, guard {MAX_ROUNDS} rounds; reasoning "
           + ", ".join(f"{l}={reasoning_for(m) or 'default'}" for l, m in models))
+    if variants != [DEFAULT_VARIANT]:
+        print(f"    variants: {', '.join(variants)}")
     print(f"    conditions: {UNCONDITIONAL_KEY}, {', '.join(c['id'] for c in conds)}"
           + (f"  [experiment: {args.experiment}]" if args.experiment else ""))
     for g in set_groups(policies):
@@ -1811,11 +1884,11 @@ def main_joint(args):
             cf.ThreadPoolExecutor(max_workers=args.workers) as ex:
         futs = {ex.submit(run_one_joint, l, m, groups, by_group, horizons, run_id,
                           args.retries, spec, conds, policies, args.experiment, arm, panel,
-                          today): (arm, l)
-                for arm in arms for l, m in models}
+                          today, v): (arm, l, v)
+                for v in variants for arm in arms for l, m in models}
         for fut in cf.as_completed(futs):
-            arm, label = futs[fut]
-            tag = f"{arm + ':' + label:32}"
+            arm, label, v = futs[fut]
+            tag = f"{arm + ':' + label + ('' if v == DEFAULT_VARIANT else ':' + v):32}"
             try:
                 rows = fut.result()
             except Exception as e:
