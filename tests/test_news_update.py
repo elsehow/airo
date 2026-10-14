@@ -103,17 +103,17 @@ class Briefs(unittest.TestCase):
         s = self.ss[1]
         self.assertIsNone(nu.brief(s, self.its)["excerpt"])
         self.assertIn("Headline only", nu.brief_text("S1", s, self.its))
-        self.its[s["members"][0]["item"]]["text"] = "Lab ships a model\n\n" + "A long paragraph of prose. " * 200
+        self.its[s["members"][0]["item"]]["text"] = "# Lab ships a model\n\n" + "The lab ships a new model today, in a long paragraph of prose. " * 200
         b = nu.brief(s, self.its)
         self.assertEqual(len(b["excerpt"]["text"].split()), nu.BRIEF_WORDS + 1)   # the words, then "…"
 
     def test_first_readable_member_in_order(self):
         s = self.ss[0]
         later = item("Worm: more hospitals", "2026-10-12T12:00:00Z", source="Other Paper")
-        self.its[later["id"]] = dict(later, text="Worm: more hospitals\n\n" + "Detail of the worm attack here. " * 5)
+        self.its[later["id"]] = dict(later, text="Worm: more hospitals\n\n" + "The worm reached more hospitals overnight, officials said. " * 12)
         join(s, later)
         self.assertEqual(nu.brief(s, self.its)["excerpt"]["source"], "Other Paper")
-        self.its[s["members"][0]["item"]]["text"] = "x\n\n" + "The first report's own text, long enough. " * 5
+        self.its[s["members"][0]["item"]]["text"] = "x\n\n" + "The agent worm hits hospitals across the region, officials said. " * 12
         self.assertEqual(nu.brief(s, self.its)["excerpt"]["source"], "Synthetic Wire")
 
     def test_article_standfirst_left_off(self):
@@ -133,12 +133,26 @@ class Briefs(unittest.TestCase):
         def ext(url):
             seen.append(url)
             ok = "worm-two" in url
-            return {"url": url, "text": "Body of two." if ok else "", "error": None if ok else "401"}
+            return {"url": url, "text": "The worm two variant spread across more systems today. " * 12 if ok else "",
+                    "error": None if ok else "401"}
         news.fetch_first_readable([s], self.its, state_dir=d, extract=ext)
         self.assertEqual([u.rsplit("/", 1)[1] for u in seen],
                          ["agent-worm-hits-hospitals", "agent-worm-hits-hospitals", "worm-two"])   # www retry, then the next
         news.fetch_first_readable([s], self.its, state_dir=d, extract=ext)
         self.assertEqual(len(seen), 3)
+
+    def test_a_paywall_page_is_not_the_article(self):
+        page = ("[Skip to main content](https://x/#c)\n*   [Sign In](https://x/login)\n# Lab ships a model\n"
+                "Subscribe to read\n![lex](https://x/i.png)\n"
+                "Save now on essential digital access to trusted journalism on any device, cancel anytime. " * 3)
+        self.assertEqual(news.opening(page, "Lab ships a model"), "")
+        it = self.its[self.ss[1]["members"][0]["item"]]
+        it["text"] = page
+        self.assertIsNone(nu.brief(self.ss[1], self.its)["excerpt"])
+        menu = "\n".join(f"*   [Section {i}](https://x/{i})" for i in range(40))
+        body = "The lab ships its new model to every customer this week, the company said on Monday. " * 8
+        self.assertTrue(news.opening(menu + "\n# Lab ships a model\n![a](https://x/a.jpg)\n" + body + "\n" + body,
+                                     "Lab ships a model").startswith("The lab ships"))
 
     def test_listing_orders(self):
         f = nu.listing(self.ss)

@@ -469,18 +469,37 @@ def extract_text(url, key=None, depth="advanced", post=None):
     return {"url": url, "text": text, "chars": len(text)}
 
 
+BOILERPLATE = re.compile(r"(posts from this (topic|author)|editorial board is a group|save now on|digital access|subscribe|sign in|sign up|"
+                         r"exclusive news, data and analytics|technology review explains|what our readers say|"
+                         r"terms & conditions|cancel anytime|skip to|cookie|newsletter|all rights reserved)", re.I)
+
+
+def _clean(line):
+    p = re.sub(r"!\[[^\]]*\]\([^)]*\)", " ", line)                # images
+    p = re.sub(r"\[([^\]]*)\]\([^)]*\)", r"\1", p)                # markdown links -> their text
+    p = re.sub(r"[#*_>|]+", " ", re.sub("[\u200b-\u200d\u2060\ufeff]", "", p))
+    return re.sub(r"\s+", " ", p).strip()
+
+
 def _prose(text, title=""):
-    """The article's paragraphs of real prose, cleaned: no headline, byline,
-    dateline-only or sign-up lines, links reduced to their text."""
-    head = (title or "").lower()[:40]
-    for para in re.split(r"\n+", text or ""):
-        p = re.sub(r"\[([^\]]*)\]\([^)]*\)", r"\1", para)          # markdown links -> their text
-        p = re.sub(r"[#*_>|]+", " ", re.sub("[\u200b-\u200d\u2060\ufeff]", "", p))
-        p = re.sub(r"\s+", " ", p).strip()
-        if len(p) < 80 or (head and head in p.lower()):
+    """The article's paragraphs of real prose, cleaned: from the headline on
+    when the page repeats it, with no menus, images, byline, dateline-only,
+    subscription or repeated lines, links reduced to their text."""
+    lines = (text or "").split("\n")
+    head = _clean(title).lower()[:40]
+    is_head = lambda p: head and head in p.lower() and len(p) < len(title) + 40   # the headline, not prose quoting it
+    at = next((i for i, l in enumerate(lines) if is_head(_clean(l))), None)
+    seen = set()
+    for raw in lines[at + 1 if at is not None else 0:]:
+        if re.match(r"\s*(!\[|[*-]\s+\[|\[[^\]]*\]\([^)]*\)\s*$)", raw):   # an image, a menu entry, a bare link
             continue
-        if re.match(r"(by |reporting by|editing by|sign up|updated |share |\w+ \d+ \(reuters\) -$)", p.lower()):
+        p = _clean(raw)
+        if len(p) < 80 or is_head(p) or BOILERPLATE.search(p) \
+                or p in seen:   # too short for prose, the headline again, boilerplate, a repeat
             continue
+        if re.match(r"(by |is an? |reporting by|editing by|updated |share |\w+ \d+ \(reuters\) -$)", p.lower()):
+            continue
+        seen.add(p)
         yield p
 
 
@@ -490,16 +509,24 @@ def lede(text, title=""):
     return next(_prose(text, title), "")[:SUMMARY_CHARS]
 
 
-def opening(text, title="", words=250):
-    """The article's first `words` words of prose, cut mid-sentence if need be
+MIN_WORDS = 60   # an opening shorter than this is a page that was not the article
+
+
+def opening(text, title="", n=250):
+    """The article's first `n` words of prose, cut mid-sentence if need be
     ("…" marks a cut): the same length for every story, so that no story reads
-    as weightier for having more text."""
+    as weightier for having more text. "" when what was read is not the
+    article: under MIN_WORDS of prose, or sharing too few words with the headline."""
     out = []
     for p in _prose(text, title):
         out += p.split()
-        if len(out) >= words:
-            return " ".join(out[:words]) + " …"
-    return " ".join(out)
+        if len(out) >= n:
+            break
+    got = " ".join(out[:n]) + (" …" if len(out) > n else "")
+    hw = words(title)
+    if len(out) < MIN_WORDS or len(hw & words(got)) < min(2, len(hw)):
+        return ""
+    return got
 
 
 def fetch_fulltext(item_ids, items, state_dir=STATE_DIR, extract=extract_text, now=None):
@@ -525,7 +552,8 @@ def fetch_fulltext(item_ids, items, state_dir=STATE_DIR, extract=extract_text, n
 
 def first_readable(story, items):
     """The story's first report, in member order, whose article text was read; else None."""
-    return next((items[m["item"]] for m in story["members"] if items[m["item"]].get("text")), None)
+    return next((items[m["item"]] for m in story["members"]
+                 if opening(items[m["item"]].get("text"), items[m["item"]]["title"])), None)
 
 
 def fetch_first_readable(stories, items, state_dir=STATE_DIR, extract=extract_text, now=None):
@@ -545,7 +573,8 @@ def fetch_first_readable(stories, items, state_dir=STATE_DIR, extract=extract_te
             rows.append(r)
             if r.get("text"):
                 items[m["item"]]["text"] = r["text"]
-                break
+                if opening(r["text"], items[m["item"]]["title"]):   # the article, not a paywall or a menu
+                    break
     return rows
 
 
