@@ -642,7 +642,8 @@ def _frame_data(state_dir, frame):
     rows = news.read_jsonl(os.path.join(state_dir, LOGS[frame][0]))
     against = max((r["forecast"] for r in rows), default=None)   # the latest run, or "generic"
     screened = {r["story"]: r for r in rows if r["forecast"] == against}
-    notes = [n for n in news.read_jsonl(os.path.join(state_dir, LOGS[frame][1])) if n["forecast"] == against]
+    notes = [n for n in news.read_jsonl(os.path.join(state_dir, LOGS[frame][1]))
+             if n["forecast"] == against and n.get("verdicts")]   # the per-family task; older notes are left off
     cal = calibrate(screened, notes)
     return screened, {
         "notes": {n["story"]: dict({k: n[k] for k in ("at", "text", "verdict", "writer", "eci", "flagged")},
@@ -679,9 +680,9 @@ def page_data(state_dir, fc_meta=None):
                for s in built["stories"]]
     post_ids = {s["id"] for s in stories if s["post"]}
     fetches = news.read_jsonl(os.path.join(state_dir, "fetches.jsonl"))
-    written = {(f, sid) for f in FRAMES for sid in frames[f][1]["notes"]}
-    gaps = [g for g in news.read_jsonl(os.path.join(state_dir, "rationale_gaps.jsonl"))
-            if (g["frame"], g["story"]) not in written]
+    written = {(f, sid): n["at"] for f in FRAMES for sid, n in frames[f][1]["notes"].items()}
+    gaps = [g for g in news.read_jsonl(os.path.join(state_dir, "rationale_gaps.jsonl"))   # failed since the last note
+            if g["at"] > written.get((g["frame"], g["story"]), "")]
     airo_rows = news.read_jsonl(os.path.join(state_dir, LOGS["airo"][0]))
     return {"meta": {"items": built["stats"]["items"], "stories": len(stories), "built": built["built_at"],
                      "polls": len({f["at"] for f in fetches}), "feeds": len({f["feed"] for f in fetches}),
@@ -700,7 +701,7 @@ def page_data(state_dir, fc_meta=None):
                           for rows in [[r for sid, r in frames[f][0].items() if sid in post_ids]]},
             "gaps": {f"{g['frame']}:{g['story']}": "The writer returned no text "
                      f"({sum(1 for h in gaps if (h['frame'], h['story']) == (g['frame'], g['story']))} "
-                     "attempt(s)); it stopped before writing, which a retry can fix." for g in gaps}}
+                     "attempt(s)): it stopped before writing anything." for g in gaps}}
 
 
 def render_page(state_dir, out_path, fc_meta=None):

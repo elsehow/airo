@@ -59,7 +59,8 @@ VERDICT = {"Agent worm hits hospitals": "small", "Lab ships a model": "none",
 
 def fake_complete(model, system, prompt):
     title = prompt.split('## The news story\n\n"', 1)[1].split('"', 1)[0]
-    return {"text": f"Note on {title}.\n\nVERDICT: {VERDICT[title]}", "usage": {"cost_usd": 0.5}}
+    lines = "\n".join(f"VERDICT {c}: {VERDICT[title]}" for c in ns.FAMILY)
+    return {"text": f"Note on {title}.\n\n{lines}", "usage": {"cost_usd": 0.5}}
 
 
 class Forecast(unittest.TestCase):
