@@ -725,6 +725,55 @@ class TestRollingSelfElicitedSet(unittest.TestCase):
         self.assertEqual(hashlib.sha256(pl.encode()).hexdigest(), TestConditionSets.LEAP_PROMPT_SHA_CURRENT)
 
 
+class TestPromptVariants(unittest.TestCase):
+    """--variant: Jason's five elicitations of the combined instrument
+    (2026-10-14). `none` is the published prompt, byte for byte; each other
+    variant adds exactly its own instruction and tags its rows apart."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.ru = _load_runner()
+        cls.cb = cls.ru.load_policies(REPO / "data" / "combined_conditions.json")
+        cls.batch = cls.ru.load_batch(cls.ru.LADDER, cls.ru.CROSS, cls.ru.UNBATCHED)
+
+    def _prompt(self, variant=None):
+        groups, by_group, horizons, _, spec = self.batch
+        args = (groups, by_group, horizons, spec, self.cb["conditions"], self.cb, date(2026, 10, 14))
+        if variant is None:
+            return self.ru.build_prompt_joint(*args)[0]
+        return self.ru.build_prompt_joint(*args, variant=variant)[0]
+
+    def test_none_is_the_published_prompt(self):
+        self.assertEqual(self.ru.DEFAULT_VARIANT, "none")
+        self.assertEqual(self._prompt("none"), self._prompt())
+        self.assertNotIn("===== APPROACH =====", self._prompt())
+
+    def test_each_variant_adds_only_its_instruction(self):
+        base = self._prompt()
+        self.assertEqual(len(self.ru.VARIANTS), 5)
+        for v, text in self.ru.VARIANTS.items():
+            if not text:
+                continue
+            p = self._prompt(v)
+            block = self.ru.VARIANT_BLOCK.format(text=text)
+            self.assertEqual(p.replace(block, "", 1), base, v)
+            self.assertLess(p.index(block), p.index("Research before answering, in rounds"))
+
+    def test_variant_rows_carry_their_own_protocol(self):
+        proto = self.ru.set_protocol(self.cb)
+        self.assertEqual(self.ru.variant_protocol(proto, "none"), proto)
+        tags = {self.ru.variant_protocol(proto, v) for v in self.ru.VARIANTS}
+        self.assertEqual(len(tags), len(self.ru.VARIANTS))
+
+    def test_a_variant_needs_an_experiment_tag(self):
+        r = subprocess.run([sys.executable, str(REPO / "code" / "run_unified.py"), "--joint",
+                            "--variant", "recent", "--conditions",
+                            str(REPO / "data" / "leap_policies.json")],
+                           capture_output=True, text=True)
+        self.assertNotEqual(r.returncode, 0)
+        self.assertIn("--experiment", r.stderr)
+
+
 class TestCombinedSet(unittest.TestCase):
     """data/combined_conditions.json: the LEAP policies and the six-month
     capability conditions in ONE instrument -- side by side, never crossed.
