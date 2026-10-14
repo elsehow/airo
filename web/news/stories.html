@@ -52,13 +52,17 @@
 #tab-explore[hidden] { display: none; }
 .summary { display: grid; gap: 14px; }
 .tablewrap { overflow-x: auto; }
-table.cond { border-collapse: collapse; font-size: 13px; width: 100%; min-width: 760px; }
-table.cond th, table.cond td { text-align: left; padding: 7px 10px 7px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
-table.cond th { font-family: var(--mono); font-size: 11px; font-weight: 500; color: var(--ink-faint); text-transform: uppercase; letter-spacing: 0.06em; }
-table.cond td.n { font-family: var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
-table.cond tr.gate td { border-top: 2px solid var(--line); }
-table.cond .v { font-family: var(--mono); font-size: 12px; white-space: nowrap; border-left: 3px solid var(--c); padding-left: 6px; }
-table.cond .read { color: var(--ink-soft); font-size: 12.5px; max-width: 30ch; }
+table.grid { border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+table.grid th, table.grid td { padding: 6px 10px; text-align: center; white-space: nowrap; }
+table.grid thead th { font-family: var(--mono); font-size: 11px; font-weight: 500; color: var(--ink-faint); text-transform: uppercase; letter-spacing: 0.05em; }
+table.grid thead th.grp { color: var(--ink); text-transform: none; letter-spacing: 0; font-family: var(--body); font-size: 13px; font-weight: 600; }
+table.grid tbody th { text-align: left; font-weight: 600; padding-right: 16px; }
+table.grid tbody tr + tr > * { border-top: 1px solid var(--line); }
+table.grid .grp { border-left: 1px solid var(--line); }
+table.grid td { font-family: var(--mono); background: color-mix(in srgb, var(--c, transparent) 22%, transparent); }
+table.grid.cost td { text-align: left; background: none; }
+table.grid.cost td b { display: block; font-size: 15px; font-weight: 500; }
+table.grid.cost td span { font-size: 11.5px; color: var(--ink-soft); }
 .vgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
 .vcell { border: 1px solid var(--line); border-left: 3px solid var(--c); border-radius: 6px; padding: 8px 10px; display: grid; gap: 2px; background: var(--panel); min-width: 0; }
 .vcell b { font-family: var(--mono); font-weight: 500; font-size: 15px; }
@@ -400,43 +404,45 @@ function footnote() {
 const fmtK = n => n == null ? "–" : n >= 1000 ? Math.round(n / 1000) + "k" : String(n);
 const usd = x => x == null ? "–" : "$" + x.toFixed(x < 0.1 ? 3 : 2);
 const RANK = ["none", "negligible", "small", "moderate", "large"];
-function vcell(size, dir, extra) {
-  return `<span class="v" style="--c:${VCOLOR[size] || "var(--line)"}">${esc(size || "–")}${dir && dir !== "none" ? " " + (dir === "up" ? "↑" : dir === "down" ? "↓" : "↕") : ""}${extra ? " " + extra : ""}</span>`;
-}
-function summary() {
-  const rows = [];
-  for (const jf of ["airo", "generic", "none"]) for (const rf of FRAMES) {
-    const ju = jf === "none" ? null : (D.jev_usage || {})[jf];
-    if (jf === "none") {
-      const d = (D.digests || {})[rf] || {}, f = d.forward, r = d.reversed;
-      const fam = CAUSES.map(([k]) => { const a = f && f.verdicts[k], b = r && r.verdicts[k];
-        return vcell(a && a.size, a && a.direction, b && a && b.size !== a.size ? `(rev: ${esc(b.size)})` : ""); });
-      rows.push({jf, rf, read: `All ${POST.length} stories in one call${r ? "; repeated with the list reversed" : ""}`, fam,
-                 jevIn: null, jevUsd: 0, wIn: f && f.usage.in, wOut: f && f.usage.out, wUsd: f && f.usage.usd,
-                 extra: r ? `reversed repeat: ${fmtK(r.usage.in)} in, ${fmtK(r.usage.out)} out, ${usd(r.usage.usd)}` : ""});
-    } else {
-      const tops = topStories(jf), notes = (D.frames[rf] || {}).notes || {}, ns = tops.map(s => notes[s.id]).filter(Boolean);
-      const fam = CAUSES.map(([k]) => { const sizes = ns.map(n => (n.verdicts || {})[k]).filter(Boolean);
-        const best = sizes.sort((a, b) => RANK.indexOf(b) - RANK.indexOf(a))[0];
-        const by = ns.filter(n => (n.verdicts || {})[k] === best && RANK.indexOf(best) >= 2).length;
-        return vcell(best, null, by ? `(${by} of ${tops.length})` : ""); });
-      const sum = key => ns.reduce((t, n) => t + ((n.usage || {})[key] || 0), 0);
-      rows.push({jf, rf, read: `Jev's top ${tops.length}: ` + tops.map(s => esc(s.title)).join("; ") + (ns.length < tops.length ? ` (${tops.length - ns.length} not written)` : ""),
-                 fam, jevIn: ju && ju.in, jevUsd: ju ? ju.usd : 0, wIn: sum("in"), wOut: sum("out"), wUsd: sum("usd"), extra: ""});
-    }
+function cell(jf, rf) {
+  // {fam: {size, dir}} and usage for one gate x writer pairing
+  if (jf === "none") {
+    const f = ((D.digests || {})[rf] || {}).forward;
+    return {fam: Object.fromEntries(CAUSES.map(([k]) => [k, f && f.verdicts[k] ? {size: f.verdicts[k].size, dir: f.verdicts[k].direction} : null])),
+            usd: f && f.usage.usd, wIn: f && f.usage.in, wOut: f && f.usage.out, jIn: 0, n: f ? 1 : 0};
   }
+  const tops = topStories(jf), notes = (D.frames[rf] || {}).notes || {}, ns = tops.map(s => notes[s.id]).filter(Boolean);
+  const ju = (D.jev_usage || {})[jf] || {};
+  const sum = key => ns.reduce((t, n) => t + ((n.usage || {})[key] || 0), 0);
+  return {fam: Object.fromEntries(CAUSES.map(([k]) => { const best = ns.map(n => (n.verdicts || {})[k]).filter(Boolean)
+            .sort((a, b) => RANK.indexOf(b) - RANK.indexOf(a))[0]; return [k, best ? {size: best} : null]; })),
+          usd: sum("usd") + (ju.usd || 0), wIn: sum("in"), wOut: sum("out"), jIn: ju.in || 0, n: ns.length};
+}
+const SHORT = {none: "none", negligible: "negl.", small: "small", moderate: "mod.", large: "large"};
+function summary() {
+  const gates = [["airo", "Jev, sees forecast"], ["generic", "Jev, generic"], ["none", "No gate"]];
+  const writers = [["airo", "Writer sees the AIRO forecast"], ["generic", "Writer generic"]];
+  const C = Object.fromEntries(gates.map(([g]) => [g, Object.fromEntries(writers.map(([w]) => [w, cell(g, w)]))]));
+  const vt = `<div class="tablewrap"><table class="grid"><thead>
+      <tr><th></th>${writers.map(([, l]) => `<th colspan="4" class="grp">${l}</th>`).join("")}</tr>
+      <tr><th></th>${writers.map(() => CAUSES.map(([, l]) => `<th>${l}</th>`).join("")).join("")}</tr></thead><tbody>
+      ${gates.map(([g, gl]) => `<tr><th>${gl}</th>${writers.map(([w]) => CAUSES.map(([k], i) => { const v = C[g][w].fam[k];
+        return `<td class="${i === 0 ? "grp" : ""}" style="--c:${v ? VCOLOR[v.size] : "transparent"}">${v ? SHORT[v.size] + (v.dir === "up" ? " ↑" : v.dir === "down" ? " ↓" : "") : "–"}</td>`; }).join("")).join("")}</tr>`).join("")}
+    </tbody></table></div>`;
+  const ct = `<div class="tablewrap"><table class="grid cost"><thead><tr><th></th>${writers.map(([, l]) => `<th class="grp">${l}</th>`).join("")}</tr></thead><tbody>
+      ${gates.map(([g, gl]) => `<tr><th>${gl}</th>${writers.map(([w]) => { const c = C[g][w];
+        return `<td class="grp"><b>${usd(c.usd)}</b><span>${g === "none" ? "" : `Jev ${fmtK(c.jIn)} in · `}writer ${fmtK(c.wIn)} in / ${fmtK(c.wOut)} out</span></td>`; }).join("")}</tr>`).join("")}
+    </tbody></table></div>`;
   const jevRows = FRAMES.map(f => { const v = POST.map(s => pOf(f, s)).filter(p => p >= 0).sort((a, b) => a - b);
-    const u = (D.jev_usage || {})[f] || {};
-    return `<tr><td>${esc(NAME[f])}</td><td class="n">${v.length}</td><td class="n">${v.length ? v[Math.floor((v.length - 1) / 2)].toFixed(2) : "–"}</td><td class="n">${v.length ? v[v.length - 1].toFixed(2) : "–"}</td><td class="n">${v.filter(p => p >= FLAG).length}</td><td class="n">${fmtK(u.in)}</td><td class="n">${usd(u.usd)}</td></tr>`; }).join("");
+    return `<tr><th>${esc(NAME[f])}</th><td>${v.length ? v[Math.floor((v.length - 1) / 2)].toFixed(2) : "–"}</td><td>${v.length ? v[v.length - 1].toFixed(2) : "–"}</td><td>${v.filter(p => p >= FLAG).length}</td></tr>`; }).join("");
   $("tab-summary").innerHTML = `
-    <p class="note">The same week of news (${POST.length} stories published after the ${esc(FC)} forecast), run through each pipeline. Rows pair a gate (what picks the stories) with a writer (the top-ECI model, shown the AIRO forecast or not). Verdicts are the largest change the writer judged for each family; for a Jev gate, the largest across Jev's top ${TOPN} stories. Costs are what these runs cost: Jev bills $42 per billion input tokens; the writer's “out” is mostly thinking.</p>
-    <div class="tablewrap"><table class="cond"><thead><tr><th>gate</th><th>writer</th><th>what the writer read</th>${CAUSES.map(([, l]) => `<th>${l}</th>`).join("")}<th>Jev in</th><th>writer in / out</th><th>cost</th></tr></thead><tbody>
-    ${rows.map((r, i) => `<tr class="${i % 2 ? "" : "gate"}"><td>${i % 2 ? "" : esc(NAME[r.jf])}</td><td>${esc(r.rf === "airo" ? "Sees the AIRO forecast" : "Generic")}</td><td class="read">${r.read}</td>${r.fam.map(c => `<td>${c}</td>`).join("")}
-      <td class="n">${r.jevIn == null ? "–" : fmtK(r.jevIn)}</td><td class="n">${fmtK(r.wIn)} / ${fmtK(r.wOut)}</td><td class="n">${usd((r.jevUsd || 0) + (r.wUsd || 0))}${r.extra ? `<div class="note">${r.extra}</div>` : ""}</td></tr>`).join("")}
-    </tbody></table></div>
-    <div class="eyebrow">The two Jev screens</div>
-    <div class="tablewrap"><table class="cond" style="min-width:520px"><thead><tr><th>Jev</th><th>stories</th><th>median p</th><th>highest</th><th>at or above ${FLAG}</th><th>tokens in</th><th>cost</th></tr></thead><tbody>${jevRows}</tbody></table></div>
-    <p class="note">↑ up, ↓ down, ↕ mixed. “(n of 3)”: how many of Jev's top stories drew that verdict. Open the Explore tab for the rationales, the histograms and the stories themselves.</p>`;
+    <div class="eyebrow">How much this week moves each family</div>
+    ${vt}
+    <p class="note">${POST.length} stories published after the ${esc(FC)} forecast. With a Jev gate: the largest verdict across Jev's top ${TOPN} stories. No gate: one read of all ${POST.length}. ↑ up, ↓ down.</p>
+    <div class="eyebrow">Cost of each pipeline, this week</div>
+    ${ct}
+    <div class="eyebrow">Jev's scores</div>
+    <div class="tablewrap"><table class="grid"><thead><tr><th></th><th>median p</th><th>highest</th><th>≥ ${FLAG}</th></tr></thead><tbody>${jevRows}</tbody></table></div>`;
 }
 
 let tab = "summary";
