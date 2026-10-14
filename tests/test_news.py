@@ -333,6 +333,30 @@ class FullText(unittest.TestCase):
         self.assertEqual(len(calls), 1)
         self.assertEqual(next(iter(news.load_items(d).values()))["text"], "The whole article.")
 
+    def test_lede_fills_a_missing_standfirst(self):
+        text = ("# Worm hits hospitals\n\nBy A Reporter\n\nLONDON, Oct 12 (Reuters) - A self-spreading AI agent "
+                "encrypted records at [three hospitals](https://x/y) on Sunday, officials said.\n\nMore text.")
+        self.assertEqual(news.lede(text, "Worm hits hospitals"),
+                         "LONDON, Oct 12 (Reuters) - A self-spreading AI agent encrypted records at three "
+                         "hospitals on Sunday, officials said.")
+        d = tempfile.mkdtemp()
+        its = items_of(item("Worm hits hospitals", "2026-10-12T09:00:00Z"))
+        news.append_jsonl(os.path.join(d, "items.jsonl"), list(its.values()))
+        news.fetch_fulltext(list(its), its, state_dir=d, extract=lambda url: {"url": url, "text": text})
+        it = next(iter(news.load_items(d).values()))
+        self.assertEqual((it["summary"][:6], it["summary_from"]), ("LONDON", "article"))
+
+    def test_www_retry(self):
+        d = tempfile.mkdtemp()
+        its = items_of(item("Worm hits hospitals", "2026-10-12T09:00:00Z"))
+        seen = []
+        def ext(url):
+            seen.append(url)
+            return {"url": url, "text": "Body." if "://www." in url else "", "error": None if "://www." in url else "401"}
+        rows = news.fetch_fulltext(list(its), its, state_dir=d, extract=ext)
+        self.assertEqual(rows[0]["text"], "Body.")
+        self.assertEqual(len(seen), 2)
+
 
 if __name__ == "__main__":
     unittest.main()

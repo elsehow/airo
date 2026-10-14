@@ -251,6 +251,9 @@ def load_items(state_dir=STATE_DIR):
     for r in read_jsonl(os.path.join(state_dir, FULLTEXT_LOG)):   # the newest extract wins
         if r["item"] in items and r.get("text"):
             items[r["item"]]["text"] = r["text"]
+    for it in items.values():   # no standfirst in the feed: the article's opening paragraph
+        if not it.get("summary") and it.get("text"):
+            it["summary"], it["summary_from"] = lede(it["text"], it["title"]), "article"
     return items
 
 
@@ -466,6 +469,22 @@ def extract_text(url, key=None, depth="advanced", post=None):
     return {"url": url, "text": text, "chars": len(text)}
 
 
+def lede(text, title=""):
+    """The article's opening paragraph, as a standfirst for a report that came
+    without one (Google News items): the first paragraph of real prose."""
+    head = (title or "").lower()[:40]
+    for para in re.split(r"\n+", text or ""):
+        p = re.sub(r"\[([^\]]*)\]\([^)]*\)", r"\1", para)          # markdown links -> their text
+        p = re.sub(r"[#*_>|]+", " ", re.sub("[\u200b-\u200d\u2060\ufeff]", "", p))
+        p = re.sub(r"\s+", " ", p).strip()
+        if len(p) < 80 or (head and head in p.lower()):
+            continue
+        if re.match(r"(by |reporting by|editing by|sign up|updated |share |\w+ \d+ \(reuters\) -$)", p.lower()):
+            continue
+        return p[:SUMMARY_CHARS]
+    return ""
+
+
 def fetch_fulltext(item_ids, items, state_dir=STATE_DIR, extract=extract_text, now=None):
     """Extract each item's article once and log it to fulltext.jsonl. Returns the rows."""
     have = {r["item"] for r in read_jsonl(os.path.join(state_dir, FULLTEXT_LOG)) if r.get("text")}
@@ -477,7 +496,11 @@ def fetch_fulltext(item_ids, items, state_dir=STATE_DIR, extract=extract_text, n
         link = it.get("link") or ""
         # the publisher's own link: the canonical form drops "www.", which some sites refuse
         url = it["url"] if not link or "news.google.com" in link else link
-        r = dict(extract(url), item=i, at=now or _now())
+        r = extract(url)
+        if not r.get("text") and "://www." not in url:   # some sites answer only on www.
+            r2 = extract(url.replace("://", "://www.", 1))
+            r = r2 if r2.get("text") else r
+        r = dict(r, item=i, at=now or _now())
         append_jsonl(os.path.join(state_dir, FULLTEXT_LOG), [r])
         rows.append(r)
     return rows

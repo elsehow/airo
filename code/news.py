@@ -51,8 +51,11 @@ def main():
     ap.add_argument("--frame", choices=ns.FRAMES, default="airo",
                     help="screen, explain, calibrate: show Jev and the writer the AIRO forecast (airo) "
                          "or ask about AI catastrophic-risk forecasts in general (generic)")
-    ap.add_argument("--top", type=int, help="explain: the union of each Jev frame's top N stories "
-                                             "published after the forecast")
+    ap.add_argument("--top", type=int, help="explain, fulltext: the union of each Jev frame's top N "
+                                             "stories published after the forecast")
+    ap.add_argument("--missing-standfirst", action="store_true",
+                    help="fulltext: also every item the feed gave no standfirst (its opening paragraph becomes one)")
+    ap.add_argument("--depth", choices=["basic", "advanced"], default="advanced", help="fulltext: Tavily extract depth")
     ap.add_argument("--order", choices=["forward", "reversed"], default="forward",
                     help="digest: list the stories in the fixed shuffle, or reversed")
     ap.add_argument("--dry-run", action="store_true", help="explain: say what would be called, call nothing")
@@ -67,11 +70,22 @@ def main():
     elif a.step == "fulltext":
         built, items = json.load(open(path("stories.json"))), news.load_items(state)
         by_id = {s["id"]: s for s in built["stories"]}
-        ids = [m["item"] for sid in (a.story or []) for m in by_id[sid]["members"]]
-        print(f"{len(ids)} articles, ~${0.016 * len(ids):.2f} at most", file=sys.stderr)
+        sids = list(a.story or [])
+        if a.top:   # the reports the writer will read for each Jev frame's top stories
+            fc = forecast(a)
+            post = ns.after_forecast(built["stories"], items, fc)
+            for f in ns.FRAMES:
+                sc = ns.screen(built["stories"], items, fc, news.read_jsonl(path(ns.LOGS[f][0])), frame=f)
+                sids += [s["id"] for s in ns.top_stories(post, sc, a.top) if s["id"] not in sids]
+        ids = [m["item"] for sid in sids for m in by_id[sid]["members"][:3]]
+        if a.missing_standfirst:
+            ids += [i for i, it in items.items() if not it.get("summary") and i not in ids]
+        credits = (2 if a.depth == "advanced" else 1) * len(ids) / 5   # Tavily: per 5 URLs, ~$0.008 a credit
+        print(f"{len(ids)} articles at {a.depth} depth, ~${credits * 0.008:.2f} at most", file=sys.stderr)
         if a.dry_run:
             return
-        for r in news.fetch_fulltext(ids, items, state_dir=state):
+        extract = lambda url: news.extract_text(url, depth=a.depth)
+        for r in news.fetch_fulltext(ids, items, state_dir=state, extract=extract):
             print(json.dumps({"item": r["item"], "url": r["url"], "chars": r.get("chars"), "error": r.get("error")}))
     elif a.step == "report":
         text = news.report(state_dir=state)

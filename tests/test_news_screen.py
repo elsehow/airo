@@ -113,18 +113,27 @@ class Screen(unittest.TestCase):
         fc2 = dict(fc, run="2026-10-14T1200Z")
         self.assertEqual(ns.screen(ss, its, fc2, log), {})
 
-    def test_full_text_rescreens_and_is_shown(self):
+    def test_article_text_goes_to_the_writer_not_jev(self):
         ss, its = stories()
         fc, log = forecast(), []
         ns.screen(ss, its, fc, [], ask=FakeJev(), log=log.append)
         its[ss[0]["members"][0]["item"]]["text"] = "Full article body."
         jev = FakeJev()
         ns.screen(ss, its, fc, log, ask=jev, log=log.append)
-        self.assertEqual(len(jev.calls), 1)
-        self.assertEqual(jev.calls[0][0]["story"]["reports"][0]["full_text"], "Full article body.")
+        self.assertEqual(jev.calls, [])                     # Jev's view is unchanged: no new question
         p = ns.explain_prompt(ss[0], its, fc, ["cyber"], today="2026-10-13")
         self.assertIn("Full article body.", p)
         self.assertNotIn("standfirsts only", p)
+
+    def test_new_standfirst_rescreens(self):
+        ss, its = stories()
+        fc, log = forecast(), []
+        ns.screen(ss, its, fc, [], ask=FakeJev(), log=log.append)
+        its[ss[0]["members"][0]["item"]]["summary"] = "A standfirst taken from the article."
+        jev = FakeJev()
+        ns.screen(ss, its, fc, log, ask=jev, log=log.append)
+        self.assertEqual(len(jev.calls), 1)
+        self.assertEqual(jev.calls[0][0]["story"]["reports"][0]["standfirst"], "A standfirst taken from the article.")
 
     def test_generic_frame_hides_the_forecast(self):
         ss, its = stories()

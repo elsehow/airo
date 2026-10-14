@@ -43,6 +43,7 @@ Every decision is logged append-only in the state directory, like the reduce:
   notes.jsonl    one row per note: writer, text, verdict, usage
 and reused on the next run when its key matches, so a re-run costs nothing.
 """
+import hashlib
 import json
 import os
 import random
@@ -224,20 +225,18 @@ def top_stories(stories, screened, n=3):
 
 
 def story_reports(story, items, n=3):
-    out = []
-    for m in story["members"][:n]:
-        v, it = news.item_view(items[m["item"]]), items[m["item"]]
-        if it.get("text"):
-            v["full_text"] = it["text"][:FULLTEXT_CHARS]
-        out.append(v)
-    return out
+    """What Jev sees of a story: its first reports' source, date, headline and
+    standfirst. Article text goes to the writer only (_reports)."""
+    return [news.item_view(items[m["item"]]) for m in story["members"][:n]]
 
 
 def _screen_key(story, fc, items=None, frame="airo"):
+    """Same story, forecast, reports and wording of what Jev is shown: a new
+    member or a new standfirst makes it a new question."""
     shown = [m["item"] for m in story["members"][:3]]
     key = [story["id"], frame_id(fc, frame), shown]
-    if items and any(items[i].get("text") for i in shown):
-        key.append("full_text")   # read in full: a new question, screened again
+    if items is not None:
+        key.append(hashlib.sha1(json.dumps(story_reports(story, items), sort_keys=True).encode()).hexdigest()[:12])
     return key
 
 
@@ -517,8 +516,6 @@ def _digest_story(label, story, items):
     for v in story_reports(story, items):          # exactly what Jev sees
         lines.append(f"- {v['source']} ({v['published']}): \"{v['headline']}\""
                      + (f" — {v['standfirst']}" if v.get("standfirst") else ""))
-        if v.get("full_text"):
-            lines.append(f"  Article text as extracted (a paywalled article may stop early): {v['full_text']}")
     return "\n".join(lines)
 
 
@@ -556,7 +553,7 @@ Each cell is the ensemble median across the panel, with the panel's range in bra
 
 ## The news
 
-Every AI news story published since {cut[:10]} {cut[11:16]} UTC, one entry per real-world event (duplicate write-ups have been merged), {len(listing)} stories in no particular order. For each you have up to three reports: source, date, headline and standfirst, and article text where it could be extracted.
+Every AI news story published since {cut[:10]} {cut[11:16]} UTC, one entry per real-world event (duplicate write-ups have been merged), {len(listing)} stories in no particular order. For each you have up to three reports: source, date, headline and standfirst.
 
 {news_block}{forecast}
 
