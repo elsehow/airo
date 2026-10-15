@@ -1332,6 +1332,9 @@ def call_pi(model_id, prompt, research, final_tool, cells_tool, coverage, debrie
                                "kwargs": {"qids": qids}}})
     u = dict(res["usage"])
     u["cache_write_tokens"] = pi_cache_writes(res["trace"])
+    # pi counts input, cache reads and cache writes apart; call_tools' (litellm's)
+    # input_tokens is all three, so the rows and the log line agree across loops.
+    u["input_tokens"] = u.get("input_tokens", 0) + u.get("cached_tokens", 0) + u["cache_write_tokens"]
     for k, v in u.items():
         if isinstance(v, (int, float)) and not isinstance(v, bool) and k not in ("seconds",):
             usage[k] = round(usage.get(k, 0) + v, 6)
