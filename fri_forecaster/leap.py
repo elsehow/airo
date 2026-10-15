@@ -184,10 +184,10 @@ def complete(r):
     return bool(r) and r.get("complete")
 
 
-def forecast_group_session(gid, g, mdir, args, research):
+def forecast_group_session(gid, g, mdir, args, research, groups):
     """Run the whole survey in one session (already ran? -- only unfinished reruns)."""
     res = harness.run(model=args.model, system=SYSTEM if research else SYSTEM_NO_RESEARCH,
-                      prompt=build_session_prompt(args.snapshot, args.due),
+                      prompt=build_session_prompt(groups, args.due),
                       workdir=os.path.join(mdir, "calls", "session"),
                       cell_schema=CELL_SCHEMA, key_fields=KEY_FIELDS,
                       allowed_keys=args.all_cells, cells_tool=True,
@@ -240,7 +240,7 @@ def cmd_run(args):
             continue
 
         if args.shard == "session":
-            got, res = forecast_group_session(gid, g, mdir, args, research)
+            got, res = forecast_group_session(gid, g, mdir, args, research, groups)
         else:
             base = {DEPENDS_ON[gid]: frozen[DEPENDS_ON[gid]]} if gid in DEPENDS_ON and DEPENDS_ON[gid] in frozen else None
             res = harness.run(model=args.model, system=SYSTEM if research else SYSTEM_NO_RESEARCH,
