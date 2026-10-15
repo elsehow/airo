@@ -76,6 +76,51 @@ def main():
     }
 
     html = TEMPLATE.replace("/*__DATA__*/", json.dumps({"stats": stats, "members": [SHORT[m] for m in members], "member_stats": member_stats, "cells": rows}))
+    # pre-render the full 46-cell table statically (no client JS needed)
+    def fmt(v):
+        if not isinstance(v, (int, float)):
+            return "—"
+        return f"{v:,.0f}" if abs(v) >= 1000 else f"{round(v, 2):g}"
+    def cellrow(r):
+        dim = f" <span class='tag dim2'>{r['dimension']}</span>" if r["dimension"] else ""
+        others = [m for m in members[1:]]
+        tds = "".join(f"<td class='num' style='color:var(--dim)'>{fmt(prov[m][r['qid']])}</td>" for m in others)
+        return (f"<tr><td>{r['group']}{dim}<br><span style='color:var(--dim);font-size:11.5px'>{r['question'][:150]}</span></td>"
+                f"<td>{r['percentile'] if r['percentile'] is not None else '—'}</td>"
+                f"<td class='num'><b>{fmt(r['ensemble'])}</b></td><td class='num'>{fmt(r['opus'])}</td>"
+                f"{tds}<td class='num' style='color:var(--dim)'>{fmt(r['session'])}</td></tr>")
+    body = ("<table><thead><tr><th>group / dimension</th><th>p</th><th class='num'>ensemble</th>"
+            "<th class='num'>Opus</th>"
+            + "".join(f"<th class='num'>{SHORT[m]}</th>" for m in members[1:])
+            + "<th class='num'>session</th></tr></thead><tbody>"
+            + "".join(cellrow(r) for r in sorted(rows, key=lambda r: (r['group'], r['percentile'] is None, r['percentile'] or 0)))
+            + "</tbody></table>")
+    html = html.replace("<div id=\"alltable\">__ALLTABLE__</div>", body)
+
+    # section 2: top divergences with static bars (no client JS)
+    top = rows[:14]
+    maxdiv = max(r["div"] for r in top) or 1
+    toprows = []
+    for r in top:
+        w = max(3, 100 * r["div"] / maxdiv)
+        cls = "up" if r["diff"] > 0 else "dn"
+        diff = f"{r['diff']:+g} pts" if r["kind"] == "pts" else f"{r['diff']:+,.0f} ({r['div']:.0f}%)"
+        dim = f" <span class='tag dim2'>{r['dimension']}</span>" if r["dimension"] else ""
+        yr = f" ({r['year']})" if r["year"] else ""
+        p = r["percentile"] if r["percentile"] is not None else "—"
+        toprows.append(
+            f"<tr><td>{r['group']}{dim} · p{p}{yr}<br>"
+            f"<span style='color:var(--dim);font-size:12px'>{r['question']}</span></td>"
+            f"<td class='num'>{fmt(r['ensemble'])}</td><td class='num'>{fmt(r['opus'])}</td>"
+            f"<td class='num'>{diff}</td>"
+            f"<td><div class='bar {cls}'><i style='width:{w}%'></i></div></td></tr>")
+    table2 = ("<table><thead><tr><th>cell</th><th class='num'>ensemble</th><th class='num'>Opus 5.5</th>"
+              "<th class='num'>diff</th><th>bar</th></tr></thead><tbody>" + "".join(toprows) + "</tbody></table>")
+    html = html.replace("<div id=\"divtable\"></div>", table2)
+
+    # strip the inline script entirely
+    html = re.sub(r"<script>.*?</script>", "", html, flags=re.S)
+    html = html.replace("__ALLTABLE__", "")
     open(OUT, "w").write(html)
     print(f"{len(rows)} cells -> {OUT}")
 
@@ -150,8 +195,7 @@ select,input{background:var(--card);color:var(--fg);border:1px solid var(--edge)
 </div>
 
 <h2>4 · All 46 cells</h2>
-<div class="toolbar"><select id="flt"><option value="all">all cells</option><option value="big">|ensemble−Opus| ≥ 10 pts or 10%</option><option value="near">near-unanimous (spread ≤ 2)</option></select></div>
-<div class="card"><div id="alltable"></div></div>
+<div class="card"><div id="alltable">__ALLTABLE__</div></div>
 
 <h2>5 · Known blemishes (pilot lessons)</h2>
 <div class="card">
@@ -194,7 +238,6 @@ const renderAll = mode=>{
      `<td class="num" style="color:var(--dim)">${fmt(r.session)}</td></tr>`).join('')+'</tbody></table>';
 };
 renderAll('all');
-document.getElementById('flt').onchange = e=>renderAll(e.target.value);
 </script>
 </body></html>"""
 
