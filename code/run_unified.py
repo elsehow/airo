@@ -488,6 +488,16 @@ def minimal_prompt(prompt, cells):
     return out[:at] + MINIMAL_TAIL.format(cells=cells)
 
 
+def minimal_variant(prompt, variant):
+    """A prompt variant on the minimal instrument: its instruction, verbatim,
+    as a plain paragraph before the submit line -- no heading, nothing else."""
+    text = VARIANTS[variant]
+    if not text:
+        return prompt
+    at = prompt.index("Call submit_forecast once")
+    return prompt[:at] + text + "\n\n" + prompt[at:]
+
+
 def minimal_tools(research, final_tool):
     """Mechanical descriptions; web_search loses `cause`, which only served
     the coverage rule."""
@@ -1646,10 +1656,11 @@ def run_one(label, model_id, groups, by_group, horizons, run_id, retries, spec,
     prompt, n, want_cells = build_prompt(groups, by_group, horizons, spec, today,
                                          state_constraints, condition, policies)
     if minimal:
-        if harness != "pi" or debrief_turn or VARIANTS[variant]:
-            raise ValueError("--minimal runs through pi, with no debrief and no variant")
-        prompt = minimal_prompt(prompt, want_cells)   # the closing paragraph, debrief sentence included, is gone
-    prompt = apply_variant(prompt, variant)
+        if harness != "pi" or debrief_turn:
+            raise ValueError("--minimal runs through pi, with no debrief")
+        prompt = minimal_variant(minimal_prompt(prompt, want_cells), variant)   # the closing paragraph, debrief sentence included, is gone
+    else:
+        prompt = apply_variant(prompt, variant)
     if not debrief_turn and not minimal:
         prompt = strip_debrief(prompt)
     # Provenance for a conditional row: which condition, and a hash of the exact
@@ -1750,7 +1761,7 @@ def run_one(label, model_id, groups, by_group, horizons, run_id, retries, spec,
                 "prompt_sha256": hashlib.sha256(prompt.encode()).hexdigest(),
                 "prompt": prompt if q is first else None,
                 "system_prompt": (MINIMAL_SYSTEM if minimal else SYSTEM) if q is first else None,
-                "protocol": ("minimal-v1" if minimal else
+                "protocol": (variant_protocol("minimal-v1", variant) if minimal else
                              lean_protocol("unified-batch-v1" if state_constraints else PROTOCOL,
                                            variant, debrief_turn)),
                 "call_id": call_id,

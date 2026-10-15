@@ -290,6 +290,25 @@ class TestLeanInstrument(unittest.TestCase):
         self.assertIn("--experiment", r.stderr)
 
 
+class TestMinimalVariants(unittest.TestCase):
+    """A prompt variant on the minimal instrument: the instruction, verbatim,
+    as one paragraph before the submit line, and nothing else changes."""
+
+    def test_only_the_instruction_is_added(self):
+        g, b, h, _, spec = ru.load_batch(ru.LADDER, ru.CROSS, ru.UNBATCHED)
+        p, _, cells = ru.build_prompt(g, b, h, spec, date(2026, 10, 15))
+        base = ru.minimal_prompt(p, cells)
+        self.assertEqual(ru.minimal_variant(base, "none"), base)
+        for v, text in ru.VARIANTS.items():
+            if not text:
+                continue
+            out = ru.minimal_variant(base, v)
+            self.assertEqual(out.replace(text + "\n\n", "", 1), base, v)
+            self.assertLess(out.index(text), out.index("Call submit_forecast once"))
+            self.assertNotIn("APPROACH", out)
+            self.assertEqual(ru.variant_protocol("minimal-v1", v), f"minimal-v1+{v}")
+
+
 class TestEmptyCallFails(unittest.TestCase):
     """A call with no forecasts after every attempt raises instead of writing
     rows of nulls that the runner logged as done (2026-10-14)."""
