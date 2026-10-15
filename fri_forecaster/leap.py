@@ -193,7 +193,7 @@ def forecast_group_session(gid, g, mdir, args, research, groups):
                       allowed_keys=args.all_cells, cells_tool=True,
                       tool_descriptions=TOOL_DESCRIPTIONS,
                       research_tools=harness.RESEARCH_TOOLS if research else (),
-                      min_research=args.min_research_session if research else 0,
+                      min_research=args.min_research * len(groups) if research else 0,
                       max_turns=args.max_turns or None,
                       thinking=args.thinking, pi=args.pi, timeout=args.timeout)
     got = {}
