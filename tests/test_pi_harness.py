@@ -166,6 +166,35 @@ class TestJointThroughPi(unittest.TestCase):
             ("submit_debrief", debrief),
         ], len(cells)
 
+    def test_lean_without_debrief(self):
+        today, policies, groups, by_group, horizons, spec = self._instrument()
+        keys = [g["key"] for g in groups]
+        cells = [{"question_id": q["id"], "horizon": h, "probability": 0.02}
+                 for g in groups for q in by_group[g["key"]] for h in horizons if h in q["horizons"]]
+        script = [("web_search", {"query": f"recent {k}", "cause": k, "recent_days": 30}) for k in keys]
+        script += [("read_page", {"url": "https://example.org/a"})] * (ru.MIN_RESEARCH - len(keys))
+        script += [("submit_forecast", {"rationale": "r", "forecasts": cells[:10]}),   # refused: missing
+                   ("submit_forecast", {"rationale": "r", "forecasts": cells})]
+        model = ScriptedModel(script)
+        self.addCleanup(model.close)
+        json.dump({"providers": {"fake": {"baseUrl": model.url, "api": "openai-completions", "apiKey": "x",
+                                          "models": [{"id": "scripted"}]}}},
+                  open(os.path.join(os.environ["PI_CODING_AGENT_DIR"], "models.json"), "w"))
+        os.environ["REDLINES_REASONING"] = "none"
+        try:
+            rows = ru.run_one("Scripted", "fake/scripted", groups, by_group, horizons, "2026-10-14T0001Z", 0,
+                              spec, experiment="test", arm="lean#1", today=today, variant="recent",
+                              harness="pi", debrief_turn=False)
+        finally:
+            os.environ.pop("REDLINES_REASONING", None)
+        self.assertEqual(len(model.requests), len(script) + 1)   # no debrief turn after the answer
+        self.assertNotIn("After it is accepted", rows[0]["prompt"])
+        self.assertIn("===== APPROACH =====", rows[0]["prompt"])
+        self.assertEqual(rows[0]["protocol"], ru.PROTOCOL + "+recent+nodebrief")
+        self.assertTrue(all(r["forecasts"] for r in rows))
+        self.assertEqual(sum(len(r["forecasts"]) for r in rows), len(cells))
+        self.assertIsNone(rows[0]["debrief"])
+
     def test_full_instrument(self):
         today, policies, groups, by_group, horizons, spec = self._instrument()
         conds = policies["conditions"]
@@ -199,6 +228,30 @@ class TestJointThroughPi(unittest.TestCase):
         self.assertEqual(first["elicited"]["eci_forecast"]["p50"], 172)
         self.assertEqual(len([e for e in first["evidence"] if e["tool"] == "web_search"]), len(groups))
         self.assertTrue(os.path.exists(first["harness"]["trace"]))
+
+
+class TestLeanInstrument(unittest.TestCase):
+    """--lean / --no-debrief: the plain batch without the debrief, for
+    experiments that run their own baseline."""
+
+    def test_strip_debrief_removes_only_the_sentence(self):
+        for t in (ru.PROMPT, ru.PROMPT_JOINT, ru.PROMPT_JOINT_GROUPED):
+            out = ru.strip_debrief(t)
+            self.assertNotIn("After it is accepted", out)
+            self.assertNotIn("research with those questions in mind", out)
+            self.assertIn("Research before answering", out)
+
+    def test_protocol_tags(self):
+        self.assertEqual(ru.lean_protocol("p", "none"), "p")
+        self.assertEqual(ru.lean_protocol("p", "recent", False), "p+recent+nodebrief")
+
+    def test_lean_needs_an_experiment(self):
+        import subprocess
+        r = subprocess.run([sys.executable, str(REPO / "code" / "run_unified.py"), "--joint", "--lean",
+                            "--conditions", str(REPO / "data" / "leap_policies.json")],
+                           capture_output=True, text=True)
+        self.assertNotEqual(r.returncode, 0)
+        self.assertIn("--experiment", r.stderr)
 
 
 class TestEmptyCallFails(unittest.TestCase):
