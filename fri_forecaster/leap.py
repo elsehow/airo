@@ -130,6 +130,35 @@ def build_session_prompt(groups, due):
     return "\n".join(lines)
 
 
+def harness_retry(**kwargs):
+    """harness.run, retrying transient API errors (pi exits 0 on stopReason=error).
+    The account occasionally 400s 'out of extra usage' on bursts; a failed call
+    yields zero cells, which we detect and retry with backoff."""
+    import time
+    last_err = None
+    for i in range(4):
+        res = harness.run(**kwargs)
+        try:
+            with open(os.path.join(res["workdir"], "events.jsonl")) as f:
+                for line in f:
+                    try:
+                        e = json.loads(line)
+                    except ValueError:
+                        continue
+                    m = e.get("message") or {}
+                    if m.get("stopReason") == "error":
+                        last_err = (m.get("errorMessage") or "")[:200]
+        except OSError:
+            pass
+        if res["cells"] or "out of extra usage" not in (last_err or ""):
+            res["api_error"] = last_err
+            return res
+        print(f"    transient API error ({last_err}); retry {i + 1}/3 after {20 * (i + 1)}s")
+        time.sleep(20 * (i + 1))
+    res["api_error"] = last_err
+    return res
+
+
 def slug(s):
     return "".join(c if c.isalnum() or c in "-._" else "_" for c in s)
 
