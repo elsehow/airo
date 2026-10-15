@@ -32,6 +32,7 @@ PINNED_PI_VERSION = "0.99.2"
 REPO_PI = os.path.join(os.path.dirname(HERE), "node_modules", "@earendil-works", "pi-coding-agent",
                        "dist", "bundle", "cli.js")
 DEFAULT_PI = os.environ.get("FORECASTER_PI") or (REPO_PI if os.path.exists(REPO_PI) else None)
+CLEAN_HOME = "/tmp/fb-clean-home"   # no ~/.claude credentials discoverable here
 # Isolation: no built-in tools, no discovered extensions/skills/prompt
 # templates, and no AGENTS.md/CLAUDE.md from the cwd or its parents, so the
 # saved system.txt + prompt.txt are the whole prompt.
@@ -168,7 +169,13 @@ def run(*, model, system, prompt, workdir, cell_schema, key_fields, allowed_keys
         thinking="high", pi=DEFAULT_PI, cwd=None, env=None, timeout=None, tool_parameters=None, **loop):
     """One pi call, in a fresh workdir/attempt-N (returned as "workdir").
     Writes spec.json, prompt.txt, system.txt, events.jsonl, stderr.txt there
-    (and pi_tools.ts writes pieces.jsonl, final.json, debrief.json)."""
+    (and pi_tools.ts writes pieces.jsonl, final.json, debrief.json).
+
+    For anthropic models, pi runs under a clean HOME: it silently prefers
+    Claude-Code OAuth credentials discovered under $HOME (keychain-backed,
+    e.g. a personal Max subscription) over ANTHROPIC_API_KEY, so spend can
+    land on the wrong account. A post-run check fails loudly if an OAuth
+    identity was used anyway."""
     workdir = new_attempt_dir(workdir)
     write_spec(workdir, cell_schema=cell_schema, key_fields=key_fields, allowed_keys=allowed_keys,
                tool_descriptions=tool_descriptions, min_research=min_research,
@@ -178,6 +185,13 @@ def run(*, model, system, prompt, workdir, cell_schema, key_fields, allowed_keys
     open(os.path.join(workdir, "system.txt"), "w").write(system)
     cmd = pi_command(model, system, prompt, thinking=thinking, pi=pi)
     full_env = dict(os.environ, **(env or {}), FORECASTER_OUT=workdir, FORECASTER_PY=sys.executable)
+    clean_home = model.startswith("anthropic/")
+    if clean_home:
+        full_env["HOME"] = CLEAN_HOME   # override: caller HOME must not leak Claude-Code creds
+        os.makedirs(CLEAN_HOME, exist_ok=True)
+        if not full_env.get("ANTHROPIC_API_KEY"):
+            raise RuntimeError("anthropic model but no ANTHROPIC_API_KEY in env; refusing to run")
+        full_env["ANTHROPIC_LOG"] = "debug"   # logs auth header to stderr, checked below
     t0 = datetime.now(timezone.utc)
     events_path = os.path.join(workdir, "events.jsonl")
     with open(events_path, "w") as ev, open(os.path.join(workdir, "stderr.txt"), "w") as err:
@@ -185,6 +199,14 @@ def run(*, model, system, prompt, workdir, cell_schema, key_fields, allowed_keys
             rc = subprocess.run(cmd, stdout=ev, stderr=err, env=full_env, cwd=cwd, timeout=timeout).returncode
         except subprocess.TimeoutExpired:
             rc = "timeout"
+    if clean_home:
+        try:
+            log = open(os.path.join(workdir, "stderr.txt"), errors="ignore").read()
+        except OSError:
+            log = ""
+        if "oauth-2025-04-20" in log or "authorization:" in log.replace("authorization: '***'", ""):
+            raise RuntimeError("pi authenticated to anthropic via OAuth identity, not ANTHROPIC_API_KEY "
+                               f"(see {workdir}/stderr.txt); aborting to avoid billing the wrong account")
     secs = (datetime.now(timezone.utc) - t0).total_seconds()
     evidence, usage = parse_events(open(events_path))
     usage["harness"] = "pi"
