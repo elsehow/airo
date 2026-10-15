@@ -23,6 +23,12 @@ Cells are the survey rows: key question_id (a row already is one
 dimension/date/percentile cell). Values carry the group's unit; probability
 rows are 0-100.
 """
+No system prompt: the instrument carries everything. The model gets the
+survey (group texts, backgrounds, resolution criteria) and the tools; no
+persona, no forecasting advice. The only added text is MECHANICS: the
+format contract the tools depend on (cell fields, units, percentile
+ordering) and the workflow in session mode.
+"""
 import argparse
 import hashlib
 import json
@@ -31,19 +37,6 @@ import sys
 
 from fri_forecaster import harness
 from fri_forecaster.keys import load_keys
-
-SYSTEM = """You are a careful, calibrated forecaster. Work like a superforecaster: establish the base rate, find the latest relevant facts with web_search and read_page (read the pages that matter, then search again on what they say), weigh the evidence, and avoid both overconfidence and timidity.
-
-You are given a survey whose questions form groups: a group text plus background and resolution criteria, and a table of CELLS to forecast. Every cell is identified by its question_id and asks for one number in the unit stated for the group:
-- probability cells: a number 0-100 (a probability in percent)
-- percentile cells: your estimate for that percentile (p10/p50/p90) of the asked quantity, in the group's unit (the percentiles must respect their order: p10 <= p50 <= p90)
-- count cells: a number of people/things; percentile cells are percentiles of that count
-
-Answer every cell exactly once, with its question_id, via submit_cells. Call submit_forecast at the end with a short overall rationale."""
-
-SYSTEM_NO_RESEARCH = SYSTEM.replace(
-    "find the latest relevant facts with web_search and read_page (read the pages that matter, then search again on what they say), ",
-    "use what you know, ")
 
 TOOL_DESCRIPTIONS = {
     "web_search": "Search the web. Returns titles, URLs, snippets and dates. Use `recent_days` to restrict to recent news.",
@@ -58,6 +51,7 @@ CELL_SCHEMA = {"type": "object",
                               "value": {"type": "number"}}}
 
 KEY_FIELDS = ["question_id"]
+MECHANICS = """MECHANICS: submit every cell listed above, each as {question_id, value} via submit_cells. `value` is one number in the unit stated for the group. For percentile cells give your estimate at that percentile of the asked quantity, in that unit (they must respect their order: p10 <= p50 <= p90). Probability units are percentages: 0-100."""
 # The revenue group conditions on the independence group.
 DEPENDS_ON = {"43f1bf32b9e4058a7c6fb9c3f633a650078566aaedfdc671e37d7bfb9e418f88":
               "d10e8fa0acd7479ca220e4a4ccebb1911bcbd600651944d96541d1f03b5e3a76"}
@@ -109,8 +103,7 @@ def build_group_prompt(g, due, base=None):
     if g.get("resolution_criteria"):
         lines += ["RESOLUTION CRITERIA:", g["resolution_criteria"], ""]
     unit = g.get("unit") or "probability (0-100)"
-    lines += [f"UNIT: {unit}.", "",
-              "CELLS TO FORECAST (submit every one of them):"]
+    lines += [f"UNIT: {unit}.", MECHANICS, "", "CELLS:"]
     lines += cell_lines(g)
     if base:
         lines += ["", "YOUR EARLIER, FROZEN FORECASTS - treat these as given and make this answer consistent with them:"]
@@ -127,7 +120,8 @@ def build_session_prompt(groups, due):
              "cells in this conversation: keep your answers consistent with them.", ""]
     for i, g in enumerate(groups, 1):
         lines += [f"=== GROUP {i}/{len(groups)} (question_group_id {g['question_group_id']}) ==="]
-        lines += ["UNIT: " + (g.get("unit") or "probability (0-100)") + ".", g["question_group_text"], ""]
+        lines += ["UNIT: " + (g.get("unit") or "probability (0-100)") + ".", MECHANICS, "",
+                  g["question_group_text"], ""]
         if g.get("background"):
             lines += ["BACKGROUND:", g["background"], ""]
         if g.get("resolution_criteria"):
@@ -186,7 +180,7 @@ def complete(r):
 
 def forecast_group_session(gid, g, mdir, args, research, groups):
     """Run the whole survey in one session (already ran? -- only unfinished reruns)."""
-    res = harness.run(model=args.model, system=SYSTEM if research else SYSTEM_NO_RESEARCH,
+    res = harness.run(model=args.model, system="",
                       prompt=build_session_prompt(groups, args.due),
                       workdir=os.path.join(mdir, "calls", "session"),
                       cell_schema=CELL_SCHEMA, key_fields=KEY_FIELDS,
@@ -267,7 +261,7 @@ def cmd_run(args):
                 continue
         else:
             base = {DEPENDS_ON[gid]: frozen[DEPENDS_ON[gid]]} if gid in DEPENDS_ON and DEPENDS_ON[gid] in frozen else None
-            res = harness.run(model=args.model, system=SYSTEM if research else SYSTEM_NO_RESEARCH,
+            res = harness.run(model=args.model, system="",
                               prompt=build_group_prompt(g, args.due, base),
                               workdir=os.path.join(mdir, "calls", gid[:12]),
                               cell_schema=CELL_SCHEMA, key_fields=KEY_FIELDS,
