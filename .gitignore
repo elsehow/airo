@@ -50,3 +50,6 @@ data/leap/
 # a clone renders with the fallback stack in web/demo/00-head.html.
 web/fonts/
 
+
+# pip install -e leaves this behind
+*.egg-info/
