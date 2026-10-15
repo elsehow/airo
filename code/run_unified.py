@@ -80,6 +80,7 @@ import copy
 import hashlib
 import json
 import os
+import re
 import subprocess
 import sys
 import threading
@@ -438,6 +439,86 @@ def apply_variant(prompt, variant):
         return prompt
     at = prompt.index("Research before answering, in rounds")
     return prompt[:at] + VARIANT_BLOCK.format(text=text) + prompt[at:]
+
+
+# THE LEAN INSTRUMENT (--lean, --no-debrief; 2026-10-14), for experiments
+# that run their own baseline: a prompt-variant screen on one cheap model
+# needs many repeats, and most of a joint call's output is the 13 conditions'
+# grid and the debrief. --lean asks the plain batch (PROMPT: the same 41
+# questions, criteria and horizons, one probability per cell, no
+# conditions); --no-debrief drops the debrief turn and the sentence that
+# announces it. Neither may write into the published series, and each
+# stamps its own protocol suffix.
+DEBRIEF_SENTENCE = re.compile(r" ?After it is accepted you will be asked one more thing.*?"
+                              r"research with those questions in mind\.", re.S)
+
+
+def strip_debrief(prompt):
+    """The prompt without the sentence announcing the debrief turn."""
+    out, n = DEBRIEF_SENTENCE.subn("", prompt)
+    assert n == 1, "the debrief sentence changed; update DEBRIEF_SENTENCE"
+    return out
+
+
+# THE MINIMAL INSTRUMENT (--minimal; 2026-10-15): as little context as the
+# questions allow, the floor of an evidence base built up from nothing. No
+# system prompt (one space: pi substitutes its own coding-assistant prompt
+# for an empty one), no research paragraph, no framing beyond "Below are N
+# questions", tool descriptions that say only what each tool does, and no
+# research floor, coverage rule or turn guard. The question blocks, their
+# criteria, the shared definitions and the dated horizons are the plain
+# batch's, byte for byte. pi only; experiments only.
+MINIMAL_SYSTEM = " "
+MINIMAL_HEAD = re.compile(r"Below are (\d+) forecasting questions, grouped by cause of catastrophe\. "
+                          r"Forecast\nall of them together, in one pass\.")
+MINIMAL_TAIL = ("Call submit_forecast once, with a probability in [0,1] for every question x\n"
+                "horizon cell ({cells} in total), a short rationale, and the sources you used.")
+MINIMAL_TOOLS = {
+    "web_search": "Search the web. Returns titled snippets with URLs and publication dates. "
+                  "recent_days limits results to the last N days.",
+    "submit_forecast": "Submit your forecasts.",
+}
+
+
+def minimal_prompt(prompt, cells):
+    """The plain batch's prompt cut to the questions and one submit line."""
+    out, n = MINIMAL_HEAD.subn(lambda m: f"Below are {m.group(1)} questions.", prompt)
+    assert n == 1, "the plain prompt's head changed; update MINIMAL_HEAD"
+    at = out.index("Research before answering, in rounds")
+    return out[:at] + MINIMAL_TAIL.format(cells=cells)
+
+
+def minimal_variant(prompt, variant):
+    """A prompt variant on the minimal instrument: its instruction, verbatim,
+    as a plain paragraph before the submit line -- no heading, nothing else."""
+    text = VARIANTS[variant]
+    if not text:
+        return prompt
+    at = prompt.index("Call submit_forecast once")
+    return prompt[:at] + text + "\n\n" + prompt[at:]
+
+
+def minimal_tools(research, final_tool):
+    """Mechanical descriptions; web_search loses `cause`, which only served
+    the coverage rule."""
+    research = copy.deepcopy(research)
+    for t in research:
+        if t["name"] == "web_search":
+            t["description"] = MINIMAL_TOOLS["web_search"]
+            t["parameters"]["properties"].pop("cause", None)
+            t["parameters"]["required"] = [r for r in t["parameters"].get("required", []) if r != "cause"]
+    final_tool = {**copy.deepcopy(final_tool), "description": MINIMAL_TOOLS["submit_forecast"]}
+    return research, final_tool
+
+
+# pi puts its working directory in the system prompt. Run from the repo and
+# that line names the project (".../airo/...") to the model, a pointer to
+# AIRO's own published forecasts; pi runs from an empty neutral directory.
+PI_CWD = os.environ.get("REDLINES_PI_CWD", "/tmp/w")
+
+
+def lean_protocol(proto, variant, debrief=True):
+    return variant_protocol(proto, variant) + ("" if debrief else "+nodebrief")
 
 
 GROUP_BLOCK = """
@@ -1252,15 +1333,140 @@ def coverage_line(rows):
     return "coverage " + " ".join(f"{k}:{n}" for k, n in cov.items()) if cov else "coverage none"
 
 
+# THE PI HARNESS (--harness pi; 2026-10-14). The same instrument through the
+# FRI Forecaster loop (forecastingresearch/agent-box: fri_forecaster.harness
+# drives pi with pi_tools.ts), which AIRO's ForecastBench runs already share.
+# What is the same: prompt, system text, tool names, descriptions and
+# schemas (the ones call_tools sends), the research floor, the coverage rule,
+# the turn guard and the debrief. What differs is the loop, and one rule in
+# it: a submit_forecast that leaves cells missing is refused once, with the
+# missing keys, inside the same conversation. call_tools accepts it, and the
+# call is re-run from scratch (2026-10-14 variant run: four Claude calls, $92
+# of $209, three attempts for one that still came back empty). Every attempt
+# keeps pi's whole event stream (events.jsonl) under PI_WORKDIR, so a cost
+# or a failure can be read turn by turn.
+HARNESSES = ("litellm", "pi")
+DEFAULT_HARNESS = "litellm"
+PI_WORKDIR = os.environ.get("REDLINES_PI_WORKDIR", os.path.join(ROOT, "results", "pi_traces"))
+# The whole call, research and debrief included; a turn has no timeout of
+# its own in pi. Two hours: the longest litellm call on record ran 103 turns.
+PI_CALL_TIMEOUT = int(os.environ.get("REDLINES_PI_TIMEOUT", "7200"))
+PI_PLAIN_CELL_SCHEMA = {"type": "object", "required": ["question_id", "horizon", "probability"],
+                        "properties": {"question_id": {"type": "string"}, "horizon": {"type": "string"},
+                                       "probability": {"type": "number", "minimum": 0, "maximum": 1}}}
+PI_CELL_SCHEMA = {"type": "object", "required": ["question_id", "horizon", "probabilities"],
+                  "properties": {"question_id": {"type": "string"}, "horizon": {"type": "string"},
+                                 "probabilities": {"type": "object"}}}
+
+
+def pi_model(model_id):
+    """A registry (litellm) id -> pi's provider/model id: OpenAI's go through
+    litellm's responses route, which pi does not name."""
+    return model_id.replace("openai/responses/", "openai/", 1)
+
+
+def validate_debrief_ids(value, qids):
+    """validate_debrief for the pi loop, which passes JSON kwargs: the
+    validator needs only each question's id."""
+    return validate_debrief(value, [{"id": q} for q in qids])
+
+
+def pi_cache_writes(trace):
+    """Cache-write tokens over a pi event stream (harness.parse_events does not
+    count them; call_tools' usage does, as cache_write_tokens)."""
+    n = 0
+    for line in open(trace):
+        try:
+            e = json.loads(line)
+        except ValueError:
+            continue
+        if e.get("type") == "message_end" and (e.get("message") or {}).get("role") == "assistant":
+            n += int(((e["message"].get("usage") or {}).get("cacheWrite")) or 0)
+    return n
+
+
+def call_pi(model_id, prompt, research, final_tool, cells_tool, coverage, debrief, qids,
+            allowed_keys, workdir, usage, cell_schema=PI_CELL_SCHEMA, system=None, rules=True):
+    """One attempt through the FRI Forecaster loop, set to call_tools' rules.
+    -> (answer, evidence, received {(qid, horizon): cell}, delivery, debrief
+    state, harness stamp). Adds the attempt's usage into `usage`."""
+    try:
+        from fri_forecaster import harness
+    except ImportError:
+        sys.exit("--harness pi needs the FRI Forecaster package: pip install -e <agent-box checkout> "
+                 "(github.com/forecastingresearch/agent-box), and node + `npm ci` there for pi")
+    tools = {t["name"]: t for t in research}
+    descriptions = {"web_search": tools["web_search"]["description"],
+                    "read_page": tools["read_page"]["description"],
+                    "submit_forecast": final_tool["description"]}
+    parameters = {"web_search": tools["web_search"]["parameters"],
+                  "read_page": tools["read_page"]["parameters"],
+                  "submit_forecast": final_tool["parameters"]}
+    if cells_tool:
+        descriptions["submit_cells"] = cells_tool["description"]
+        parameters["submit_cells"] = cells_tool["parameters"]
+    loop = {}
+    if debrief:
+        loop["debrief"] = {"tool": debrief["tool"], "prompt": debrief["prompt"], "retries": debrief["retries"],
+                           "validator": {"file": os.path.abspath(__file__), "function": "validate_debrief_ids",
+                                         "kwargs": {"qids": qids}}}
+    os.makedirs(PI_CWD, exist_ok=True)
+    if rules:   # call_tools' rules: the floor, the coverage rule, the turn guard
+        loop.update(min_research=MIN_RESEARCH, floor_counts="returned", coverage=coverage,
+                    withhold_final=True, max_turns=MAX_ROUNDS)
+    res = harness.run(
+        model=pi_model(model_id), system=SYSTEM if system is None else system, prompt=prompt,
+        workdir=workdir, cwd=PI_CWD,
+        thinking=reasoning_for(model_id) or "off", timeout=PI_CALL_TIMEOUT,
+        cell_schema=cell_schema, key_fields=["question_id", "horizon"], allowed_keys=allowed_keys,
+        # call_tools' descriptions and schemas, verbatim, so the model sees the same tools.
+        tool_descriptions=descriptions, tool_parameters=parameters, cells_tool=bool(cells_tool),
+        **loop)
+    u = dict(res["usage"])
+    u["cache_write_tokens"] = pi_cache_writes(res["trace"])
+    # pi counts input, cache reads and cache writes apart; call_tools' (litellm's)
+    # input_tokens is all three, so the rows and the log line agree across loops.
+    u["input_tokens"] = u.get("input_tokens", 0) + u.get("cached_tokens", 0) + u["cache_write_tokens"]
+    for k, v in u.items():
+        if isinstance(v, (int, float)) and not isinstance(v, bool) and k not in ("seconds",):
+            usage[k] = round(usage.get(k, 0) + v, 6)
+    usage["seconds"] = usage.get("seconds", 0) + u.get("seconds", 0)
+    usage["harness"] = "pi"
+    received = {tuple(k.split("|", 1)): c for k, c in res["cells"].items()}
+    state = res.get("debrief") or ({"result": None, "complete": False, "attempts": 0,
+                                    "problems": ["no debrief turn"], "error": None} if debrief else {})
+    stamp = {"name": "pi", "pi": harness.pi_version(), "thinking": reasoning_for(model_id) or "off",
+             "rc": res["rc"], "forced": res["forced"], "trace": res["trace"]}
+    return res["answer"] or {}, res["evidence"], received, dict(res["delivery"]), state, stamp
+
+
+def pi_preflight():
+    """Refuse before spending when the pi loop cannot start: no package, no
+    pi, or no node on PATH."""
+    import shutil
+    try:
+        from fri_forecaster import harness
+    except ImportError:
+        sys.exit("--harness pi needs the FRI Forecaster package: pip install -e <agent-box checkout>")
+    if not shutil.which("node"):
+        sys.exit("--harness pi needs node (>= 22.19) on PATH")
+    version = harness.pi_version()
+    if version != harness.PINNED_PI_VERSION:
+        sys.exit(f"--harness pi needs pi {harness.PINNED_PI_VERSION} (`npm ci` in the agent-box "
+                 f"checkout, or FORECASTER_PI); found {version!r}")
+
+
 def run_one_joint(label, model_id, groups, by_group, horizons, run_id, retries, spec,
                   conds, policies, experiment=None, arm=None, panel=None, today=None,
-                  variant=DEFAULT_VARIANT):
+                  variant=DEFAULT_VARIANT, harness=DEFAULT_HARNESS, debrief_turn=True):
     """One call: the full instrument. -> rows, one per (question, condition)."""
     today = today or datetime.now(timezone.utc).date()
     policies = resolve_set(policies, today)
     conds = [c for c in policies["conditions"] if c["id"] in {x["id"] for x in conds}]
     prompt, n, want_cells = build_prompt_joint(groups, by_group, horizons, spec,
                                                conds, policies, today, variant)
+    if not debrief_turn:
+        prompt = strip_debrief(prompt)
     block = conditions_block(conds, policies)
     sha = hashlib.sha256(block.encode()).hexdigest()
     cond_ids = [c["id"] for c in conds]
@@ -1302,18 +1508,28 @@ def run_one_joint(label, model_id, groups, by_group, horizons, run_id, retries, 
                 "missing": len(missing), "missing_first": missing[:20]}
 
     partial = {**submit_cells_tool(qids, horizons, cond_ids), "fn": take_cells}
+    call_slug = f"{label}{'' if not VARIANTS[variant] else '-' + variant}".replace(" ", "_")
+    harness_stamp = {"name": "litellm"} if harness != "pi" else None
     while attempts <= retries:
         attempts += 1
         received.clear()
         delivery.update(cells_calls=0, cells_in_pieces=0, cells_in_final=0)
         try:
             research, coverage = research_tools(groups)
-            debrief = debrief_state(groups, by_group)
-            answer, evidence = call_tools(
-                model_id, prompt, research, submit_tool_joint(qids, horizons, cond_ids, elicits),
-                system=SYSTEM, max_iters=MAX_ROUNDS, max_tokens=64000,
-                min_evidence=MIN_RESEARCH, usage=usage, partial_tool=partial,
-                coverage=coverage, debrief=debrief)
+            debrief = debrief_state(groups, by_group) if debrief_turn else None
+            if harness == "pi":
+                answer, evidence, got_cells, delivery, debrief, harness_stamp = call_pi(
+                    model_id, prompt, research, submit_tool_joint(qids, horizons, cond_ids, elicits),
+                    submit_cells_tool(qids, horizons, cond_ids), coverage, debrief, qids,
+                    [f"{q}|{h}" for q in qids for h in horizons if h in allowed[q]],
+                    os.path.join(PI_WORKDIR, run_id, call_slug), usage)
+                received.update(got_cells)
+            else:
+                answer, evidence = call_tools(
+                    model_id, prompt, research, submit_tool_joint(qids, horizons, cond_ids, elicits),
+                    system=SYSTEM, max_iters=MAX_ROUNDS, max_tokens=64000,
+                    min_evidence=MIN_RESEARCH, usage=usage, partial_tool=partial,
+                    coverage=coverage, debrief=debrief)
         except Exception as exc:
             # A provider error or a call that never submitted: worth the same
             # retry budget as a short grid, and just as visible in the log.
@@ -1321,12 +1537,13 @@ def run_one_joint(label, model_id, groups, by_group, horizons, run_id, retries, 
                 raise
             print(f"  retry {label:16} attempt {attempts}: {type(exc).__name__}: {str(exc)[:160]}")
             continue
-        delivery["cells_in_pieces"] = len(received)
         merged = dict(received)
-        for f in _as_list(answer.get("forecasts")):
-            if isinstance(f, dict) and "question_id" in f and "horizon" in f:
-                merged[(f["question_id"], f["horizon"])] = f
-                delivery["cells_in_final"] += 1
+        if harness != "pi":   # pi's harness has merged pieces and final already
+            delivery["cells_in_pieces"] = len(received)
+            for f in _as_list(answer.get("forecasts")):
+                if isinstance(f, dict) and "question_id" in f and "horizon" in f:
+                    merged[(f["question_id"], f["horizon"])] = f
+                    delivery["cells_in_final"] += 1
         answer["forecasts"] = list(merged.values())
         grids = clean_forecasts_joint(answer.get("forecasts"), allowed, horizons, cond_ids)
         got = sum(len(v) for g in (grids or {}).values() for v in g.values())
@@ -1337,6 +1554,12 @@ def run_one_joint(label, model_id, groups, by_group, horizons, run_id, retries, 
         print(f"  retry {label:16} attempt {attempts}: {got}/{want} cells x conditions"
               + "".join(f", {k} {'ok' if v else 'missing/unordered'}"
                         for k, v in (elicited or {}).items()))
+    # A call with no forecasts after every attempt is a failure, not a row set
+    # of nulls: the runner used to count it "done" (2026-10-14, Sonnet 5.5
+    # two-step: 0/574 rows, logged ok) and a scheduled run would go on to
+    # publish a date without that model.
+    if not grids:
+        raise RuntimeError(f"no forecasts after {attempts} attempt(s)")
     # Stamp each condition with the level it names in this call: a fixed
     # level carries its own `value` (the axes sets); a condition on the
     # model's own number (`field`) takes what it gave for that field of its
@@ -1349,7 +1572,7 @@ def run_one_joint(label, model_id, groups, by_group, horizons, run_id, retries, 
             stamps[c["id"]]["value"] = ((elicited or {}).get(key) or {}).get(c["field"])
     hits = sum(len((e.get("result") or {}).get("results") or [])
                for e in evidence if e.get("tool") == "web_search")
-    debrief = debrief if attempts else debrief_state(groups, by_group)
+    debrief = (debrief if attempts else debrief_state(groups, by_group)) or {}
     # Cited but not read (the source-quality pass, 2026-09-02 evening): the
     # key sources the model lists that no read_page call in this call fetched.
     read = {(e.get("args") or {}).get("url") for e in evidence if e.get("tool") == "read_page"}
@@ -1388,7 +1611,7 @@ def run_one_joint(label, model_id, groups, by_group, horizons, run_id, retries, 
                     "prompt_sha256": hashlib.sha256(prompt.encode()).hexdigest(),
                     "prompt": prompt if first else None,
                     "system_prompt": SYSTEM if first else None,
-                    "protocol": variant_protocol(set_protocol(policies), variant),
+                    "protocol": lean_protocol(set_protocol(policies), variant, debrief_turn),
                     "condition_set": set_slug(policies),
                     "call_id": call_id, "attempts": attempts,
                     "batch_size": len(qids),
@@ -1411,6 +1634,9 @@ def run_one_joint(label, model_id, groups, by_group, horizons, run_id, retries, 
                     # Which prompt variant (VARIANTS) asked: "none" is the
                     # published prompt.
                     "variant": variant,
+                    # Which loop ran the call (HARNESSES): the litellm loop in
+                    # redlines.llm, or pi through the FRI Forecaster.
+                    "harness": harness_stamp if first else {"name": harness},
                     # Which conditions this call was asked, so a partial
                     # submission is visibly partial.
                     "joint_conditions": [UNCONDITIONAL_KEY] + cond_ids,
@@ -1424,10 +1650,19 @@ def run_one_joint(label, model_id, groups, by_group, horizons, run_id, retries, 
 
 def run_one(label, model_id, groups, by_group, horizons, run_id, retries, spec,
             state_constraints=False, condition=None, policies=None,
-            experiment=None, arm=None, panel=None, today=None):
+            experiment=None, arm=None, panel=None, today=None,
+            variant=DEFAULT_VARIANT, harness=DEFAULT_HARNESS, debrief_turn=True, minimal=False):
     today = today or datetime.now(timezone.utc).date()
     prompt, n, want_cells = build_prompt(groups, by_group, horizons, spec, today,
                                          state_constraints, condition, policies)
+    if minimal:
+        if harness != "pi" or debrief_turn:
+            raise ValueError("--minimal runs through pi, with no debrief")
+        prompt = minimal_variant(minimal_prompt(prompt, want_cells), variant)   # the closing paragraph, debrief sentence included, is gone
+    else:
+        prompt = apply_variant(prompt, variant)
+    if not debrief_turn and not minimal:
+        prompt = strip_debrief(prompt)
     # Provenance for a conditional row: which condition, and a hash of the exact
     # block the model saw, so a later edit to the policy text cannot be pooled
     # with this run unnoticed.
@@ -1446,15 +1681,29 @@ def run_one(label, model_id, groups, by_group, horizons, run_id, retries, spec,
     # not one. Gemini 3.1 Pro did exactly that in the ladder experiment (searched
     # seven times, submitted nothing). Retry on an empty or badly partial grid.
     usage = {}   # the whole call's tokens and price, retries included
-    debrief = debrief_state(groups, by_group)
+    debrief = debrief_state(groups, by_group) if debrief_turn else {}
+    harness_stamp = {"name": harness}
+    slug = f"{label}{'' if not VARIANTS[variant] else '-' + variant}".replace(" ", "_")
     while attempts <= retries:
         attempts += 1
         research, coverage = research_tools(groups)
-        debrief = debrief_state(groups, by_group)
-        answer, evidence = call_tools(
-            model_id, prompt, research, submit_tool(qids, horizons),
-            system=SYSTEM, max_iters=MAX_ROUNDS, max_tokens=32000,
-            min_evidence=MIN_RESEARCH, usage=usage, coverage=coverage, debrief=debrief)
+        debrief = debrief_state(groups, by_group) if debrief_turn else None
+        final = submit_tool(qids, horizons)
+        if minimal:
+            research, final = minimal_tools(research, final)
+        if harness == "pi":
+            answer, evidence, got, _, debrief, harness_stamp = call_pi(
+                model_id, prompt, research, final, None, coverage, debrief,
+                qids, [f"{q}|{h}" for q in qids for h in horizons if h in allowed[q]],
+                os.path.join(PI_WORKDIR, run_id, slug), usage, cell_schema=PI_PLAIN_CELL_SCHEMA,
+                system=MINIMAL_SYSTEM if minimal else None, rules=not minimal)
+            answer["forecasts"] = list(got.values())
+        else:
+            answer, evidence = call_tools(
+                model_id, prompt, research, submit_tool(qids, horizons),
+                system=SYSTEM, max_iters=MAX_ROUNDS, max_tokens=32000,
+                min_evidence=MIN_RESEARCH, usage=usage, coverage=coverage, debrief=debrief)
+        debrief = debrief or {}
         grid = clean_forecasts(answer.get("forecasts"), allowed, horizons)
         # CELLS, not questions. The guard used to read len(grid) >= 0.9 *
         # len(qids), which counts a question as complete the moment ONE of its
@@ -1466,6 +1715,8 @@ def run_one(label, model_id, groups, by_group, horizons, run_id, retries, spec,
             break
         print(f"  retry {label:16} attempt {attempts}: {got}/{want_cells} cells "
               f"({len(grid or {})}/{len(qids)} questions)")
+    if not grid:   # as run_one_joint: an empty call is a failure, not null rows
+        raise RuntimeError(f"no forecasts after {attempts} attempt(s)")
     # A search that RAN is not a search that WORKED. bool(evidence) was true
     # whenever the model called web_search at all, including when every call
     # came back {"results": [], "error": "web search unavailable (no
@@ -1509,8 +1760,10 @@ def run_one(label, model_id, groups, by_group, horizons, run_id, retries, spec,
                 "counting_window": counting_windows(q, horizons, today, spec),
                 "prompt_sha256": hashlib.sha256(prompt.encode()).hexdigest(),
                 "prompt": prompt if q is first else None,
-                "system_prompt": SYSTEM if q is first else None,
-                "protocol": "unified-batch-v1" if state_constraints else PROTOCOL,
+                "system_prompt": (MINIMAL_SYSTEM if minimal else SYSTEM) if q is first else None,
+                "protocol": (variant_protocol("minimal-v1", variant) if minimal else
+                             lean_protocol("unified-batch-v1" if state_constraints else PROTOCOL,
+                                           variant, debrief_turn)),
                 "call_id": call_id,
                 "attempts": attempts,
                 "batch_size": len(qids),
@@ -1523,6 +1776,8 @@ def run_one(label, model_id, groups, by_group, horizons, run_id, retries, spec,
                 "experiment": experiment,
                 "arm": arm,
                 "panel": panel,
+                "variant": variant,
+                "harness": harness_stamp if q is first else {"name": harness},
             })
     return rows
 
@@ -1644,6 +1899,16 @@ def main():
                          "call per model per variant). Default none, the published "
                          "prompt; any other needs --experiment, so it never writes "
                          "into the published series")
+    ap.add_argument("--harness", default=DEFAULT_HARNESS, choices=HARNESSES,
+                    help="with --joint: the agent loop. litellm (default) = redlines.llm."
+                         "call_tools; pi = the FRI Forecaster loop (forecastingresearch/agent-box), "
+                         "which needs the fri_forecaster package, node and pi 0.99.2")
+    ap.add_argument("--lean", action="store_true",
+                    help="with --joint and --experiment: ask the plain batch (the 41 questions, "
+                         "no conditions) instead of the condition set -- an experiment that runs "
+                         "its own baseline")
+    ap.add_argument("--no-debrief", action="store_true",
+                    help="with --experiment: no debrief turn, and no sentence announcing it")
     ap.add_argument("--dry-run", action="store_true",
                     help="print each arm's prompt and exit; no model is called")
     args = ap.parse_args()
@@ -1790,6 +2055,8 @@ def main_joint(args):
     if args.repeats < 1:
         sys.exit("--repeats must be >= 1")
     variants = args.variant or [DEFAULT_VARIANT]
+    if (args.lean or args.no_debrief) and not args.experiment and not args.dry_run:
+        sys.exit("refusing: --lean and --no-debrief are experiment instruments; tag the run with --experiment")
     if any(VARIANTS[v] for v in variants) and not args.experiment and not args.dry_run:
         sys.exit("refusing: a prompt variant is not the published elicitation; "
                  "tag the run with --experiment <name>")
@@ -1841,12 +2108,20 @@ def main_joint(args):
                                      policies, today, v)[0] for v in variants}
     prompt, n, cells = build_prompt_joint(groups, by_group, horizons, spec, conds,
                                           policies, today, variants[0])
+    if args.lean:
+        conds = []
+        prompts = {v: apply_variant(build_prompt(groups, by_group, horizons, spec, today)[0], v)
+                   for v in variants}
+        proto = PROTOCOL
+    if args.no_debrief:
+        prompts = {v: strip_debrief(p) for v, p in prompts.items()}
     for el in set_elicits(resolve_set(policies, today)):
         print(f"    elicits {el['key']} {el['fields']} for {el.get('target_date')}"
               + (f" (run date + {el['target_months']} months)" if el.get("target_months") else ""))
     if args.dry_run:
         for v, p in prompts.items():
-            print(f"##### JOINT [{slug}: {variant_protocol(proto, v)}]: {n} questions, {cells} cells x "
+            print(f"##### {'LEAN' if args.lean else 'JOINT'} [{'plain' if args.lean else slug}: "
+                  f"{lean_protocol(proto, v, not args.no_debrief)}]: {n} questions, {cells} cells x "
                   f"{len(conds) + 1} conditions = {cells * (len(conds) + 1)} probabilities, "
                   f"{len(p)} chars #####")
             print(p)
@@ -1854,12 +2129,14 @@ def main_joint(args):
     load_keys()
     if not os.environ.get("TAVILY_API_KEY") and not args.allow_ungrounded:
         sys.exit("refusing to run: TAVILY_API_KEY is unset (see the unconditional path)")
+    if args.harness == "pi":
+        pi_preflight()
     models, panel = select_models(args)
     print(f"run {run_id} protocol {proto} [set {slug}]: {len(models) * len(arms) * len(variants)} calls "
           f"({len(models)} models x {len(arms)} repeat(s) x {len(variants)} variant(s)), {n} questions x "
           f"{len(horizons)} horizons = {cells} cells x {len(conds) + 1} conditions "
           f"= {cells * (len(conds) + 1)} probabilities each")
-    print(f"    harness: research floor {MIN_RESEARCH} calls, coverage "
+    print(f"    harness: {args.harness}; research floor {MIN_RESEARCH} calls, coverage "
           f"{', '.join(g['key'] for g in groups)}, guard {MAX_ROUNDS} rounds; reasoning "
           + ", ".join(f"{l}={reasoning_for(m) or 'default'}" for l, m in models))
     if variants != [DEFAULT_VARIANT]:
@@ -1882,10 +2159,17 @@ def main_joint(args):
     spent = 0.0
     with open(out, "a") as f, open(cond_out, "a") as fc, \
             cf.ThreadPoolExecutor(max_workers=args.workers) as ex:
-        futs = {ex.submit(run_one_joint, l, m, groups, by_group, horizons, run_id,
-                          args.retries, spec, conds, policies, args.experiment, arm, panel,
-                          today, v): (arm, l, v)
-                for v in variants for arm in arms for l, m in models}
+        if args.lean:
+            futs = {ex.submit(run_one, l, m, groups, by_group, horizons, run_id, args.retries, spec,
+                              experiment=args.experiment, arm=arm, panel=panel, today=today,
+                              variant=v, harness=args.harness,
+                              debrief_turn=not args.no_debrief): (arm, l, v)
+                    for v in variants for arm in arms for l, m in models}
+        else:
+            futs = {ex.submit(run_one_joint, l, m, groups, by_group, horizons, run_id,
+                              args.retries, spec, conds, policies, args.experiment, arm, panel,
+                              today, v, args.harness, not args.no_debrief): (arm, l, v)
+                    for v in variants for arm in arms for l, m in models}
         for fut in cf.as_completed(futs):
             arm, label, v = futs[fut]
             tag = f"{arm + ':' + label + ('' if v == DEFAULT_VARIANT else ':' + v):32}"
