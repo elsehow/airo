@@ -210,7 +210,7 @@ def complete(r):
 def forecast_group_session(gid, g, mdir, args, research, groups):
     """Run the whole survey in one session (already ran? -- only unfinished reruns)."""
     res = harness_retry(model=args.model, system="",
-                      prompt=build_session_prompt(groups, args.due),
+                      prompt=build_session_prompt(groups, args.due), env=run_env,
                       workdir=os.path.join(mdir, "calls", "session"),
                       cell_schema=CELL_SCHEMA, key_fields=KEY_FIELDS,
                       allowed_keys=args.all_cells, cells_tool=True,
@@ -227,9 +227,18 @@ def forecast_group_session(gid, g, mdir, args, research, groups):
     return got, res
 
 
+CLEAN_HOME = "/tmp/fb-clean-home"   # no ~/.claude credentials here
+
+
 def cmd_run(args):
     harness.pi_argv(args.pi)             # no pi: fail here, not mid-run
     load_keys()
+    # pi prefers Claude-Code credentials found under $HOME (~/.claude creds /
+    # keychain login) over ANTHROPIC_API_KEY -- and the Claude-Code identity here
+    # is a Max account whose weekly limit is exhausted (the API key is fine).
+    # Point pi at a clean HOME and pass the keys explicitly instead.
+    os.makedirs(CLEAN_HOME, exist_ok=True)
+    run_env = {"HOME": CLEAN_HOME}
     root = os.path.abspath(args.root)
     os.makedirs(root, exist_ok=True)
     snapshot = load_questions(root)
@@ -290,7 +299,7 @@ def cmd_run(args):
                 continue
         else:
             base = {DEPENDS_ON[gid]: frozen[DEPENDS_ON[gid]]} if gid in DEPENDS_ON and DEPENDS_ON[gid] in frozen else None
-            res = harness_retry(model=args.model, system="",
+            res = harness_retry(model=args.model, system="", env=run_env,
                               prompt=build_group_prompt(g, args.due, base),
                               workdir=os.path.join(mdir, "calls", gid[:12]),
                               cell_schema=CELL_SCHEMA, key_fields=KEY_FIELDS,
