@@ -22,7 +22,7 @@ build    combine members: per-cell mean across members.
 Cells are the survey rows: key question_id (a row already is one
 dimension/date/percentile cell). Values carry the group's unit; probability
 rows are 0-100.
-"""
+
 No system prompt: the instrument carries everything. The model gets the
 survey (group texts, backgrounds, resolution criteria) and the tools; no
 persona, no forecasting advice. The only added text is MECHANICS: the
