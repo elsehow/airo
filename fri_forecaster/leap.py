@@ -214,7 +214,8 @@ def cmd_run(args):
     research = not args.no_research
     mdir = member_dir(root, args.model, args.thinking, research, args.shard)
     os.makedirs(mdir, exist_ok=True)
-    min_res = args.min_research if args.shard == "group" else args.min_research * len(snapshot["groups"])
+    n_forecast = len([g for g in snapshot["groups"] if g["question_type"] == "forecast"])
+    min_res = args.min_research if args.shard == "group" else args.min_research * n_forecast
     check_manifest(os.path.join(mdir, "manifest.json"),
                    manifest_of(snapshot, args.model, args.thinking, research, args.shard, min_res, args.pi))
 
