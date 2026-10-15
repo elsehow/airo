@@ -210,7 +210,8 @@ def cmd_run(args):
     root = os.path.abspath(args.root)
     os.makedirs(root, exist_ok=True)
     snapshot = load_questions(root)
-    args.snapshot, args.due = snapshot, str(snapshot.get("survey_end_date") or "")
+    args.snapshot, args.due = snapshot, str(snapshot.get("survey_end_date")
+                                                    or snapshot["groups"][0].get("survey_end_date") or "")
     research = not args.no_research
     mdir = member_dir(root, args.model, args.thinking, research, args.shard)
     os.makedirs(mdir, exist_ok=True)

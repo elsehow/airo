@@ -42,9 +42,9 @@ def main(survey_id):
                 "questions": []}
         g["questions"].append({k: r[k] for k in ("question_id", "question_dimension",
                                                  "question_percentile", "question_resolution_date")})
-    json.dump({"survey_id": survey_id,
-               "survey_source_id": rows[0]["survey_source_id"],
-               "groups": list(groups.values())}, sys.stdout, indent=1)
+    json.dump({"survey_id": survey_id, "survey_source_id": rows[0]["survey_source_id"],
+               "survey_end_date": rows[0]["survey_end_date"], "groups": list(groups.values())},
+              sys.stdout, indent=1)
 
 
 if __name__ == "__main__":
