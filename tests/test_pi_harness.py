@@ -195,6 +195,42 @@ class TestJointThroughPi(unittest.TestCase):
         self.assertEqual(sum(len(r["forecasts"]) for r in rows), len(cells))
         self.assertIsNone(rows[0]["debrief"])
 
+    def test_minimal_no_rules_no_system(self):
+        today, policies, groups, by_group, horizons, spec = self._instrument()
+        cells = [{"question_id": q["id"], "horizon": h, "probability": 0.02}
+                 for g in groups for q in by_group[g["key"]] for h in horizons if h in q["horizons"]]
+        script = [("submit_forecast", {"rationale": "r", "forecasts": cells})]   # no research at all
+        model = ScriptedModel(script)
+        self.addCleanup(model.close)
+        json.dump({"providers": {"fake": {"baseUrl": model.url, "api": "openai-completions", "apiKey": "x",
+                                          "models": [{"id": "scripted"}]}}},
+                  open(os.path.join(os.environ["PI_CODING_AGENT_DIR"], "models.json"), "w"))
+        os.environ["REDLINES_REASONING"] = "none"
+        cwd, ru.PI_CWD = ru.PI_CWD, os.path.join(self.tmp.name, "w")
+        try:
+            rows = ru.run_one("Scripted", "fake/scripted", groups, by_group, horizons, "2026-10-15T0000Z", 0,
+                              spec, experiment="test", arm="m#1", today=today, harness="pi",
+                              debrief_turn=False, minimal=True)
+        finally:
+            os.environ.pop("REDLINES_REASONING", None)
+            ru.PI_CWD = cwd
+        req = model.requests[0]
+        system = [m for m in req["messages"] if m["role"] == "system"][0]["content"]
+        self.assertTrue(system.startswith(" \n\n<cwd>"), system[:80])     # not pi's coding-assistant prompt
+        self.assertNotIn("coding", system)
+        tools = {t["function"]["name"]: t["function"] for t in req["tools"]}
+        self.assertEqual(set(tools), {"web_search", "read_page", "submit_forecast"})  # offered from turn one
+        self.assertNotIn("cause", tools["web_search"]["parameters"]["properties"])
+        self.assertEqual(tools["submit_forecast"]["description"], ru.MINIMAL_TOOLS["submit_forecast"])
+        prompt = rows[0]["prompt"]
+        self.assertIn("Below are 41 questions.", prompt)
+        self.assertNotIn("Research before answering", prompt)
+        self.assertNotIn("base rates", prompt.split("===== APPLIES")[0].split("Below are")[0])
+        self.assertEqual(rows[0]["protocol"], "minimal-v1")
+        self.assertEqual(rows[0]["system_prompt"], " ")
+        self.assertTrue(all(r["forecasts"] for r in rows))
+        self.assertEqual(rows[0]["evidence"], [])
+
     def test_full_instrument(self):
         today, policies, groups, by_group, horizons, spec = self._instrument()
         conds = policies["conditions"]

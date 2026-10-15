@@ -460,6 +460,53 @@ def strip_debrief(prompt):
     return out
 
 
+# THE MINIMAL INSTRUMENT (--minimal; 2026-10-15): as little context as the
+# questions allow, the floor of an evidence base built up from nothing. No
+# system prompt (one space: pi substitutes its own coding-assistant prompt
+# for an empty one), no research paragraph, no framing beyond "Below are N
+# questions", tool descriptions that say only what each tool does, and no
+# research floor, coverage rule or turn guard. The question blocks, their
+# criteria, the shared definitions and the dated horizons are the plain
+# batch's, byte for byte. pi only; experiments only.
+MINIMAL_SYSTEM = " "
+MINIMAL_HEAD = re.compile(r"Below are (\d+) forecasting questions, grouped by cause of catastrophe\. "
+                          r"Forecast\nall of them together, in one pass\.")
+MINIMAL_TAIL = ("Call submit_forecast once, with a probability in [0,1] for every question x\n"
+                "horizon cell ({cells} in total), a short rationale, and the sources you used.")
+MINIMAL_TOOLS = {
+    "web_search": "Search the web. Returns titled snippets with URLs and publication dates. "
+                  "recent_days limits results to the last N days.",
+    "submit_forecast": "Submit your forecasts.",
+}
+
+
+def minimal_prompt(prompt, cells):
+    """The plain batch's prompt cut to the questions and one submit line."""
+    out, n = MINIMAL_HEAD.subn(lambda m: f"Below are {m.group(1)} questions.", prompt)
+    assert n == 1, "the plain prompt's head changed; update MINIMAL_HEAD"
+    at = out.index("Research before answering, in rounds")
+    return out[:at] + MINIMAL_TAIL.format(cells=cells)
+
+
+def minimal_tools(research, final_tool):
+    """Mechanical descriptions; web_search loses `cause`, which only served
+    the coverage rule."""
+    research = copy.deepcopy(research)
+    for t in research:
+        if t["name"] == "web_search":
+            t["description"] = MINIMAL_TOOLS["web_search"]
+            t["parameters"]["properties"].pop("cause", None)
+            t["parameters"]["required"] = [r for r in t["parameters"].get("required", []) if r != "cause"]
+    final_tool = {**copy.deepcopy(final_tool), "description": MINIMAL_TOOLS["submit_forecast"]}
+    return research, final_tool
+
+
+# pi puts its working directory in the system prompt. Run from the repo and
+# that line names the project (".../airo/...") to the model, a pointer to
+# AIRO's own published forecasts; pi runs from an empty neutral directory.
+PI_CWD = os.environ.get("REDLINES_PI_CWD", "/tmp/w")
+
+
 def lean_protocol(proto, variant, debrief=True):
     return variant_protocol(proto, variant) + ("" if debrief else "+nodebrief")
 
@@ -1329,7 +1376,7 @@ def pi_cache_writes(trace):
 
 
 def call_pi(model_id, prompt, research, final_tool, cells_tool, coverage, debrief, qids,
-            allowed_keys, workdir, usage, cell_schema=PI_CELL_SCHEMA):
+            allowed_keys, workdir, usage, cell_schema=PI_CELL_SCHEMA, system=None, rules=True):
     """One attempt through the FRI Forecaster loop, set to call_tools' rules.
     -> (answer, evidence, received {(qid, horizon): cell}, delivery, debrief
     state, harness stamp). Adds the attempt's usage into `usage`."""
@@ -1353,14 +1400,18 @@ def call_pi(model_id, prompt, research, final_tool, cells_tool, coverage, debrie
         loop["debrief"] = {"tool": debrief["tool"], "prompt": debrief["prompt"], "retries": debrief["retries"],
                            "validator": {"file": os.path.abspath(__file__), "function": "validate_debrief_ids",
                                          "kwargs": {"qids": qids}}}
+    os.makedirs(PI_CWD, exist_ok=True)
+    if rules:   # call_tools' rules: the floor, the coverage rule, the turn guard
+        loop.update(min_research=MIN_RESEARCH, floor_counts="returned", coverage=coverage,
+                    withhold_final=True, max_turns=MAX_ROUNDS)
     res = harness.run(
-        model=pi_model(model_id), system=SYSTEM, prompt=prompt, workdir=workdir,
+        model=pi_model(model_id), system=SYSTEM if system is None else system, prompt=prompt,
+        workdir=workdir, cwd=PI_CWD,
         thinking=reasoning_for(model_id) or "off", timeout=PI_CALL_TIMEOUT,
         cell_schema=cell_schema, key_fields=["question_id", "horizon"], allowed_keys=allowed_keys,
         # call_tools' descriptions and schemas, verbatim, so the model sees the same tools.
         tool_descriptions=descriptions, tool_parameters=parameters, cells_tool=bool(cells_tool),
-        min_research=MIN_RESEARCH, floor_counts="returned", coverage=coverage,
-        withhold_final=True, max_turns=MAX_ROUNDS, **loop)
+        **loop)
     u = dict(res["usage"])
     u["cache_write_tokens"] = pi_cache_writes(res["trace"])
     # pi counts input, cache reads and cache writes apart; call_tools' (litellm's)
@@ -1590,12 +1641,16 @@ def run_one_joint(label, model_id, groups, by_group, horizons, run_id, retries, 
 def run_one(label, model_id, groups, by_group, horizons, run_id, retries, spec,
             state_constraints=False, condition=None, policies=None,
             experiment=None, arm=None, panel=None, today=None,
-            variant=DEFAULT_VARIANT, harness=DEFAULT_HARNESS, debrief_turn=True):
+            variant=DEFAULT_VARIANT, harness=DEFAULT_HARNESS, debrief_turn=True, minimal=False):
     today = today or datetime.now(timezone.utc).date()
     prompt, n, want_cells = build_prompt(groups, by_group, horizons, spec, today,
                                          state_constraints, condition, policies)
+    if minimal:
+        if harness != "pi" or debrief_turn or VARIANTS[variant]:
+            raise ValueError("--minimal runs through pi, with no debrief and no variant")
+        prompt = minimal_prompt(prompt, want_cells)   # the closing paragraph, debrief sentence included, is gone
     prompt = apply_variant(prompt, variant)
-    if not debrief_turn:
+    if not debrief_turn and not minimal:
         prompt = strip_debrief(prompt)
     # Provenance for a conditional row: which condition, and a hash of the exact
     # block the model saw, so a later edit to the policy text cannot be pooled
@@ -1622,11 +1677,15 @@ def run_one(label, model_id, groups, by_group, horizons, run_id, retries, spec,
         attempts += 1
         research, coverage = research_tools(groups)
         debrief = debrief_state(groups, by_group) if debrief_turn else None
+        final = submit_tool(qids, horizons)
+        if minimal:
+            research, final = minimal_tools(research, final)
         if harness == "pi":
             answer, evidence, got, _, debrief, harness_stamp = call_pi(
-                model_id, prompt, research, submit_tool(qids, horizons), None, coverage, debrief,
+                model_id, prompt, research, final, None, coverage, debrief,
                 qids, [f"{q}|{h}" for q in qids for h in horizons if h in allowed[q]],
-                os.path.join(PI_WORKDIR, run_id, slug), usage, cell_schema=PI_PLAIN_CELL_SCHEMA)
+                os.path.join(PI_WORKDIR, run_id, slug), usage, cell_schema=PI_PLAIN_CELL_SCHEMA,
+                system=MINIMAL_SYSTEM if minimal else None, rules=not minimal)
             answer["forecasts"] = list(got.values())
         else:
             answer, evidence = call_tools(
@@ -1690,9 +1749,10 @@ def run_one(label, model_id, groups, by_group, horizons, run_id, retries, spec,
                 "counting_window": counting_windows(q, horizons, today, spec),
                 "prompt_sha256": hashlib.sha256(prompt.encode()).hexdigest(),
                 "prompt": prompt if q is first else None,
-                "system_prompt": SYSTEM if q is first else None,
-                "protocol": lean_protocol("unified-batch-v1" if state_constraints else PROTOCOL,
-                                          variant, debrief_turn),
+                "system_prompt": (MINIMAL_SYSTEM if minimal else SYSTEM) if q is first else None,
+                "protocol": ("minimal-v1" if minimal else
+                             lean_protocol("unified-batch-v1" if state_constraints else PROTOCOL,
+                                           variant, debrief_turn)),
                 "call_id": call_id,
                 "attempts": attempts,
                 "batch_size": len(qids),
