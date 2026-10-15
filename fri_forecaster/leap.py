@@ -227,6 +227,15 @@ def cmd_run(args):
     args.all_cells = [qid for g in groups for qid in group_cells(g)]
     log = os.path.join(mdir, "results.jsonl")
     results = read_results(log)
+    if args.shard == "session":
+        # One full-coverage session call serves every group: don't re-run per group.
+        full = [r for r in (results.get(g["question_group_id"]) for g in groups) if complete(r)]
+        n_all = len(args.all_cells)
+        if not full:
+            pass
+        elif any(len(cells_of(r)) == n_all for r in full):
+            print("session already covers every cell; nothing to do")
+            return 0
     print(f"survey {snapshot['survey_id'][:8]} member {os.path.basename(mdir)}: {len(groups)} groups, "
           f"{len(args.all_cells)} cells; {sum(complete(results.get(g['question_group_id'])) for g in groups)} groups done")
 
@@ -241,6 +250,20 @@ def cmd_run(args):
 
         if args.shard == "session":
             got, res = forecast_group_session(gid, g, mdir, args, research, groups)
+            if set(args.all_cells) <= set(got):
+                # mark the remaining groups complete from this same call
+                for h in groups:
+                    if h is g or complete(results.get(h["question_group_id"])):
+                        continue
+                    rr = {"group_id": h["question_group_id"], "cells": got, "wanted": group_cells(h),
+                          "complete": True, "rationale": (res.get("answer") or {}).get("rationale"),
+                          "rc": res["rc"], "usage": res["usage"], "delivery": res.get("delivery"),
+                          "n_evidence": len(res["evidence"]), "attempt": os.path.relpath(res["workdir"], mdir),
+                          "same_session_as": gid}
+                    with open(log, "a") as f:
+                        f.write(json.dumps(rr) + "\n")
+                frozen.update({h["question_group_id"]: got for h in groups})
+                continue
         else:
             base = {DEPENDS_ON[gid]: frozen[DEPENDS_ON[gid]]} if gid in DEPENDS_ON and DEPENDS_ON[gid] in frozen else None
             res = harness.run(model=args.model, system=SYSTEM if research else SYSTEM_NO_RESEARCH,
