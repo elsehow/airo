@@ -168,6 +168,15 @@ number. Reason from base rates first, then adjust. These are low-probability
 questions — beware both dismissing tail risk as zero and inflating it for
 vividness. When done, call submit_forecast."""
 
+
+# An experiment may append one sentence to SYSTEM (--system-addendum; first
+# used by the anchor-guard experiment, 2026-10-16, which asks models not to
+# use other AI systems' forecasts as evidence). Only an --experiment may, so
+# the published series always sees SYSTEM exactly; the rows carry the
+# sentence as `system_addendum` and the whole prompt as `system_prompt`.
+def system_with(addendum=None):
+    return f"{SYSTEM} {addendum.strip()}" if addendum else SYSTEM
+
 PROMPT = """Today is {today}.
 {condition}
 Below are {n} forecasting questions, grouped by cause of catastrophe. Forecast
@@ -1232,9 +1241,15 @@ def coverage_line(rows):
 
 def run_one_joint(label, model_id, groups, by_group, horizons, run_id, retries, spec,
                   conds, policies, experiment=None, arm=None, panel=None, today=None,
-                  harness="litellm"):
+                  harness="litellm", system_addendum=None):
     """One call: the full instrument. -> rows, one per (question, condition)."""
     today = today or datetime.now(timezone.utc).date()
+    system = system_with(system_addendum)
+    # agent-box's URL guard (FORECASTER_BLOCK_URL_PATTERNS) is read by the tool
+    # processes from the environment; stamp it so a guarded row says so.
+    guard = os.environ.get("FORECASTER_BLOCK_URL_PATTERNS") or None
+    extra = {**({"system_addendum": system_addendum} if system_addendum else {}),
+             **({"url_block_patterns": guard} if guard else {})}
     policies = resolve_set(policies, today)
     conds = [c for c in policies["conditions"] if c["id"] in {x["id"] for x in conds}]
     prompt, n, want_cells = build_prompt_joint(groups, by_group, horizons, spec,
@@ -1289,7 +1304,7 @@ def run_one_joint(label, model_id, groups, by_group, horizons, run_id, retries, 
             debrief = debrief_state(groups, by_group)
             answer, evidence = loop_for(harness)(
                 model_id, prompt, research, submit_tool_joint(qids, horizons, cond_ids, elicits),
-                system=SYSTEM, max_iters=MAX_ROUNDS, max_tokens=64000,
+                system=system, max_iters=MAX_ROUNDS, max_tokens=64000,
                 min_evidence=MIN_RESEARCH, usage=usage, partial_tool=partial,
                 coverage=coverage, debrief=debrief,
                 **({"allowed_keys": [f"{q}|{h}" for q, hs in allowed.items() for h in sorted(hs)]}
@@ -1365,7 +1380,7 @@ def run_one_joint(label, model_id, groups, by_group, horizons, run_id, retries, 
                     "counting_window": counting_windows(q, horizons, today, spec),
                     "prompt_sha256": hashlib.sha256(prompt.encode()).hexdigest(),
                     "prompt": prompt if first else None,
-                    "system_prompt": SYSTEM if first else None,
+                    "system_prompt": system if first else None,
                     "protocol": row_protocol(policies, harness),
                     "condition_set": set_slug(policies),
                     "call_id": call_id, "attempts": attempts,
@@ -1392,6 +1407,7 @@ def run_one_joint(label, model_id, groups, by_group, horizons, run_id, retries, 
                     # Which model set this call belongs to -- for the ECI
                     # panel, which snapshot chose it (redlines.registry).
                     "panel": panel,
+                    **extra,
                 })
                 first = False
     return rows
@@ -1620,7 +1636,12 @@ def main():
                     help="the loop: the condition set's own (its `harness`; litellm when it names "
                          "none) unless given. Another loop runs only as a --joint --experiment, "
                          "its rows tagged <protocol>+<harness>")
+    ap.add_argument("--system-addendum", default=None,
+                    help="append this sentence to the system prompt (--joint --experiment only)")
     args = ap.parse_args()
+    if args.system_addendum and not (args.joint and args.experiment):
+        sys.exit("--system-addendum runs only as a --joint --experiment, so the published "
+                 "series always sees the system prompt unchanged")
     if args.harness:
         if not args.joint:
             sys.exit("--harness is for --joint runs")
@@ -1824,6 +1845,10 @@ def main_joint(args):
         print(f"##### JOINT [{slug}: {proto}]: {n} questions, {cells} cells x {len(conds) + 1} "
               f"conditions = {cells * (len(conds) + 1)} probabilities, {len(prompt)} chars #####")
         print(prompt)
+        print(f"##### SYSTEM ({'with addendum' if args.system_addendum else 'unchanged'}) #####")
+        print(system_with(args.system_addendum))
+        print("##### URL GUARD (FORECASTER_BLOCK_URL_PATTERNS): "
+              f"{os.environ.get('FORECASTER_BLOCK_URL_PATTERNS') or 'off'} #####")
         return
     load_keys()
     if not os.environ.get("TAVILY_API_KEY") and not args.allow_ungrounded:
@@ -1856,7 +1881,7 @@ def main_joint(args):
             cf.ThreadPoolExecutor(max_workers=args.workers) as ex:
         futs = {ex.submit(run_one_joint, l, m, groups, by_group, horizons, run_id,
                           args.retries, spec, conds, policies, args.experiment, arm, panel,
-                          today, harness): (arm, l)
+                          today, harness, args.system_addendum): (arm, l)
                 for arm in arms for l, m in models}
         for fut in cf.as_completed(futs):
             arm, label = futs[fut]

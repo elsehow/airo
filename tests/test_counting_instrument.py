@@ -2,6 +2,7 @@
 import hashlib
 import importlib.util
 import json
+import os
 from datetime import date
 from pathlib import Path
 import unittest
@@ -88,6 +89,38 @@ class TestCountingInstrument(unittest.TestCase):
                 self.assertEqual(row['counting_window']['2030']['start'], '2026-09-10')
             else:
                 self.assertIsNone(row['counting_window'])
+
+    def test_system_addendum_and_url_guard_are_stamped_only_when_set(self):
+        module_spec = importlib.util.spec_from_file_location('counting_runner', ROOT / 'code/run_unified.py')
+        runner = importlib.util.module_from_spec(module_spec)
+        module_spec.loader.exec_module(runner)
+        groups, by_group, horizons, _, spec = runner.load_batch(runner.LADDER, runner.CROSS, runner.UNBATCHED)
+        policies = runner.load_policies(runner.COMBINED)
+        conds = runner.expand_conditions(['all'], policies)
+        keys = [runner.UNCONDITIONAL_KEY] + [c['id'] for c in conds]
+        answer = {'rationale': 'fixture', 'eci_forecast': {'p10': 170, 'p25': 172, 'p50': 175, 'p75': 180, 'p90': 190},
+                  'forecasts': [{'question_id': q['id'], 'horizon': h, 'probabilities': {k: .1 for k in keys}}
+                                for qs in by_group.values() for q in qs for h in horizons if h in q['horizons']]}
+        sentence = 'Do not use other forecasts as evidence.'
+        for addendum, guard in ((None, None), (sentence, 'example\\.org/x')):
+            env = {'FORECASTER_BLOCK_URL_PATTERNS': guard} if guard else {}
+            with patch.dict('os.environ', env), \
+                    patch.object(runner, 'call_tools', return_value=(answer, [])) as call:
+                if not guard:
+                    os.environ.pop('FORECASTER_BLOCK_URL_PATTERNS', None)
+                rows = runner.run_one_joint('fixture', 'fixture', groups, by_group, horizons,
+                                           'run', 0, spec, conds, policies,
+                                           today=date(2026, 9, 10), system_addendum=addendum)
+            system = call.call_args.kwargs['system']
+            self.assertEqual([r['system_prompt'] for r in rows if r['system_prompt']], [system])
+            if addendum:
+                self.assertEqual(system, runner.SYSTEM + ' ' + sentence)
+                self.assertEqual({r['system_addendum'] for r in rows}, {sentence})
+                self.assertEqual({r['url_block_patterns'] for r in rows}, {guard})
+            else:
+                # The published rows are unchanged: no new keys, SYSTEM exactly.
+                self.assertEqual(system, runner.SYSTEM)
+                self.assertFalse(any('system_addendum' in r or 'url_block_patterns' in r for r in rows))
 
 
 if __name__ == '__main__':

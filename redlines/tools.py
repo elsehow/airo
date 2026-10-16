@@ -44,6 +44,7 @@ The paper tells the same story in its methods section.
 """
 import json
 import os
+import re
 import urllib.error
 import urllib.request
 from datetime import date, timedelta
@@ -55,6 +56,28 @@ TAVILY_EXTRACT_URL = "https://api.tavily.com/extract"
 # caps a tool reply at 8000 characters, so a window has to fit under that with
 # its envelope; the model pages through a longer document with `offset`.
 PAGE_CHARS = 7000
+
+# URL GUARD (2026-10-16, AIRO's anchor-guard experiment). OFF unless the
+# environment sets FORECASTER_BLOCK_URL_PATTERNS: regexes separated by newlines
+# or commas, searched (re.search) against each URL. pi_tools.ts hands its
+# environment to every tool process, so one variable reaches both tools.
+# read_page refuses a matching URL without calling Tavily, with the ordinary
+# failure shape and a neutral reason; web_search drops matching results, and
+# results titled as the AIRO paper (BLOCK_TITLES), and blanks Tavily's
+# `answer` when it dropped anything, because that summary was written from
+# the unfiltered results. ForecastBench shares these tools, so nothing here
+# changes when the variable is unset.
+BLOCK_ENV = "FORECASTER_BLOCK_URL_PATTERNS"
+BLOCK_TITLES = ("Automated Artificial Intelligence Risk Outlook",)
+
+
+def blocked_patterns():
+    raw = os.environ.get(BLOCK_ENV) or ""
+    return [re.compile(p.strip()) for p in re.split(r"[\n,]", raw) if p.strip()]
+
+
+def is_blocked(url, patterns):
+    return bool(url) and any(p.search(url) for p in patterns)
 
 
 def search_body(query, max_results=5, recent_days=None, today=None):
@@ -106,9 +129,14 @@ def web_search(query, max_results=5, recent_days=None, cause=None):
     except (urllib.error.URLError, ValueError, TimeoutError) as e:
         return {"query": query, **tag, "results": [], "error": f"web search failed: {e}"}
     out = {"query": query, **tag, "answer": data.get("answer"), "results": []}
+    guard = blocked_patterns()
     if recent_days:
         out["window"] = {"start": spec["start_date"], "end": spec["end_date"]}
     for r in data.get("results", []):
+        if guard and (is_blocked(r.get("url"), guard)
+                      or any(t in (r.get("title") or "") for t in BLOCK_TITLES)):
+            out["answer"] = None
+            continue
         item = {"title": r.get("title"), "url": r.get("url"),
                 # Tavily already returns trimmed snippets; cap defensively
                 "content": (r.get("content") or "")[:1500]}
@@ -127,6 +155,8 @@ def read_page(url, offset=0):
     page cannot be fetched, returns a result carrying an `error` string and no
     text, so the loop keeps going.
     """
+    if is_blocked(url, blocked_patterns()):
+        return {"url": url, "text": "", "error": "page read failed: page unavailable"}
     key = os.environ.get("TAVILY_API_KEY")
     if not key:
         return {"url": url, "text": "",
