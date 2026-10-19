@@ -59,7 +59,8 @@ PAGE_CHARS = 7000
 
 # URL GUARD (2026-10-16, AIRO's anchor-guard experiment). OFF unless the
 # environment sets FORECASTER_BLOCK_URL_PATTERNS: regexes separated by newlines
-# or commas, searched (re.search) against each URL. pi_tools.ts hands its
+# or commas (so no commas inside a pattern), searched case-insensitively
+# against each URL. pi_tools.ts hands its
 # environment to every tool process, so one variable reaches both tools.
 # read_page refuses a matching URL without calling Tavily, with the ordinary
 # failure shape and a neutral reason; web_search drops matching results, and
@@ -73,7 +74,7 @@ BLOCK_TITLES = ("Automated Artificial Intelligence Risk Outlook",)
 
 def blocked_patterns():
     raw = os.environ.get(BLOCK_ENV) or ""
-    return [re.compile(p.strip()) for p in re.split(r"[\n,]", raw) if p.strip()]
+    return [re.compile(p.strip(), re.I) for p in re.split(r"[\n,]", raw) if p.strip()]
 
 
 def is_blocked(url, patterns):

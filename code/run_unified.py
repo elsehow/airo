@@ -80,6 +80,7 @@ import copy
 import hashlib
 import json
 import os
+import re
 import subprocess
 import sys
 import threading
@@ -91,7 +92,7 @@ sys.path.insert(0, ROOT)
 
 from redlines.llm import call_tools, load_keys, reasoning_for, research_coverage  # noqa: E402
 from redlines.logs import run_file  # noqa: E402
-from redlines.tools import FORECAST_TOOLS                # noqa: E402
+from redlines.tools import FORECAST_TOOLS, blocked_patterns  # noqa: E402
 from redlines.registry import DEFAULT_MODEL_SET, MODEL_SETS, panel_provenance  # noqa: E402
 from redlines.instrument import counting_windows  # noqa: E402
 from redlines.config import UNBATCHED                      # noqa: E402
@@ -1639,9 +1640,22 @@ def main():
     ap.add_argument("--system-addendum", default=None,
                     help="append this sentence to the system prompt (--joint --experiment only)")
     args = ap.parse_args()
+    if args.system_addendum is not None and not args.system_addendum.strip():
+        sys.exit("--system-addendum is empty")
     if args.system_addendum and not (args.joint and args.experiment):
         sys.exit("--system-addendum runs only as a --joint --experiment, so the published "
                  "series always sees the system prompt unchanged")
+    # The URL guard lives in the tools (FORECASTER_BLOCK_URL_PATTERNS), so the
+    # gate is here: only an experiment may filter its search, and a bad
+    # pattern fails now rather than on the first paid tool call.
+    if os.environ.get("FORECASTER_BLOCK_URL_PATTERNS"):
+        if not args.experiment and not args.dry_run:
+            sys.exit("FORECASTER_BLOCK_URL_PATTERNS is set: a URL-guarded run must be an "
+                     "--experiment, so its rows never join the series")
+        try:
+            blocked_patterns()
+        except re.error as e:
+            sys.exit(f"FORECASTER_BLOCK_URL_PATTERNS: bad pattern: {e}")
     if args.harness:
         if not args.joint:
             sys.exit("--harness is for --joint runs")

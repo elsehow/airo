@@ -191,7 +191,7 @@ reads_by, ks_by, queries = collections.defaultdict(list), collections.defaultdic
 for name, rows in sets.items():
     for cid, c in sorted(calls(rows).items()):
         st, reads, ks, qs = call_stats(c)
-        per.setdefault((name, c["label"]), []).append((c.get("arm") or "joint#1", st))
+        per.setdefault((name, c["label"]), []).append((f'{c["rows"][0]["run_id"][11:]} {c.get("arm") or "joint#1"}', st))
         reads_by[name] += reads
         ks_by[name] += ks
         queries[(name, c["label"])] += qs
