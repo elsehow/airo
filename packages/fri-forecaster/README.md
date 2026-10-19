@@ -171,7 +171,7 @@ dropped.
   per run with `harness.run(env=...)`.
 
 ```sh
-git clone https://github.com/forecastingresearch/agent-box && cd agent-box
+git clone https://github.com/forecastingresearch/airo && cd airo/packages/fri-forecaster
 npm ci && python -m venv .venv && .venv/bin/pip install -e '.[dev]'
 ```
 

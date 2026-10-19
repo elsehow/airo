@@ -5,7 +5,7 @@ published loop since combined-v9 (2026-10-16), whose condition set names it
 Under pi, run_unified swaps this in for call_tools and changes nothing else: the prompt, the tools and their schemas, the research floor, the
 coverage rule, the turn limit, the debrief and its validator, the cell
 cleaning and the rows are the instrument's own. The loop is FRI's agent-box
-(github.com/forecastingresearch/agent-box, the `fri_forecaster` package):
+(packages/fri-forecaster in this repository, the `fri_forecaster` package):
 pi drives the model, and its extension enforces the rules above with the
 loop options that mirror call_tools (agent-box README, "How it works").
 
