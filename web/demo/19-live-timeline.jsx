@@ -85,6 +85,13 @@ function TimelineChart({ q, snapshots, horizon, scale }) {
   const [hv, setHv] = useState(null);                 // hovered snapshot index
   const series = q.series.map(s => ({ ...s, vals: s.ps[h] || [], cis: (s.ci || {})[h] || [] }));
   const ci = (q.ci || {})[h] || [];
+  // Prompt variants (combined-v10): one light line per variant, the panel
+  // median of that prompt's calls; the ink line is the median of the models'
+  // means over the five. Hover a line for its prompt.
+  const VLABEL = { none: "Baseline", independent: "Independent", recent: "Recent", critical: "Critical", "two-step": "Two-step" };
+  const vtext = Object.fromEntries((TL.variants || []).map(v => [v.id, v.text]));
+  const variants = Object.entries(q.variants || {}).map(([id, hs]) => ({ id, label: VLABEL[id] || id, vals: hs[h] || [] }));
+  const hasVar = i => variants.some(v => v.vals[i] != null);
 
   let y, yticks, tickText, tickSub;
   if (loss) {
@@ -101,6 +108,7 @@ function TimelineChart({ q, snapshots, horizon, scale }) {
     // linear axis is.
     const top = linearTop([
       ...med,
+      ...variants.flatMap(v => v.vals),
       ...series.flatMap(s => s.vals),
       ...ci.flatMap(c => c || []),
     ]);
@@ -178,7 +186,7 @@ function TimelineChart({ q, snapshots, horizon, scale }) {
             {labelled.has(i) && <text x={x(i)} y={H - (replicated ? 24 : 18)} textAnchor={anchor(i)} fontSize="12" fill="var(--ink-soft)" fontWeight="600">{s.label}</text>}
             {replicated && labelled.has(i) && (
               <text x={x(i)} y={H - 10} textAnchor={anchor(i)} fontSize="10" fill="var(--ink-faint)" className="mono">
-                {s.draws} draw{s.draws === 1 ? "" : "s"}/model
+                {s.draws} call{s.draws === 1 ? "" : "s"}/model
               </text>
             )}
           </g>
@@ -196,6 +204,19 @@ function TimelineChart({ q, snapshots, horizon, scale }) {
           <rect key={"ci" + i} x={x(i) - 9} width={18} y={y(c[1])} height={Math.max(1.5, y(c[0]) - y(c[1]))}
             rx="2" fill="var(--ink-faint)" opacity="0.22" />
         ) : null)}
+
+        {/* One light line per prompt variant, under the median. */}
+        {variants.map(v => (
+          <g key={"v" + v.id} opacity="0.55">
+            <title>{v.label + (vtext[v.id] ? ": " + vtext[v.id] : ": no added instruction")}</title>
+            {segs(v.vals).map((pts, k) => pts.length > 1 ? (
+              <path key={k} d={path(pts)} fill="none" stroke="var(--ink-faint)" strokeWidth="1.8" strokeLinejoin="round" strokeLinecap="round" />
+            ) : null)}
+            {v.vals.map((val, i) => val == null ? null : (
+              <circle key={i} cx={x(i)} cy={y(val)} r="2.8" fill="var(--ink-faint)" />
+            ))}
+          </g>
+        ))}
 
         {/* The median line, with a halo, and its marks. */}
         {segs(med).map((pts, k) => pts.length > 1 ? (
@@ -240,7 +261,8 @@ function TimelineChart({ q, snapshots, horizon, scale }) {
           boxShadow: "var(--shadow)", pointerEvents: "none", minWidth: 210, maxWidth: "calc(100% - 16px)" }}>
           <div style={{ fontSize: 11, color: "var(--ink-faint)", marginBottom: 6 }}>
             {snapshots[hv].date} · <span style={{ color: "var(--ink)", fontWeight: 600 }}>by {h}</span>
-            {snapshots[hv].draws > 1 ? ` · ${snapshots[hv].draws} draws per model · point = mean, range = 95% CI` : ""}{loss ? " · death-equivalents" : ""}
+            {hasVar(hv) ? ` · ${variants.filter(v => v.vals[hv] != null).length} prompts per model · point = mean of the prompts`
+              : snapshots[hv].draws > 1 ? ` · ${snapshots[hv].draws} draws per model · point = mean, range = 95% CI` : ""}{loss ? " · death-equivalents" : ""}
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", gap: 14, fontSize: 12.5, fontWeight: 600, marginBottom: 4 }}>
             <span>Ensemble median</span>
@@ -249,6 +271,11 @@ function TimelineChart({ q, snapshots, horizon, scale }) {
               {ci[hv] && <span style={{ color: "var(--ink-faint)", fontWeight: 400 }}> {range(ci[hv])}</span>}
             </span>
           </div>
+          {variants.filter(v => v.vals[hv] != null).map(v => (
+            <div key={"tv" + v.id} style={{ display: "flex", justifyContent: "space-between", gap: 14, fontSize: 12, color: "var(--ink-soft)" }}>
+              <span>— {v.label} prompt</span><span className="mono">{fmtV(v.vals[hv])}</span>
+            </div>
+          ))}
           {series.filter(s => s.vals[hv] != null).map(s => (
             <div key={s.label} style={{ display: "flex", justifyContent: "space-between", gap: 14, fontSize: 12 }}>
               <span style={{ display: "flex", alignItems: "center", gap: 6 }}>

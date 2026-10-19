@@ -2,8 +2,16 @@
  "title": "Policy and capability conditions in one instrument -- LEAP Wave 12 policies beside the self-elicited frontier ECI six months from the run date -- as the runner prepends them",
  "slug": "combined",
  "kind": "policy or capability",
- "protocol": "unified-joint-combined-v9",
+ "protocol": "unified-joint-combined-v10",
  "harness": "pi",
+ "instrument": "minimal",
+ "variants": [
+  "none",
+  "independent",
+  "recent",
+  "critical",
+  "two-step"
+ ],
  "source": {
   "panel": "LEAP, for the policy conditions only; no human panel answers the capability conditions",
   "wave": "LEAP Wave 12 policies + frontier ECI 6 months from the run date (the model's own p10/p25/p50/p75/p90)",

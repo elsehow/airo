@@ -80,6 +80,7 @@ import copy
 import hashlib
 import json
 import os
+import re
 import subprocess
 import sys
 import threading
@@ -388,6 +389,113 @@ you relied on (only pages you read), and any cells not yet delivered. After it i
 rationale for its numbers naming the mechanism at that severity and the anchor
 you used, the sources that mattered most to it, and the assumption you are least
 sure of -- research with those questions in mind."""
+
+# PROMPT VARIANTS (Jason's five, 2026-10-14). Each is the same instrument with
+# one added instruction, verbatim. `none` adds nothing. A set may declare the
+# variants it is asked under ("variants"; combined-v10: all five): one call
+# per model per variant, rows tagged `variant`, pooled per model and date by
+# redlines.runlog. --variant asks others, as an experiment.
+VARIANTS = {
+    "none": None,
+    "independent": (
+        "Try to make your own forecasts. Do not take into account external surveys "
+        "assessing extinction or catastrophic risk, or other probabilities given by "
+        "prominent figures. The goal is to reach your own independent conclusion."),
+    "recent": (
+        "If you search external information, focus on information that arrived within "
+        "the past year, and weight more heavily sources that are more up to date about "
+        "recent developments."),
+    "critical": (
+        "Evaluate existing information critically. If you take into account forecasts by "
+        "specific people or surveyed groups, consider their recent and historical "
+        "forecasting accuracy, as well as the information available to the forecasters "
+        "when they made their forecasts."),
+    "two-step": (
+        "Proceed in two steps. First, make the best predictions you can about model "
+        "capability progress over the relevant time frame, via human generated "
+        "improvement or recursive self-improvement. Consider the distribution, not only "
+        "the modal outcome. Then, given possible model capabilities, evaluate the risk "
+        "posed and put these pieces together."),
+}
+DEFAULT_VARIANT = "none"
+VARIANT_BLOCK = """===== APPROACH =====
+
+{text}
+
+"""
+
+
+def set_variants(policies):
+    """The prompt variants a set is asked under (combined-v10: all five)."""
+    return list(policies.get("variants") or [DEFAULT_VARIANT])
+
+
+def set_instrument(policies):
+    """"minimal" (combined-v10) or "standard": the guidance the prompt carries."""
+    return policies.get("instrument", "standard")
+
+
+def apply_variant(prompt, variant):
+    """The standard instrument: the instruction as its own block before the research paragraph."""
+    text = VARIANTS[variant]
+    if not text:
+        return prompt
+    at = prompt.index("Research before answering, in rounds")
+    return prompt[:at] + VARIANT_BLOCK.format(text=text) + prompt[at:]
+
+
+# THE MINIMAL INSTRUMENT (combined-v10): the joint prompt -- every question,
+# the LEAP policy and capability conditions, the ECI step, the delivery
+# mechanics -- with the guidance cut: no system prompt (one space: pi puts its
+# own coding-assistant prompt in place of an empty one), no "forecasting
+# questions, grouped by cause", no research paragraph, no rationale length,
+# no debrief; tool descriptions that say only what a tool does; no research
+# floor or coverage rule. A variant's instruction goes in as a plain
+# paragraph before the delivery paragraph. The turn limit is a runaway guard
+# far above any call seen (64 turns); it also keeps agent-box's nudge on, so a
+# reply cut at the output limit with no submission (Opus 5.5, 2026-10-19)
+# does not end the call.
+MINIMAL_SYSTEM = " "
+MINIMAL_MAX_TURNS = 100
+MINIMAL_JOINT_HEAD = ("forecasting questions, grouped by cause of catastrophe. Forecast\n"
+                      "all of them together, in one pass -- and forecast every")
+MINIMAL_JOINT_RESEARCH = re.compile(r"Research before answering, in rounds:.*?applied to the same evidence\.\n", re.S)
+MINIMAL_JOINT_RATIONALE = ("a 3-6 sentence rationale covering the whole set, the key sources\n"
+                           "you relied on (only pages you read), and any cells not yet delivered.")
+DEBRIEF_SENTENCE = re.compile(r" ?After it is accepted you will be asked one more thing.*?"
+                              r"research with those questions in mind\.", re.S)
+MINIMAL_TOOLS = {
+    "web_search": "Search the web. Returns titled snippets with URLs and publication dates. "
+                  "recent_days limits results to the last N days.",
+}
+
+
+def minimal_joint_prompt(prompt, variant=DEFAULT_VARIANT):
+    """The joint prompt cut to the questions, conditions and delivery mechanics."""
+    assert prompt.count(MINIMAL_JOINT_HEAD) == 1, "the joint prompt's head changed; update MINIMAL_JOINT_HEAD"
+    out = prompt.replace(MINIMAL_JOINT_HEAD, "questions. Answer\nall of them -- and answer every")
+    out, n = MINIMAL_JOINT_RESEARCH.subn("", out)
+    assert n == 1, "the joint prompt's research paragraph changed; update MINIMAL_JOINT_RESEARCH"
+    assert out.count(MINIMAL_JOINT_RATIONALE) == 1, "the joint prompt's rationale line changed"
+    out = out.replace(MINIMAL_JOINT_RATIONALE, "a short rationale, the sources you used, and any cells not yet delivered.")
+    out, n = DEBRIEF_SENTENCE.subn("", out)
+    assert n == 1, "the debrief sentence changed; update DEBRIEF_SENTENCE"
+    if VARIANTS[variant]:
+        at = out.index("Deliver the probabilities with submit_cells")
+        out = out[:at] + VARIANTS[variant] + "\n\n" + out[at:]
+    return out
+
+
+def minimal_tools(research):
+    """Mechanical descriptions; web_search loses `cause`, which served only the coverage rule."""
+    research = copy.deepcopy(research)
+    for t in research:
+        if t["name"] == "web_search":
+            t["description"] = MINIMAL_TOOLS["web_search"]
+            t["parameters"]["properties"].pop("cause", None)
+            t["parameters"]["required"] = [r for r in t["parameters"].get("required", []) if r != "cause"]
+    return research
+
 
 GROUP_BLOCK = """
 ===== {heading} =====
@@ -1232,13 +1340,14 @@ def coverage_line(rows):
 
 def run_one_joint(label, model_id, groups, by_group, horizons, run_id, retries, spec,
                   conds, policies, experiment=None, arm=None, panel=None, today=None,
-                  harness="litellm"):
+                  harness="litellm", variant=DEFAULT_VARIANT, minimal=False):
     """One call: the full instrument. -> rows, one per (question, condition)."""
     today = today or datetime.now(timezone.utc).date()
     policies = resolve_set(policies, today)
     conds = [c for c in policies["conditions"] if c["id"] in {x["id"] for x in conds}]
     prompt, n, want_cells = build_prompt_joint(groups, by_group, horizons, spec,
                                                conds, policies, today)
+    prompt = minimal_joint_prompt(prompt, variant) if minimal else apply_variant(prompt, variant)
     block = conditions_block(conds, policies)
     sha = hashlib.sha256(block.encode()).hexdigest()
     cond_ids = [c["id"] for c in conds]
@@ -1286,11 +1395,14 @@ def run_one_joint(label, model_id, groups, by_group, horizons, run_id, retries, 
         delivery.update(cells_calls=0, cells_in_pieces=0, cells_in_final=0)
         try:
             research, coverage = research_tools(groups)
-            debrief = debrief_state(groups, by_group)
+            debrief = None if minimal else debrief_state(groups, by_group)
+            if minimal:
+                research, coverage = minimal_tools(research), None
             answer, evidence = loop_for(harness)(
                 model_id, prompt, research, submit_tool_joint(qids, horizons, cond_ids, elicits),
-                system=SYSTEM, max_iters=MAX_ROUNDS, max_tokens=64000,
-                min_evidence=MIN_RESEARCH, usage=usage, partial_tool=partial,
+                system=MINIMAL_SYSTEM if minimal else SYSTEM,
+                max_iters=MINIMAL_MAX_TURNS if minimal else MAX_ROUNDS, max_tokens=64000,
+                min_evidence=0 if minimal else MIN_RESEARCH, usage=usage, partial_tool=partial,
                 coverage=coverage, debrief=debrief,
                 **({"allowed_keys": [f"{q}|{h}" for q, hs in allowed.items() for h in sorted(hs)]}
                    if harness == "pi" else {}))
@@ -1317,6 +1429,10 @@ def run_one_joint(label, model_id, groups, by_group, horizons, run_id, retries, 
         print(f"  retry {label:16} attempt {attempts}: {got}/{want} cells x conditions"
               + "".join(f", {k} {'ok' if v else 'missing/unordered'}"
                         for k, v in (elicited or {}).items()))
+    # No forecasts after every attempt is a failed call, not rows of nulls
+    # (2026-10-14: a 0/574 call was logged as done).
+    if not grids:
+        raise RuntimeError(f"no forecasts after {attempts} attempt(s)")
     # Stamp each condition with the level it names in this call: a fixed
     # level carries its own `value` (the axes sets); a condition on the
     # model's own number (`field`) takes what it gave for that field of its
@@ -1329,13 +1445,13 @@ def run_one_joint(label, model_id, groups, by_group, horizons, run_id, retries, 
             stamps[c["id"]]["value"] = ((elicited or {}).get(key) or {}).get(c["field"])
     hits = sum(len((e.get("result") or {}).get("results") or [])
                for e in evidence if e.get("tool") == "web_search")
-    debrief = debrief if attempts else debrief_state(groups, by_group)
+    debrief = (debrief if attempts else debrief_state(groups, by_group)) or {}
     # Cited but not read (the source-quality pass, 2026-09-02 evening): the
     # key sources the model lists that no read_page call in this call fetched.
     read = {(e.get("args") or {}).get("url") for e in evidence if e.get("tool") == "read_page"}
     unread = [u for u in (answer.get("key_sources") or []) if isinstance(u, str) and u not in read]
     stamp = datetime.now(timezone.utc).isoformat(timespec="seconds")
-    call_id = f"{run_id}:{set_slug(policies)}:{arm}:{label}"
+    call_id = f"{run_id}:{set_slug(policies)}:{arm}:{label}" + (f":{variant}" if variant != DEFAULT_VARIANT else "")
     rows, first = [], True
     for key in [UNCONDITIONAL_KEY] + cond_ids:
         grid = (grids or {}).get(key) or {}
@@ -1365,8 +1481,11 @@ def run_one_joint(label, model_id, groups, by_group, horizons, run_id, retries, 
                     "counting_window": counting_windows(q, horizons, today, spec),
                     "prompt_sha256": hashlib.sha256(prompt.encode()).hexdigest(),
                     "prompt": prompt if first else None,
-                    "system_prompt": SYSTEM if first else None,
-                    "protocol": row_protocol(policies, harness),
+                    "system_prompt": (MINIMAL_SYSTEM if minimal else SYSTEM) if first else None,
+                    "protocol": row_protocol(policies, harness)
+                                + ("" if variant in set_variants(policies) else f"+{variant}")
+                                + ("" if minimal == (set_instrument(policies) == "minimal") else
+                                   ("+minimal" if minimal else "+standard")),
                     "condition_set": set_slug(policies),
                     "call_id": call_id, "attempts": attempts,
                     "batch_size": len(qids),
@@ -1386,6 +1505,8 @@ def run_one_joint(label, model_id, groups, by_group, horizons, run_id, retries, 
                                   "targets": {e["key"]: e.get("target_date") for e in elicits}}
                                  if elicits else None),
                     "experiment": experiment, "arm": arm,
+                    # Which prompt variant asked (VARIANTS); "none" adds nothing.
+                    "variant": variant,
                     # Which conditions this call was asked, so a partial
                     # submission is visibly partial.
                     "joint_conditions": [UNCONDITIONAL_KEY] + cond_ids,
@@ -1614,6 +1735,12 @@ def main():
                          "for another)")
     ap.add_argument("--experiment",
                     help="tag every row with this experiment name (needs --out)")
+    ap.add_argument("--variant", action="append", choices=sorted(VARIANTS),
+                    help="with --joint: ask under these prompt variants (repeatable) instead of the "
+                         "set's own (combined-v10: all five); others than the set's need --experiment")
+    ap.add_argument("--minimal", action=argparse.BooleanOptionalAction, default=None,
+                    help="with --joint: the minimal instrument (default: the set's; combined-v10 is "
+                         "minimal); a run against the set's choice needs --experiment")
     ap.add_argument("--dry-run", action="store_true",
                     help="print each arm's prompt and exit; no model is called")
     ap.add_argument("--harness", choices=HARNESSES,
@@ -1766,6 +1893,14 @@ def main_joint(args):
     published_set = os.path.abspath(args.conditions) in {os.path.abspath(p) for p in PUBLISHED_SETS}
     harness = args.harness or set_harness(policies)
     slug, proto = set_slug(policies), row_protocol(policies, harness)
+    variants = args.variant or set_variants(policies)
+    minimal = set_instrument(policies) == "minimal" if args.minimal is None else args.minimal
+    if (set(variants) - set(set_variants(policies)) or minimal != (set_instrument(policies) == "minimal")) \
+            and not args.experiment and not args.dry_run:
+        sys.exit("refusing: variants or an instrument this set does not name are an experiment; "
+                 "tag the run with --experiment")
+    if minimal and harness != "pi":
+        sys.exit("the minimal instrument runs through pi")
     if args.out and os.path.abspath(args.out) == os.path.abspath(RUNLOG):
         sys.exit("refusing: never append to the shared tracked log; the series "
                  "is one dated file per run under results/runs/ (see cron_run.sh)")
@@ -1821,9 +1956,12 @@ def main_joint(args):
         print(f"    elicits {el['key']} {el['fields']} for {el.get('target_date')}"
               + (f" (run date + {el['target_months']} months)" if el.get("target_months") else ""))
     if args.dry_run:
-        print(f"##### JOINT [{slug}: {proto}]: {n} questions, {cells} cells x {len(conds) + 1} "
-              f"conditions = {cells * (len(conds) + 1)} probabilities, {len(prompt)} chars #####")
-        print(prompt)
+        for v in variants:
+            p = minimal_joint_prompt(prompt, v) if minimal else apply_variant(prompt, v)
+            print(f"##### JOINT [{slug}: {proto}{'' if v == DEFAULT_VARIANT else ' / ' + v}"
+                  f"{' / minimal' if minimal else ''}]: {n} questions, {cells} cells x {len(conds) + 1} "
+                  f"conditions = {cells * (len(conds) + 1)} probabilities, {len(p)} chars #####")
+            print(p)
         return
     load_keys()
     if not os.environ.get("TAVILY_API_KEY") and not args.allow_ungrounded:
@@ -1856,11 +1994,11 @@ def main_joint(args):
             cf.ThreadPoolExecutor(max_workers=args.workers) as ex:
         futs = {ex.submit(run_one_joint, l, m, groups, by_group, horizons, run_id,
                           args.retries, spec, conds, policies, args.experiment, arm, panel,
-                          today, harness): (arm, l)
-                for arm in arms for l, m in models}
+                          today, harness, v, minimal): (arm, l, v)
+                for v in variants for arm in arms for l, m in models}
         for fut in cf.as_completed(futs):
-            arm, label = futs[fut]
-            tag = f"{arm + ':' + label:32}"
+            arm, label, v = futs[fut]
+            tag = f"{arm + ':' + label + ('' if v == DEFAULT_VARIANT else ':' + v):32}"
             try:
                 rows = fut.result()
             except Exception as e:

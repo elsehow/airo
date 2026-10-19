@@ -187,7 +187,10 @@ export REDLINES_LLM_TIMEOUT="${REDLINES_LLM_TIMEOUT:-1800}"
 # the axes instruments spend on a date that will not publish. Its preflight
 # also refuses an Epoch snapshot older than 21 days or condition sets not
 # built from the newest one (code/check_eci_snapshot.py).
-if ! "$PY" code/run_unified.py --joint --repeats 1 --workers 2 \
+# COMBINED-V10 (2026-10-19): the minimal instrument under five prompt variants
+# (the set declares both), so 4 models x 5 = 20 calls, ten at a time; about
+# 5x a v9 run's spend, the published number per model the mean of its five.
+if ! "$PY" code/run_unified.py --joint --repeats 1 --workers 10 \
         --conditions data/combined_conditions.json --out "$OUT"; then
     echo "FATAL: the combined instrument did not complete for every panel model; see above. Skipping the axes instruments and publication."
     exit 1

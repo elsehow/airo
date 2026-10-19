@@ -53,7 +53,9 @@ def latest_run_date(rows=None):
 def build(today=None):
     ru = _runner()
     rows = instrument_rows(current_rows(load_runlog()))
-    recorded = max((r for r in rows if r.get("prompt")),
+    # Since combined-v10 a date carries five prompts (one per variant); the
+    # FAQ shows the baseline's, the prompt with no added instruction.
+    recorded = max((r for r in rows if r.get("prompt") and (r.get("variant") or "none") == "none"),
                    key=lambda r: r["elicited_at"], default=None) if today is None else None
     today = today or (date.fromisoformat(recorded["run_date"]) if recorded else latest_run_date())
     policies = ru.load_policies(ru.COMBINED)
@@ -67,6 +69,9 @@ def build(today=None):
     by_group = {k: [q for q in qs if q["id"] in asked] for k, qs in by_group.items()}
     horizons = ru.set_horizons(policies, horizons)
     prompt, n, cells = ru.build_prompt_joint(groups, by_group, horizons, spec, conds, policies, today)
+    minimal = ru.set_instrument(policies) == "minimal"
+    if minimal:
+        prompt = ru.minimal_joint_prompt(prompt)
     if recorded:
         prompt = recorded["prompt"]
     prov = panel_provenance()
@@ -74,7 +79,8 @@ def build(today=None):
         "today": today.isoformat(),
         "promptRecorded": bool(recorded),
         "promptSha256": recorded.get("prompt_sha256") if recorded else None,
-        "system": ru.SYSTEM,
+        "system": (recorded.get("system_prompt") if recorded and recorded.get("system_prompt") is not None
+                   else (ru.MINIMAL_SYSTEM if minimal else ru.SYSTEM)),
         "prompt": prompt,
         # The tag the recorded prompt was sent under, else the one the next
         # run will carry.
