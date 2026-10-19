@@ -1649,9 +1649,9 @@ def main():
     # gate is here: only an experiment may filter its search, and a bad
     # pattern fails now rather than on the first paid tool call.
     if os.environ.get("FORECASTER_BLOCK_URL_PATTERNS"):
-        if not args.experiment and not args.dry_run:
-            sys.exit("FORECASTER_BLOCK_URL_PATTERNS is set: a URL-guarded run must be an "
-                     "--experiment, so its rows never join the series")
+        if not (args.joint and args.experiment) and not args.dry_run:
+            sys.exit("FORECASTER_BLOCK_URL_PATTERNS is set: a URL-guarded run must be a "
+                     "--joint --experiment, so its rows never join the series and say so")
         try:
             blocked_patterns()
         except re.error as e:
