@@ -149,6 +149,47 @@ class TestSixthCallLaunch(unittest.TestCase):
         self.assertEqual(rc, 1)
         self.assertEqual([e["check"] for e in report["errors"]][:1], ["complete_unique_grid"])
 
+    def test_a_defective_sixth_call_is_a_warning_and_a_defective_pooled_call_an_error(self):
+        """What a call returned -- no rationale, an ECI elicit that never
+        came back ordered, a probability out of bounds, a short grid -- is
+        a variant warning on the sixth and an error on a pooled call; the
+        day publishes without a defective sixth (the reviewer of 1f9d0c6
+        reproduced the first two blocking it)."""
+        import copy
+        label = self.labels[0]
+
+        def mutate(rows, variant, how):
+            rows = copy.deepcopy(rows)
+            for r in rows:
+                if r["label"] == label and r["variant"] == variant:
+                    if how == "rationale":
+                        r["rationale"] = None
+                    elif how == "elicit":      # run_one_joint writes rows after retries with the elicit unordered
+                        r["elicited"]["eci_forecast"] = None
+                    elif how == "bounds":
+                        r["forecasts"] = [{**f, "probability": 1.5} for f in r["forecasts"]]
+                    elif how == "short":
+                        r["forecasts"] = r["forecasts"][:1]
+            return rows
+
+        for how, kind in (("rationale", "rationale_present"), ("elicit", "elicited_metadata"),
+                          ("bounds", "bounded_probability"), ("short", "complete_horizons")):
+            results = Path(self.tmp.name) / f"sixth-{how}"
+            write_run(results, mutate(self.rows, "ai-banned", how))
+            rc, report, log = validate(results)
+            self.assertEqual(rc, 0, (how, log))
+            self.assertEqual(report["errors"], [], how)
+            self.assertTrue(report["variant_warnings"], how)
+            self.assertEqual({w["problem"] for w in report["variant_warnings"]}, {kind}, how)
+            self.assertEqual({(w["variant"], w["label"]) for w in report["variant_warnings"]}, {("ai-banned", label)}, how)
+            self.assertEqual(report["instruments"]["combined"]["unpooled_calls"], 4, how)   # every row is there
+            results = Path(self.tmp.name) / f"pooled-{how}"
+            write_run(results, mutate(self.rows, "critical", how))
+            rc, report, _ = validate(results)
+            self.assertEqual(rc, 1, how)
+            self.assertIn(kind, {e["check"] for e in report["errors"]}, how)
+            self.assertEqual(report["variant_warnings"], [], how)
+
     def _load(self, **kw):
         return runlog.load_runlog(runlog=self.results / "none.jsonl", runs_dir=self.results / "runs", **kw)
 

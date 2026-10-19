@@ -50,12 +50,29 @@ def main():
               'debrief_warnings': [],
               # The unpooled sixth call (combined-v10 + "ai-banned", 2026-10-19):
               # asked beside the five, never in the published number, so a
-              # missing or short one is a warning; the day is complete when
-              # the five are. Its rows must still be well-formed.
+              # missing, short or defective one (check_call) is a warning;
+              # the day is complete when the five are. Its rows must still
+              # say what they ran under (check).
               'variant_warnings': []}
 
     def check(ok, kind, detail):
         if not ok:
+            report['errors'].append({'check': kind, 'detail': detail})
+
+    def check_call(ok, kind, detail, row, slug):
+        """A check on what a CALL returned (its grid, its numbers, its
+        rationale, its elicit). On an unpooled call (the sixth, `pooled:
+        false`) a failure is a variant warning, never a reason to withhold
+        the five; on a pooled call it is an error as before. What a row
+        must SAY about its run (protocol, prompt, windows, dates, the
+        unpooled stamp) stays an error on every row: that is the code, not
+        the model."""
+        if ok:
+            return
+        if row.get('pooled') is False:
+            report['variant_warnings'].append({'set': slug, 'variant': row.get('variant') or 'none',
+                                               'label': row['label'], 'problem': kind, 'detail': detail})
+        else:
             report['errors'].append({'check': kind, 'detail': detail})
 
     for slug in sets:
@@ -117,12 +134,8 @@ def main():
             ident = [slug, r['label'], v, r['question_id'], (r.get('condition') or {}).get('id')]
             hs = {h for h in horizons if h in q['horizons']}
             fs = r.get('forecasts') or []
-            if v in unpooled and not (len(fs) == len(hs) and {f['horizon'] for f in fs} == hs):
-                report['variant_warnings'].append({'set': slug, 'variant': v, 'label': r['label'],
-                                                   'problem': 'incomplete horizons', 'row': ident})
-            else:
-                check(len(fs) == len(hs) and {f['horizon'] for f in fs} == hs,
-                      'complete_horizons', ident)
+            check_call(len(fs) == len(hs) and {f['horizon'] for f in fs} == hs,
+                       'complete_horizons', ident, r, slug)
             check(r.get('protocol') == policies['protocol'], 'protocol', ident)
             check(r.get('prompt_sha256') == shas.get(v), 'prompt_hash', ident)
             # The sixth's rows say what they ran under; the five's are unchanged.
@@ -139,7 +152,7 @@ def main():
             for f in fs:
                 p = f.get('probability')
                 valid = isinstance(p, (int, float)) and not isinstance(p, bool) and math.isfinite(p) and 0 <= p <= 1
-                check(valid, 'bounded_probability', ident+[f.get('horizon'), p])
+                check_call(valid, 'bounded_probability', ident+[f.get('horizon'), p], r, slug)
                 if valid:
                     probabilities[tuple(ident[1:])+ (f['horizon'],)] = p
             calls[r['call_id']].append(r)
@@ -156,7 +169,7 @@ def main():
                 if not minimal:   # the minimal instrument has no research floor
                     check(len(evidence) >= ru.MIN_RESEARCH and all(r.get('grounded') for r in rs),
                           'grounding_floor', call_id)
-                check(bool(first.get('rationale')), 'rationale_present', call_id)
+                check_call(bool(first.get('rationale')), 'rationale_present', call_id, first, slug)
                 status = first.get('debrief_status') or {}
                 if not minimal and not (isinstance(first.get('debrief'), dict) and status.get('complete')):
                     report['debrief_warnings'].append({
@@ -165,7 +178,8 @@ def main():
                         'problems': status.get('problems') or (['no debrief recorded'] if not status else [])})
                 for elicit in ru.set_elicits(policies):
                     value = (first.get('elicited') or {}).get(elicit['key'])
-                    check(bool(ru.clean_elicit(value, elicit)), 'elicited_metadata', [call_id, elicit['key']])
+                    check_call(bool(ru.clean_elicit(value, elicit)), 'elicited_metadata',
+                               [call_id, elicit['key']], first, slug)
                 call_report.append({'call_id': call_id, 'label': first['label'],
                                     'variant': first.get('variant') or 'none',
                                     'pooled': bool(first.get('pooled', True)), 'rows': len(rs),
