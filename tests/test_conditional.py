@@ -750,7 +750,7 @@ class TestCombinedSet(unittest.TestCase):
                          [c["id"] for c in self.leap["conditions"]] + [c["id"] for c in self.es["conditions"]])
         self.assertEqual([g["key"] for g in cb["groups"]], ["policy", "capability"])
         self.assertEqual([c["group"] for c in cb["conditions"]], ["policy"] * 8 + ["capability"] * 5)
-        self.assertEqual(self.ru.set_protocol(cb), "unified-joint-combined-v9")   # October 16: the pi loop; October 1: the pair unnamed; September 15: the extinction pair (v5 = September 10 counting version)
+        self.assertEqual(self.ru.set_protocol(cb), "unified-joint-combined-v10")   # October 16: the pi loop; October 1: the pair unnamed; September 15: the extinction pair (v5 = September 10 counting version)
         self.assertEqual(self.ru.set_slug(cb), "combined")
         self.assertNotIn(self.ru.set_protocol(cb), (self.ru.PROTOCOL_JOINT, self.ru.set_protocol(self.es)))
         self.assertEqual(cb["elicit"], self.es["elicit"])
@@ -880,7 +880,7 @@ class TestGroupedSetOnTheTabs(unittest.TestCase):
         self.assertEqual(pol["source"]["panel"], "LEAP")
         self.assertIn("eci_p50", pol["conditioning"]["assumption"])
         self.assertEqual(pol["slug"], "combined")                       # the log is still the combined one
-        self.assertEqual(pol["protocol"], "unified-joint-combined-v9")
+        self.assertEqual(pol["protocol"], "unified-joint-combined-v10")
         cap = group_view(self.cb, "capability")
         self.assertEqual([c["field"] for c in cap["conditions"]], ["p10", "p25", "p50", "p75", "p90"])
         self.assertEqual(cap["conditioning"]["instruction"], self.es["conditioning"]["instruction"])
@@ -912,7 +912,7 @@ class TestGroupedSetOnTheTabs(unittest.TestCase):
                 self.assertEqual(view["questions"], [])
                 self.assertEqual(view["models"], [])
                 self.assertFalse(view["instrumentInfo"]["available"])
-                self.assertEqual(view["protocol"], "unified-joint-combined-v9")
+                self.assertEqual(view["protocol"], "unified-joint-combined-v10")
             return
         # Separate provider retries may have distinct run IDs but share the
         # single explicitly recorded elicitation date and incident windows.

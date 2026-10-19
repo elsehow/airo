@@ -109,8 +109,8 @@ class HarnessFlagTest(unittest.TestCase):
     def test_the_set_names_its_loop(self):
         cb = json.load(open(REPO / "data" / "combined_conditions.json"))
         self.assertEqual(self.ru.set_harness(cb), "pi")                        # since combined-v9
-        self.assertEqual(self.ru.row_protocol(cb, "pi"), "unified-joint-combined-v9")
-        self.assertEqual(self.ru.row_protocol(cb, "litellm"), "unified-joint-combined-v9+litellm")
+        self.assertEqual(self.ru.row_protocol(cb, "pi"), "unified-joint-combined-v10")
+        self.assertEqual(self.ru.row_protocol(cb, "litellm"), "unified-joint-combined-v10+litellm")
         legacy = {"protocol": "unified-joint-v6"}                              # a set naming none: litellm
         self.assertEqual(self.ru.row_protocol(legacy, "litellm"), "unified-joint-v6")
         self.assertEqual(self.ru.row_protocol(legacy, "pi"), "unified-joint-v6+pi")

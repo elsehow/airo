@@ -83,6 +83,18 @@ def _logit(p):
 # falls back down the line, so the tab keeps its rows on the day of a bump and
 # switches the day the first run under the new tag lands.
 PROTOCOL_LINEAGE = {
+    # 2026-10-19, v10: the INSTRUMENT changes. The minimal prompt -- no system
+    # prompt, no research advice, no research floor or coverage rule, no
+    # debrief; the questions, conditions and delivery mechanics are v9's --
+    # asked under five prompt variants (Jason's), one call per model per
+    # variant, the published number per model the mean of its five
+    # (redlines.runlog.pool). The evidence: the prompt-variant experiments of
+    # 2026-10-14..19, where the dropped guidance moved no headline forecast.
+    "unified-joint-combined-v10": ("unified-joint-combined-v9", "unified-joint-combined-v8",
+                                   "unified-joint-combined-v7", "unified-joint-combined-v6",
+                                   "unified-joint-combined-v5", "unified-joint-combined-v4",
+                                   "unified-joint-combined-v3", "unified-joint-combined-v2",
+                                   "unified-joint-combined-v1"),
     # 2026-10-16, v9: the LOOP changes, nothing else. The instrument -- prompt,
     # questions, conditions, tools and their schemas, the research floor, the
     # coverage rule, the turn limit, the debrief -- is v8's; the calls go
@@ -159,7 +171,7 @@ PROTOCOL_LINEAGE = {
 # the same string (tests pin the two together); the views, the run log's
 # grounding line and the coherence test all read it from here, so a bump is
 # one edit plus the lineage entry above.
-COMBINED_PROTOCOL = "unified-joint-combined-v9"
+COMBINED_PROTOCOL = "unified-joint-combined-v10"
 # The first combined tag elicited by the agentic harness (iterative search +
 # page reads, 2026-09-02); v1 (2026-08-28) still ran the legacy grounding.
 AGENTIC_SINCE = "unified-joint-combined-v2"

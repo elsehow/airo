@@ -116,10 +116,18 @@ CAP = os.path.join(ROOT, "data", "eci_self6mo_conditions.json")
 OUT = os.path.join(ROOT, "data", "combined_conditions.json")
 
 SLUG = "combined"
-PROTOCOL = "unified-joint-combined-v9"
+PROTOCOL = "unified-joint-combined-v10"
 # The loop the protocol is elicited through (code/run_unified.py set_harness):
 # agent-box's pi since v9 (redlines/conditional.py PROTOCOL_LINEAGE).
 HARNESS = "pi"
+# Since v10 (2026-10-19): the MINIMAL instrument (no system prompt, no research
+# advice, no research floor or coverage rule, no debrief; code/run_unified.py
+# minimal_joint_prompt), asked under each of five prompt VARIANTS -- one call
+# per model per variant, the published number per model the mean of its five.
+# The evidence: the prompt-variant experiments of 2026-10-14..19 (Jason's five
+# prompts), which found the instrument's guidance moved no headline forecast.
+INSTRUMENT = "minimal"
+VARIANTS = ["none", "independent", "recent", "critical", "two-step"]
 PLACEHOLDER = "{target_date}"
 
 # ── The authored sentences ──────────────────────────────────────────────────
@@ -176,6 +184,8 @@ def build():
         "kind": "policy or capability",
         "protocol": PROTOCOL,
         "harness": HARNESS,
+        "instrument": INSTRUMENT,
+        "variants": VARIANTS,
         "source": {
             "panel": "LEAP, for the policy conditions only; no human panel answers the "
                      "capability conditions",

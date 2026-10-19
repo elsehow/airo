@@ -70,9 +70,16 @@ def main():
         qs = {q['id']: q for g in groups for q in by_group[g['key']]}
         prompt, n, cells = ru.build_prompt_joint(groups, by_group, horizons, spec, conds, policies, args.date)
         prompt_sha = hashlib.sha256(prompt.encode()).hexdigest()
+        # combined-v10: the minimal instrument under each of the set's prompt
+        # variants -- one call per model per variant, each with its own prompt.
+        variants = ru.set_variants(policies)
+        minimal = ru.set_instrument(policies) == 'minimal'
+        prompts = {v: (ru.minimal_joint_prompt(prompt, v) if minimal else ru.apply_variant(prompt, v)) for v in variants}
+        shas = {v: hashlib.sha256(p.encode()).hexdigest() for v, p in prompts.items()}
         conditions = {None} | {c['id'] for c in conds}
-        expected = {(label, q, c) for label in labels for q in qs for c in conditions}
-        keys = Counter((r['label'], r['question_id'], (r.get('condition') or {}).get('id')) for r in rows)
+        expected = {(label, v, q, c) for label in labels for v in variants for q in qs for c in conditions}
+        keys = Counter((r['label'], r.get('variant') or 'none', r['question_id'], (r.get('condition') or {}).get('id'))
+                       for r in rows)
         check(set(keys) == expected and all(v == 1 for v in keys.values()), 'complete_unique_grid',
               {'set': slug, 'expected_rows': len(expected), 'actual_rows': len(rows),
                'missing': len(expected-set(keys)), 'extra': len(set(keys)-expected),
@@ -82,13 +89,13 @@ def main():
             q = qs.get(r['question_id'])
             if q is None:
                 continue
-            ident = [slug, r['label'], r['question_id'], (r.get('condition') or {}).get('id')]
+            ident = [slug, r['label'], r.get('variant') or 'none', r['question_id'], (r.get('condition') or {}).get('id')]
             hs = {h for h in horizons if h in q['horizons']}
             fs = r.get('forecasts') or []
             check(len(fs) == len(hs) and {f['horizon'] for f in fs} == hs,
                   'complete_horizons', ident)
             check(r.get('protocol') == policies['protocol'], 'protocol', ident)
-            check(r.get('prompt_sha256') == prompt_sha, 'prompt_hash', ident)
+            check(r.get('prompt_sha256') == shas.get(r.get('variant') or 'none'), 'prompt_hash', ident)
             check(r.get('counting_window') == counting_windows(q, horizons, args.date, spec),
                   'incident_window', ident)
             check(r.get('resolves_on') == {h: ru.resolves_on(h, args.date, spec) for h in horizons},
@@ -106,14 +113,16 @@ def main():
             check(len(retained) == 1, 'one_retained_prompt', call_id)
             if retained:
                 first = retained[0]
-                check(first['prompt'] == prompt and first.get('system_prompt') == ru.SYSTEM,
+                check(first['prompt'] == prompts.get(first.get('variant') or 'none')
+                      and first.get('system_prompt') == (ru.MINIMAL_SYSTEM if minimal else ru.SYSTEM),
                       'exact_prompt_replay', call_id)
                 evidence = [e for r in rs for e in r.get('evidence') or []]
-                check(len(evidence) >= ru.MIN_RESEARCH and all(r.get('grounded') for r in rs),
-                      'grounding_floor', call_id)
+                if not minimal:   # the minimal instrument has no research floor
+                    check(len(evidence) >= ru.MIN_RESEARCH and all(r.get('grounded') for r in rs),
+                          'grounding_floor', call_id)
                 check(bool(first.get('rationale')), 'rationale_present', call_id)
                 status = first.get('debrief_status') or {}
-                if not (isinstance(first.get('debrief'), dict) and status.get('complete')):
+                if not minimal and not (isinstance(first.get('debrief'), dict) and status.get('complete')):
                     report['debrief_warnings'].append({
                         'set': slug, 'call_id': call_id, 'label': first['label'],
                         'attempts': status.get('attempts'), 'error': status.get('error'),
@@ -132,26 +141,26 @@ def main():
                 report['coherence_warnings'].append({'set': slug, 'check': kind,
                     'left': left, 'right': right, 'values': [a, b], 'excess_pp': (a-b)*100})
 
-        for label in labels:
+        for label, v in ((l, v) for l in labels for v in variants):
             for c in conditions:
                 for q in qs:
                     hs = sorted([h for h in horizons if h in qs[q]['horizons']],
                                 key=lambda h: ru.resolves_on(h, args.date, spec))
                     for h1, h2 in zip(hs, hs[1:]):
-                        ordered((label,q,c,h1), (label,q,c,h2), 'horizon')
+                        ordered((label,v,q,c,h1), (label,v,q,c,h2), 'horizon')
                 for h in horizons:
-                    ordered((label,'catastrophe:ai',c,h), (label,'catastrophe:general',c,h), 'ai_within_general')
+                    ordered((label,v,'catastrophe:ai',c,h), (label,v,'catastrophe:general',c,h), 'ai_within_general')
                     for cause in ('ai','cyber','bio','misalign'):
                         for lo, hi in zip(rungs, rungs[1:]):
-                            ordered((label,f'ladder:{cause}:{hi}',c,h),
-                                    (label,f'ladder:{cause}:{lo}',c,h), 'severity')
+                            ordered((label,v,f'ladder:{cause}:{hi}',c,h),
+                                    (label,v,f'ladder:{cause}:{lo}',c,h), 'severity')
                         if cause != 'ai':
                             for rung in rungs:
-                                ordered((label,f'ladder:{cause}:{rung}',c,h),
-                                        (label,f'ladder:ai:{rung}',c,h), 'subtype_within_ai')
+                                ordered((label,v,f'ladder:{cause}:{rung}',c,h),
+                                        (label,v,f'ladder:ai:{rung}',c,h), 'subtype_within_ai')
         report['instruments'][slug] = {'file_sha256': hashlib.sha256(raw).hexdigest(),
             'prompt_sha256': prompt_sha, 'rows': len(rows), 'probabilities': len(probabilities),
-            'expected_probabilities': cells * len(conditions) * len(labels), 'calls': call_report}
+            'expected_probabilities': cells * len(conditions) * len(labels) * len(variants), 'calls': call_report}
     report['passed_integrity_checks'] = not report['errors']
     report['recorded_cost_usd'] = round(sum((c.get('usage') or {}).get('cost_usd',0)
         for s in report['instruments'].values() for c in s['calls']),6)

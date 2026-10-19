@@ -67,6 +67,16 @@ from ..config import REPO_ROOT
 from ..questions import SEVERITY_AXIS
 from ..instrument import CURRENT_INSTRUMENT
 from .graph1 import _loss_question, _loss_series
+
+# code/run_unified.py VARIANTS, verbatim (the runner is not importable from
+# the stdlib-only build); tests/test_timeline_variants.py keeps the two equal.
+VARIANT_TEXT = {
+    "none": None,
+    "independent": "Try to make your own forecasts. Do not take into account external surveys assessing extinction or catastrophic risk, or other probabilities given by prominent figures. The goal is to reach your own independent conclusion.",
+    "recent": "If you search external information, focus on information that arrived within the past year, and weight more heavily sources that are more up to date about recent developments.",
+    "critical": "Evaluate existing information critically. If you take into account forecasts by specific people or surveyed groups, consider their recent and historical forecasting accuracy, as well as the information available to the forecasters when they made their forecasts.",
+    "two-step": "Proceed in two steps. First, make the best predictions you can about model capability progress over the relevant time frame, via human generated improvement or recursive self-improvement. Consider the distribution, not only the modal outcome. Then, given possible model capabilities, evaluate the risk posed and put these pieces together.",
+}
 import json
 
 MONTH = ["", "Jan", "Feb", "Mar", "Apr", "May", "Jun",
@@ -132,7 +142,24 @@ def noise_floor(by_day, days):
     return None
 
 
-def _prob_row(q, rail, by_day, days, horizons):
+def variant_medians(rows, days):
+    """{(date, question_id): {variant: {horizon: panel median, in %}}} for dates
+    asked under more than one prompt variant (combined-v10: five), else {}.
+    The pooled point per model is the mean of its variants (runlog.pool);
+    these are the per-variant panel medians the Timeline draws beside it."""
+    by = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
+    for r in rows:
+        v = r.get("variant") or "none"
+        for f in r["forecasts"]:
+            by[(elicitation_date(r), r["question_id"])][v][f["horizon"]].append(100 * f["probability"])
+    out = {}
+    for key, per in by.items():
+        if len(per) > 1:
+            out[key] = {v: {h: round(statistics.median(ps), 3) for h, ps in hs.items()} for v, hs in per.items()}
+    return out
+
+
+def _prob_row(q, rail, by_day, days, horizons, var_meds=None):
     """One cross-cutting question: per model, lists aligned to `days` of the
     pooled point, its draws, their min-max, and the model's 95% CI (logit
     t-interval over that day's draws, redlines.conditional.level_or); the
@@ -193,6 +220,20 @@ def _prob_row(q, rail, by_day, days, horizons):
             else:
                 cis.append(None)
         median[h], rerun[h], ci[h] = med, band, cis
+    # Prompt variants (combined-v10): one panel-median line per variant, None
+    # on dates asked under one prompt. On those dates the draws are the
+    # variants, not re-asks, so the re-run band is dropped.
+    variants = {}
+    for i, d in enumerate(days):
+        per = (var_meds or {}).get((d, q["id"]))
+        if not per:
+            continue
+        for h in horizons:
+            rerun[h][i] = None
+        for v, hs in per.items():
+            for h in horizons:
+                variants.setdefault(v, {hh: [None] * len(days) for hh in horizons})[h][i] = hs.get(h)
+    extra = {"variants": variants} if variants else {}
     return {
         "id": q["id"], "short": q.get("short") or q.get("cause_label"),
         "category": rail["category"], "railLabel": rail["railLabel"],
@@ -201,7 +242,7 @@ def _prob_row(q, rail, by_day, days, horizons):
         # the panel shows them behind the same "Resolution criteria" toggle.
         "criteria": q.get("criteria") or "", "details": q.get("details") or None,
         "value_kind": "probability", "horizons": horizons,
-        "series": series, "median": median, "rerun": rerun, "ci": ci,
+        "series": series, "median": median, "rerun": rerun, "ci": ci, **extra,
         "declined": dict(declined),
         "display_note": ("GPT-6 Astra's first exploratory run (September 8) is omitted from this graph; its raw forecast remains in the archive and download."
                           if q["id"] == "catastrophe:ai" else None),
@@ -343,6 +384,7 @@ def build():
             "panel": sorted({(r.get("panel") or {}).get("set") or "frontier5" for r in drows}),
         })
 
+    var_meds = variant_medians(rows, days)
     # Cross-cutting questions as themselves; each incident cause as ONE
     # expected-loss row (since 2026-08-27, matching Graph 1 and the
     # Policy-levers tab), emitted at its first rung and never again.
@@ -373,7 +415,7 @@ def build():
             done.add(q["cause"])
             questions.append(_loss_row(q["cause"], rungs, current_by_day, days, horizons, spec))
             continue
-        questions.append(_prob_row(q, per_q[q["id"]], by_day, days, horizons))
+        questions.append(_prob_row(q, per_q[q["id"]], by_day, days, horizons, var_meds))
     for q in questions:
         for s in q["series"]:
             s["legacy"] = s["label"] not in current
@@ -407,4 +449,8 @@ def build():
         "severityAxis": SEVERITY_AXIS,
         "usdPerDeath": USD_PER_DEATH,
         "marks": _reference_marks(),
+        # The prompt variants a date may carry (combined-v10), for the lines'
+        # labels and their hover text.
+        **({"variants": [{"id": v, "text": t} for v, t in VARIANT_TEXT.items()]}
+           if var_meds else {}),
     }

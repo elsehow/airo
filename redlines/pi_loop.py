@@ -69,7 +69,13 @@ def call_tools(model, prompt, tools, final_tool, *, max_iters=6, system=None,
                            "prompt": debrief["prompt"], "retries": int(debrief.get("retries", 1)),
                            **({"validator": debrief["validator"]} if debrief.get("validator") else {})}
     thinking = reasoning_for(model) or "off"
-    res = run(model=pi_model(model), system=system or "", prompt=prompt, workdir=workdir,
+    # pi writes its working directory into the system prompt; run from the
+    # checkout, that line names the project (".../airo/...") to the model --
+    # a pointer to AIRO's own published forecasts. pi runs from an empty
+    # directory with a name that says nothing (2026-10-15).
+    cwd = os.environ.get("REDLINES_PI_CWD") or os.path.join(tempfile.gettempdir(), "w")
+    os.makedirs(cwd, exist_ok=True)
+    res = run(model=pi_model(model), system=system or "", prompt=prompt, workdir=workdir, cwd=cwd,
               cell_schema=cell_items, key_fields=["question_id", "horizon"],
               allowed_keys=list(allowed_keys or []),
               tool_descriptions={t["name"]: t.get("description", "") for t in specs},
