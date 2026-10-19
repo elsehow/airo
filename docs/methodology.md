@@ -11,11 +11,13 @@ Three things differ between the `2024-07-21` line and any later line, and a
 cross-round chart credits all three to capability. Measured separately by
 `code/graph3_comparability.py`, which writes `results/graph3_comparability.json`:
 
+<!-- BEGIN GENERATED graph3:decomposition (python3 -m redlines.graph3_report) -->
 | source of variation | effect on Brier | how it was measured |
 |---|---|---|
 | prompt config | **0.002** | same round, same questions, scaffold varied |
 | round (question set + horizon mix) | **0.035** | *the same model*, scored across rounds |
 | model vintage | **0.013** | one round, one question set, older models vs frontier |
+<!-- END GENERATED graph3:decomposition -->
 
 The confound is about three times the signal.
 
@@ -68,6 +70,7 @@ benchmark offers. Claude-3-5-Sonnet-20240620 ran in both and still swings
 Recent rounds have not had time to resolve their long questions. A round's
 resolved rows fill in from the short horizons upward:
 
+<!-- BEGIN GENERATED graph3:horizons (python3 -m redlines.graph3_report) -->
 | round | resolved rows | ≥90-day |
 |---|---|---|
 | 2024-07-21 | 1,507 | 61% |
@@ -75,6 +78,7 @@ resolved rows fill in from the short horizons upward:
 | 2025-11-23 | 1,074 | 47% |
 | 2026-02-15 | 784 | 34% |
 | 2026-06-21 | 579 | 0% |
+<!-- END GENERATED graph3:horizons -->
 
 This is the calendar, not a design change. Every round eventually matures. The
 2026-08-11 refresh alone moved 2026-02-15 from 205 rows and 0% long-horizon to
@@ -88,11 +92,13 @@ argument expires on its own schedule and has already partly expired.
 Inside a single round the questions, config and horizon mix are identical for
 every model, so an older-vs-frontier split isolates capability:
 
+<!-- BEGIN GENERATED graph3:vintage (python3 -m redlines.graph3_report) -->
 | round | older | frontier | gap | spread between individual models |
 |---|---|---|---|---|
 | 2025-11-23 | 0.1810 | 0.1645 | +0.017 | 0.059 |
 | 2026-02-15 | 0.1443 | 0.1391 | +0.005 | 0.085 |
 | 2026-06-21 | 0.1834 | 0.1663 | +0.017 | 0.050 |
+<!-- END GENERATED graph3:vintage -->
 
 The gap is real and positive in all three rounds. It is also smaller than the
 spread between individual models of the *same* vintage in the same round. Which
@@ -103,12 +109,14 @@ models you pick still matters more than what year they are from.
 The tightest test available: one lab, one tier, consecutive versions, same
 round, same questions. Nothing varies but the model generation.
 
+<!-- BEGIN GENERATED graph3:version-bumps (python3 -m redlines.graph3_report) -->
 | version bump (2026-06-21) | Brier | change |
 |---|---|---|
 | GPT-5.4-2026-03-05 → GPT-5.5-2026-04-23 | 0.1969 → 0.1738 | **+0.023** |
 | Claude-Sonnet-4-5 → Claude-Sonnet-4-6 | 0.1739 → 0.1728 | +0.001 |
 | Grok-4.20-Reasoning → Grok-4.3 | 0.1665 → 0.1679 | −0.001 |
 | Claude-Opus-4-7 → Claude-Opus-4-8 | 0.1772 → 0.1888 | **−0.012** |
+<!-- END GENERATED graph3:version-bumps -->
 
 Mean **+0.003**, and two of four went backwards. Newer is not dependably better
 at this task, even holding the lab and the tier fixed. This is the sharpest

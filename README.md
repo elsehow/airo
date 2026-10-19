@@ -221,6 +221,7 @@ redlines/                   the pipeline package (stdlib only; litellm only insi
   stats.py                  deciles / brier / bss / spearman / wilson — one implementation each
   hydrate.py, pages.py      window.__NAME__ blob injection; manifest-driven page assembly
   export.py                 forecasts.csv, rationales.csv, the download bundle, the ForecastBench export
+  graph3_report.py          docs/methodology.md's Graph 3 tables, rendered from graph3_comparability.json
   llm.py, tools.py          ACQUISITION ONLY: key loading + the agentic tool-use loop; the Tavily tools
   pi_loop.py                call_tools through FRI's agent-box (pi): the published loop since combined-v9
   views/                    one pure build() per panel: graph1..graph4, observational, causal,

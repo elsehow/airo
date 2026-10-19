@@ -48,6 +48,11 @@ WHAT IT FINDS (see docs/methodology.md for the write-up)
     and run:
 
         python3 code/graph3_comparability.py
+
+    then regenerate the tables in docs/methodology.md from the new JSON (the
+    test suite fails until you do), and re-read the prose around them:
+
+        python3 -m redlines.graph3_report
 """
 import datetime as dt
 import glob
@@ -295,6 +300,7 @@ def main():
     OUT.parent.mkdir(exist_ok=True)
     json.dump(report, open(OUT, "w"), indent=1)
     print(f"\n-> {OUT.relative_to(OUT.parent.parent)}")
+    print("   now: python3 -m redlines.graph3_report  (rewrites docs/methodology.md tables)")
 
 
 if __name__ == "__main__":

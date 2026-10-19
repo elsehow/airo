@@ -435,13 +435,12 @@ here so they don't have to be rediscovered.
   advisor review before public release; moving the repo to the
   `forecastingresearch` org (matching `forecastbench-sim`'s home) is a
   decision for that point in the timeline, not before.
-- **No Graph-3 comparability *report generator*.** The numbers in
-  `docs/methodology.md`'s tables (the 0.002 / 0.035 / 0.013 decomposition,
-  the horizon-maturity table, the version-bump table) are hand-transcribed
-  from `results/graph3_comparability.json`, which
-  `code/graph3_comparability.py` does write. There is no script that turns
-  that JSON into the markdown tables — every re-run of
-  `graph3_comparability.py` (which the methodology doc itself warns will
-  produce different numbers as ForecastBench data matures) requires someone
-  to re-copy numbers into prose by hand, with the transcription-error risk
-  that implies. Worth a small generator; not built.
+- **Graph-3 comparability report generator** — resolved 2026-10-19.
+  `docs/methodology.md`'s Graph 3 tables (the 0.002 / 0.035 / 0.013
+  decomposition, horizon maturity, the vintage split, the version bumps) sit
+  in marked generated regions that `python3 -m redlines.graph3_report`
+  rewrites from `results/graph3_comparability.json` (`--check` reports drift
+  without writing). `tests/test_graph3_report.py` fails if a region, or a
+  number the surrounding prose quotes, disagrees with the committed JSON.
+  The prose still needs a human re-read after each re-run of
+  `code/graph3_comparability.py`.
