@@ -51,7 +51,8 @@ LADDER_SPEC = REPO_ROOT / "data" / "autoarc_ladder.json"
 # English, not measurements". Most of those judgments have no successor: the
 # Auto-ARC definitions state their containments outright, so a relation is now
 # read off the question set rather than argued for. Moving them also makes a
-# question-set swap a data change, which is what TODO.md Phase 5 asked for.
+# question-set swap a data change (edit the ladder JSON) rather than a code
+# change.
 #
 # The set is deliberately small (project lead, 2026-08-18: minimal coherence
 # checks, applied AFTER the fact, warning when there are obvious violations).

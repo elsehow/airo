@@ -181,7 +181,7 @@ def build(eval_path, questions_path, pandemic_preds_path, final=False):
                  "meanPred": round(mean_p, 4), "meanObs": round(mean_o, 4),
                  "sims": ("civbench+starsim" if (lbl in fc and lbl in pan) else ("civbench" if lbl in fc else "starsim")),
                  "pts": [{"pred": round(p["pred"], 5), "obs": round(p["obs"], 5), "n": p["n"]} for p in pts],
-                 # TODO.md Phase 2: dense/MoE/distilled declared in data (see
+                 # dense/MoE/distilled is declared in data (see
                  # redlines/registry.py), so the clean-subset trend below is
                  # reproducible rather than hand-picked.
                  "architecture": arch, "excluded": excluded,
@@ -229,7 +229,7 @@ def build(eval_path, questions_path, pandemic_preds_path, final=False):
             "rule": "median of the members' probabilities per question; equal weight per simulator",
         }
 
-    # Clean subset (TODO.md Phase 2): same trend statistic, computed only over
+    # Clean subset: same trend statistic, computed only over
     # points whose architecture isn't a known confound. Always shown alongside
     # the full-set rho above -- never in place of it (see docs/methodology.md
     # "Graph 4 subsetting").
@@ -243,7 +243,7 @@ def build(eval_path, questions_path, pandemic_preds_path, final=False):
             "nModels": len(models_out), "nQuestions": sum(m["n"] for m in models_out),
             "models": models_out, "scatter": scatter,
             "ensemble": ensemble,
-            # New keys (TODO.md Phase 2 -- Graph 4 credibility): existing keys
+            # New keys (added for Graph 4's clean subset): existing keys
             # above are byte-unchanged. "rhoClean"/"nModelsClean" describe the
             # dense+undisclosed subset; "excludedArchitectures" documents the
             # rule that produced it (see registry.CONFOUNDED_ARCHITECTURES).

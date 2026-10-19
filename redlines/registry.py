@@ -82,7 +82,7 @@ def load_epoch_index(csv_path: Path = EPOCH_CSV, supplement: Path | None = None)
 #                      not "we didn't check" -- it's the honest label for
 #                      "the vendor keeps it private."
 #
-# TODO.md Phase 2's Graph-4 subset rule (redlines/views/graph4.py build()):
+# Graph 4's clean-subset rule (applied in redlines/views/graph4.py build()):
 # the CLEAN SUBSET excludes architecture in {"moe", "distilled"} -- i.e.
 # architectures known to behave differently from a plain dense transformer,
 # which is a real confound for a capability-vs-skill trend line -- and keeps
@@ -149,7 +149,7 @@ _ROWS = [
     ("claude-sonnet-5-5",   "claude-sonnet", "Sonnet 5.5",      "anthropic/claude-sonnet-5-5",                              None,                          "Claude Sonnet 5.5",         "#d4892a",  "undisclosed", []),
 ]
 
-# Graph-4 clean-subset rule (TODO.md Phase 2). A model is excluded from the
+# Graph-4 clean-subset rule. A model is excluded from the
 # "clean subset" trend iff its architecture is a known-confounded one -- see
 # the architecture field comment above for what's in/out and why.
 CONFOUNDED_ARCHITECTURES = frozenset({"moe", "distilled"})

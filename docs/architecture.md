@@ -430,11 +430,10 @@ here so they don't have to be rediscovered.
 - **JS-helper duplication between `web/demo` and `web/timeline`** —
   resolved 2026-09-08 by folding the timeline page into `index.html`
   (`web/demo/19-live-timeline.jsx`); there is one atoms chunk now.
-- **Repo home: `elsehow/` vs. the `forecastingresearch` org.** This repo
-  currently lives under a personal namespace. The plan puts FRI
-  advisor review before public release; moving the repo to the
-  `forecastingresearch` org (matching `forecastbench-sim`'s home) is a
-  decision for that point in the timeline, not before.
+- **Repo home: `elsehow/` vs. the `forecastingresearch` org** — resolved:
+  the repo now lives at `github.com/forecastingresearch/airo`, alongside
+  `forecastbench-sim`. Older references to `elsehow/airo` (e.g. PR numbers
+  in code comments) point at the pre-move repo and are kept as history.
 - **No Graph-3 comparability *report generator*.** The numbers in
   `docs/methodology.md`'s tables (the 0.002 / 0.035 / 0.013 decomposition,
   the horizon-maturity table, the version-bump table) are hand-transcribed
