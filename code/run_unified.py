@@ -469,6 +469,7 @@ def strip_debrief(prompt):
 # criteria, the shared definitions and the dated horizons are the plain
 # batch's, byte for byte. pi only; experiments only.
 MINIMAL_SYSTEM = " "
+MINIMAL_MAX_TURNS = 100
 MINIMAL_HEAD = re.compile(r"Below are (\d+) forecasting questions, grouped by cause of catastrophe\. "
                           r"Forecast\nall of them together, in one pass\.")
 MINIMAL_TAIL = ("Call submit_forecast once, with a probability in [0,1] for every question x\n"
@@ -1442,6 +1443,13 @@ def call_pi(model_id, prompt, research, final_tool, cells_tool, coverage, debrie
     if rules:   # call_tools' rules: the floor, the coverage rule, the turn guard
         loop.update(min_research=MIN_RESEARCH, floor_counts="returned", coverage=coverage,
                     withhold_final=True, max_turns=MAX_ROUNDS)
+    else:
+        # No research rules, but a reply that ends without a submission (a
+        # thinking-only reply cut at the output limit: Opus 5.5, 2026-10-19,
+        # 128k tokens) must not end the call. pi_tools.ts nudges "Now call
+        # submit_forecast" only under max_turns, so minimal runs set one far
+        # above any call seen (64 turns) -- a runaway guard, not a budget.
+        loop.update(max_turns=MINIMAL_MAX_TURNS)
     res = harness.run(
         model=pi_model(model_id), system=SYSTEM if system is None else system, prompt=prompt,
         workdir=workdir, cwd=PI_CWD,
