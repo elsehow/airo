@@ -309,6 +309,35 @@ class TestMinimalVariants(unittest.TestCase):
             self.assertEqual(ru.variant_protocol("minimal-v1", v), f"minimal-v1+{v}")
 
 
+class TestMinimalJoint(unittest.TestCase):
+    """--minimal --joint: the published joint prompt with the guidance cut;
+    questions, conditions and delivery mechanics byte for byte."""
+
+    def _prompt(self):
+        today = date(2026, 10, 19)
+        pol = ru.resolve_set(ru.load_policies(ru.COMBINED), today)
+        g, b, h, _, spec = ru.load_batch(ru.LADDER, ru.CROSS, ru.UNBATCHED)
+        h = ru.set_horizons(pol, h)
+        return ru.build_prompt_joint(g, b, h, spec, pol["conditions"], pol, today)[0]
+
+    def test_cuts_only_the_guidance(self):
+        p = self._prompt()
+        m = ru.minimal_joint_prompt(p)
+        for gone in ("forecasting questions, grouped by cause", "Research before answering",
+                     "3-6 sentence rationale", "After it is accepted"):
+            self.assertIn(gone, p)
+            self.assertNotIn(gone, m)
+        blocks = p[p.index("===== AI-RELATED INCIDENT"):p.index("\nHorizons: ")]
+        self.assertIn(blocks, m)                                   # questions and conditions untouched
+        self.assertIn("Deliver the probabilities with submit_cells", m)
+        self.assertLess(len(m.encode()), 131072)                   # pi takes the prompt as one argv string
+
+    def test_variant_goes_before_delivery(self):
+        m = ru.minimal_joint_prompt(self._prompt(), "independent")
+        self.assertLess(m.index(ru.VARIANTS["independent"]), m.index("Deliver the probabilities"))
+        self.assertNotIn("APPROACH", m)
+
+
 class TestEmptyCallFails(unittest.TestCase):
     """A call with no forecasts after every attempt raises instead of writing
     rows of nulls that the runner logged as done (2026-10-14)."""

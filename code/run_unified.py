@@ -498,6 +498,34 @@ def minimal_variant(prompt, variant):
     return prompt[:at] + text + "\n\n" + prompt[at:]
 
 
+# The minimal JOINT instrument (--minimal with --joint; 2026-10-19): the
+# published joint prompt -- every question, the LEAP policy and capability
+# conditions, the self-elicited ECI step, the delivery mechanics -- with the
+# guidance cut: no "forecasting questions, grouped by cause", no research
+# paragraph, no rationale length, no debrief. A variant's instruction goes in
+# as a plain paragraph before the delivery paragraph.
+MINIMAL_JOINT_HEAD = ("forecasting questions, grouped by cause of catastrophe. Forecast\n"
+                      "all of them together, in one pass -- and forecast every")
+MINIMAL_JOINT_RESEARCH = re.compile(r"Research before answering, in rounds:.*?applied to the same evidence\.\n", re.S)
+MINIMAL_JOINT_RATIONALE = ("a 3-6 sentence rationale covering the whole set, the key sources\n"
+                           "you relied on (only pages you read), and any cells not yet delivered.")
+
+
+def minimal_joint_prompt(prompt, variant=DEFAULT_VARIANT):
+    """The published joint prompt cut to the questions, conditions and delivery mechanics."""
+    assert prompt.count(MINIMAL_JOINT_HEAD) == 1, "the joint prompt's head changed; update MINIMAL_JOINT_HEAD"
+    out = prompt.replace(MINIMAL_JOINT_HEAD, "questions. Answer\nall of them -- and answer every")
+    out, n = MINIMAL_JOINT_RESEARCH.subn("", out)
+    assert n == 1, "the joint prompt's research paragraph changed; update MINIMAL_JOINT_RESEARCH"
+    assert out.count(MINIMAL_JOINT_RATIONALE) == 1, "the joint prompt's rationale line changed"
+    out = strip_debrief(out.replace(MINIMAL_JOINT_RATIONALE,
+                                    "a short rationale, the sources you used, and any cells not yet delivered."))
+    if VARIANTS[variant]:
+        at = out.index("Deliver the probabilities with submit_cells")
+        out = out[:at] + VARIANTS[variant] + "\n\n" + out[at:]
+    return out
+
+
 def minimal_tools(research, final_tool):
     """Mechanical descriptions; web_search loses `cause`, which only served
     the coverage rule."""
@@ -1458,14 +1486,21 @@ def pi_preflight():
 
 def run_one_joint(label, model_id, groups, by_group, horizons, run_id, retries, spec,
                   conds, policies, experiment=None, arm=None, panel=None, today=None,
-                  variant=DEFAULT_VARIANT, harness=DEFAULT_HARNESS, debrief_turn=True):
+                  variant=DEFAULT_VARIANT, harness=DEFAULT_HARNESS, debrief_turn=True, minimal=False):
     """One call: the full instrument. -> rows, one per (question, condition)."""
     today = today or datetime.now(timezone.utc).date()
     policies = resolve_set(policies, today)
     conds = [c for c in policies["conditions"] if c["id"] in {x["id"] for x in conds}]
-    prompt, n, want_cells = build_prompt_joint(groups, by_group, horizons, spec,
-                                               conds, policies, today, variant)
-    if not debrief_turn:
+    if minimal:
+        if harness != "pi":
+            raise ValueError("--minimal runs through pi")
+        debrief_turn = False
+        prompt, n, want_cells = build_prompt_joint(groups, by_group, horizons, spec, conds, policies, today)
+        prompt = minimal_joint_prompt(prompt, variant)
+    else:
+        prompt, n, want_cells = build_prompt_joint(groups, by_group, horizons, spec,
+                                                   conds, policies, today, variant)
+    if not debrief_turn and not minimal:
         prompt = strip_debrief(prompt)
     block = conditions_block(conds, policies)
     sha = hashlib.sha256(block.encode()).hexdigest()
@@ -1517,12 +1552,16 @@ def run_one_joint(label, model_id, groups, by_group, horizons, run_id, retries, 
         try:
             research, coverage = research_tools(groups)
             debrief = debrief_state(groups, by_group) if debrief_turn else None
+            final = submit_tool_joint(qids, horizons, cond_ids, elicits)
+            if minimal:
+                research, _ = minimal_tools(research, final)
             if harness == "pi":
                 answer, evidence, got_cells, delivery, debrief, harness_stamp = call_pi(
-                    model_id, prompt, research, submit_tool_joint(qids, horizons, cond_ids, elicits),
+                    model_id, prompt, research, final,
                     submit_cells_tool(qids, horizons, cond_ids), coverage, debrief, qids,
                     [f"{q}|{h}" for q in qids for h in horizons if h in allowed[q]],
-                    os.path.join(PI_WORKDIR, run_id, call_slug), usage)
+                    os.path.join(PI_WORKDIR, run_id, call_slug), usage,
+                    system=MINIMAL_SYSTEM if minimal else None, rules=not minimal)
                 received.update(got_cells)
             else:
                 answer, evidence = call_tools(
@@ -1610,8 +1649,9 @@ def run_one_joint(label, model_id, groups, by_group, horizons, run_id, retries, 
                     "counting_window": counting_windows(q, horizons, today, spec),
                     "prompt_sha256": hashlib.sha256(prompt.encode()).hexdigest(),
                     "prompt": prompt if first else None,
-                    "system_prompt": SYSTEM if first else None,
-                    "protocol": lean_protocol(set_protocol(policies), variant, debrief_turn),
+                    "system_prompt": (MINIMAL_SYSTEM if minimal else SYSTEM) if first else None,
+                    "protocol": (variant_protocol("minimal-" + set_protocol(policies), variant) if minimal
+                                 else lean_protocol(set_protocol(policies), variant, debrief_turn)),
                     "condition_set": set_slug(policies),
                     "call_id": call_id, "attempts": attempts,
                     "batch_size": len(qids),
@@ -1907,6 +1947,10 @@ def main():
                     help="with --joint and --experiment: ask the plain batch (the 41 questions, "
                          "no conditions) instead of the condition set -- an experiment that runs "
                          "its own baseline")
+    ap.add_argument("--minimal", action="store_true",
+                    help="with --joint --harness pi --experiment: the minimal joint instrument -- the "
+                         "questions and conditions with the guidance cut, no system prompt, no research "
+                         "rules, no debrief")
     ap.add_argument("--no-debrief", action="store_true",
                     help="with --experiment: no debrief turn, and no sentence announcing it")
     ap.add_argument("--dry-run", action="store_true",
@@ -2055,8 +2099,10 @@ def main_joint(args):
     if args.repeats < 1:
         sys.exit("--repeats must be >= 1")
     variants = args.variant or [DEFAULT_VARIANT]
-    if (args.lean or args.no_debrief) and not args.experiment and not args.dry_run:
-        sys.exit("refusing: --lean and --no-debrief are experiment instruments; tag the run with --experiment")
+    if (args.lean or args.no_debrief or args.minimal) and not args.experiment and not args.dry_run:
+        sys.exit("refusing: --lean, --minimal and --no-debrief are experiment instruments; tag the run with --experiment")
+    if args.minimal and (args.harness != "pi" or args.lean):
+        sys.exit("--minimal (joint) runs through --harness pi, without --lean")
     if any(VARIANTS[v] for v in variants) and not args.experiment and not args.dry_run:
         sys.exit("refusing: a prompt variant is not the published elicitation; "
                  "tag the run with --experiment <name>")
@@ -2113,7 +2159,11 @@ def main_joint(args):
         prompts = {v: apply_variant(build_prompt(groups, by_group, horizons, spec, today)[0], v)
                    for v in variants}
         proto = PROTOCOL
-    if args.no_debrief:
+    if args.minimal:
+        prompts = {v: minimal_joint_prompt(build_prompt_joint(groups, by_group, horizons, spec, conds,
+                                                              policies, today)[0], v) for v in variants}
+        proto = "minimal-" + proto
+    elif args.no_debrief:
         prompts = {v: strip_debrief(p) for v, p in prompts.items()}
     for el in set_elicits(resolve_set(policies, today)):
         print(f"    elicits {el['key']} {el['fields']} for {el.get('target_date')}"
@@ -2168,7 +2218,7 @@ def main_joint(args):
         else:
             futs = {ex.submit(run_one_joint, l, m, groups, by_group, horizons, run_id,
                               args.retries, spec, conds, policies, args.experiment, arm, panel,
-                              today, v, args.harness, not args.no_debrief): (arm, l, v)
+                              today, v, args.harness, not args.no_debrief, args.minimal): (arm, l, v)
                     for v in variants for arm in arms for l, m in models}
         for fut in cf.as_completed(futs):
             arm, label, v = futs[fut]
