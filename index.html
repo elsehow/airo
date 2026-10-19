@@ -528,11 +528,22 @@ function TimelineChart({ q, snapshots, horizon, scale }) {
   const ci = (q.ci || {})[h] || [];
   // Prompt variants (combined-v10): one light line per variant, the panel
   // median of that prompt's calls; the ink line is the median of the models'
-  // means over the five. Hover a line for its prompt.
-  const VLABEL = { none: "Baseline", independent: "Independent", recent: "Recent", critical: "Critical", "two-step": "Two-step" };
-  const vtext = Object.fromEntries((TL.variants || []).map(v => [v.id, v.text]));
-  const variants = Object.entries(q.variants || {}).map(([id, hs]) => ({ id, label: VLABEL[id] || id, vals: hs[h] || [] }));
-  const hasVar = i => variants.some(v => v.vals[i] != null);
+  // means over the five. Hover a line for its prompt. An UNPOOLED variant
+  // (the sixth call since 2026-10-19: the baseline prompt with the
+  // AI-forecast ban and a URL guard against AIRO's own pages) is dashed, its
+  // hover shows the sentence and the guard, and it is not in the mean.
+  const VLABEL = { none: "Baseline", independent: "Independent", recent: "Recent", critical: "Critical", "two-step": "Two-step", "ai-banned": "AI forecasts banned" };
+  const vinfo = Object.fromEntries((TL.variants || []).map(v => [v.id, v]));
+  const variants = Object.entries(q.variants || {}).map(([id, hs]) => {
+    const info = vinfo[id] || {};
+    return { id, label: VLABEL[id] || id, vals: hs[h] || [], text: info.text, guard: info.guard,
+      pooled: info.pooled !== false };
+  });
+  const pooledVariants = variants.filter(v => v.pooled);
+  const hasVar = i => pooledVariants.some(v => v.vals[i] != null);
+  const vtitle = v => v.label + (v.text ? ": " + v.text : ": no added instruction")
+    + (v.guard ? " Search guard (URL patterns blocked for this call): " + v.guard : "")
+    + (v.pooled ? "" : " Not in the published number.");
 
   let y, yticks, tickText, tickSub;
   if (loss) {
@@ -646,12 +657,13 @@ function TimelineChart({ q, snapshots, horizon, scale }) {
             rx="2" fill="var(--ink-faint)" opacity="0.22" />
         ) : null)}
 
-        {/* One light line per prompt variant, under the median. */}
+        {/* One light line per prompt variant, under the median; an unpooled one dashed. */}
         {variants.map(v => (
           <g key={"v" + v.id} opacity="0.55">
-            <title>{v.label + (vtext[v.id] ? ": " + vtext[v.id] : ": no added instruction")}</title>
+            <title>{vtitle(v)}</title>
             {segs(v.vals).map((pts, k) => pts.length > 1 ? (
-              <path key={k} d={path(pts)} fill="none" stroke="var(--ink-faint)" strokeWidth="1.8" strokeLinejoin="round" strokeLinecap="round" />
+              <path key={k} d={path(pts)} fill="none" stroke="var(--ink-faint)" strokeWidth="1.8" strokeLinejoin="round" strokeLinecap="round"
+                strokeDasharray={v.pooled ? undefined : "5 4"} />
             ) : null)}
             {v.vals.map((val, i) => val == null ? null : (
               <circle key={i} cx={x(i)} cy={y(val)} r="2.8" fill="var(--ink-faint)" />
@@ -702,7 +714,7 @@ function TimelineChart({ q, snapshots, horizon, scale }) {
           boxShadow: "var(--shadow)", pointerEvents: "none", minWidth: 210, maxWidth: "calc(100% - 16px)" }}>
           <div style={{ fontSize: 11, color: "var(--ink-faint)", marginBottom: 6 }}>
             {snapshots[hv].date} · <span style={{ color: "var(--ink)", fontWeight: 600 }}>by {h}</span>
-            {hasVar(hv) ? ` · ${variants.filter(v => v.vals[hv] != null).length} prompts per model · point = mean of the prompts`
+            {hasVar(hv) ? ` · ${pooledVariants.filter(v => v.vals[hv] != null).length} prompts per model · point = mean of the prompts`
               : snapshots[hv].draws > 1 ? ` · ${snapshots[hv].draws} draws per model · point = mean, range = 95% CI` : ""}{loss ? " · death-equivalents" : ""}
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", gap: 14, fontSize: 12.5, fontWeight: 600, marginBottom: 4 }}>
@@ -714,7 +726,7 @@ function TimelineChart({ q, snapshots, horizon, scale }) {
           </div>
           {variants.filter(v => v.vals[hv] != null).map(v => (
             <div key={"tv" + v.id} style={{ display: "flex", justifyContent: "space-between", gap: 14, fontSize: 12, color: "var(--ink-soft)" }}>
-              <span>— {v.label} prompt</span><span className="mono">{fmtV(v.vals[hv])}</span>
+              <span>{v.pooled ? "— " : "- - "}{v.label}{v.pooled ? " prompt" : " · not in the mean"}</span><span className="mono">{fmtV(v.vals[hv])}</span>
             </div>
           ))}
           {series.filter(s => s.vals[hv] != null).map(s => (

@@ -22,7 +22,11 @@ One page, `index.html`, assembled from the chunks under `web/demo/`. Its panels:
   ensemble median. The series starts at the agentic-harness cutover on
   2026-09-02 (`redlines/runlog.py::SERIES_START`); earlier elicitations stay in
   the run log and the download but are not drawn on the same axis. A model that
-  leaves the panel keeps its points, drawn in gray.
+  leaves the panel keeps its points, drawn in gray. Since combined-v10 a date
+  carries one light line per prompt variant (five, whose mean is each model's
+  published number) and, since 2026-10-19, a dashed sixth for the call with
+  AI forecasts banned and AIRO's own pages kept out of its search, which is
+  drawn but never pooled (`data/combined_conditions.json` `unpooled_variants`).
 - **Graph 1** — the current forecasts by horizon: the cross-cutting questions
   (general catastrophe, AI catastrophe, human disempowerment) and one
   expected-loss row per AI-related incident cause, with prior human panels

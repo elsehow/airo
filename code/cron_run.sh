@@ -190,6 +190,15 @@ export REDLINES_LLM_TIMEOUT="${REDLINES_LLM_TIMEOUT:-1800}"
 # COMBINED-V10 (2026-10-19): the minimal instrument under five prompt variants
 # (the set declares both), so 4 models x 5 = 20 calls, ten at a time; about
 # 5x a v9 run's spend, the published number per model the mean of its five.
+# THE SIXTH CALL (2026-10-19 evening): the set also declares one unpooled
+# variant per model -- the baseline prompt with the AI-forecast ban, and
+# agent-box's URL guard against AIRO's own pages passed to that call alone
+# (`unpooled_variants`; run_unified set_unpooled) -- 24 calls in all. It is
+# a line on the Timeline, never in the published number, and a failed sixth
+# call does not fail the run. The guard needs agent-box's `url-guard` in PY
+# (FORECASTER_BLOCK_URL_PATTERNS in its tools); an older agent-box ignores
+# the variable and the sixth call searches unguarded while its rows say
+# otherwise, so update agent-box before the first run under this set.
 if ! "$PY" code/run_unified.py --joint --repeats 1 --workers 10 \
         --conditions data/combined_conditions.json --out "$OUT"; then
     echo "FATAL: the combined instrument did not complete for every panel model; see above. Skipping the axes instruments and publication."

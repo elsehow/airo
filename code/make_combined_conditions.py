@@ -96,6 +96,21 @@ call. First cron run under v4: Friday 2026-09-04.
 v4 -> v5 on 2026-09-10: the prospective incident-counting definitions
 (redlines.instrument.CURRENT_INSTRUMENT), same call shape.
 
+v10 + THE SIXTH VARIANT, 2026-10-19 evening: "AI forecasts banned". Beside
+the five prompts the set now asks a sixth call per model: the baseline (`none`)
+prompt with one added sentence -- forecasts by AI systems carry no information
+beyond their inputs; do not consult them -- AND agent-box's URL guard
+(FORECASTER_BLOCK_URL_PATTERNS, passed to that call alone) keeping AIRO's own
+published forecasts out of its search. It is the `both` arm of the anchor-guard
+experiment of 2026-10-16 (elsehow/airo#5), asked every run. It is declared
+under `unpooled_variants`: asked with no new flag, drawn as its own line on the
+Timeline, and NEVER part of a model's published number -- the mean, the CI,
+Graph 1, the data bank and the Policy-levers tab stay the mean of the five
+(redlines.runlog.pooled_rows). Its rows carry `variant`, `url_block_patterns`
+and `pooled: false`; the five's rows and prompts are unchanged, so the protocol
+tag stays v10. A failed sixth call does not fail the run: the day is complete
+when the five are (code/validate_launch_run.py).
+
 v5 -> v6 on 2026-09-15: THE EXTINCTION PAIR. Two cross-cutting questions in
 XPT's wording (human extinction, AI extinction: data/auto-arc/
 addendum-extinction-2026-09-15.json, docs/extinction-questions-2026-09-15.md)
@@ -128,6 +143,15 @@ HARNESS = "pi"
 # prompts), which found the instrument's guidance moved no headline forecast.
 INSTRUMENT = "minimal"
 VARIANTS = ["none", "independent", "recent", "critical", "two-step"]
+# The sixth call (2026-10-19 evening): the baseline prompt with the AI-forecast
+# ban (code/run_unified.py VARIANTS["ai-banned"], the sentence) and agent-box's
+# URL guard against AIRO's own pages, per call. Asked beside the five, never
+# pooled into the published number (see the docstring).
+UNPOOLED_VARIANTS = [
+    {"variant": "ai-banned",
+     "url_block_patterns": r"forecastingresearch\.org/pdf/airo,forecastingresearch\.org/research/airo,"
+                           r"airo\.forecastingresearch\.org"},
+]
 PLACEHOLDER = "{target_date}"
 
 # ── The authored sentences ──────────────────────────────────────────────────
@@ -186,6 +210,7 @@ def build():
         "harness": HARNESS,
         "instrument": INSTRUMENT,
         "variants": VARIANTS,
+        "unpooled_variants": UNPOOLED_VARIANTS,
         "source": {
             "panel": "LEAP, for the policy conditions only; no human panel answers the "
                      "capability conditions",

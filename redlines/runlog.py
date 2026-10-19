@@ -242,7 +242,8 @@ def load_runlog(runlog=RUNLOG, runs_dir=RUNS_DIR, panel_only=True):
     """All forecast rows: the historical log plus one file per scheduled run.
 
     `panel_only` (the default) hands back panel rows only (panel_rows: what
-    the views draw); False hands back every row in the log -- the download
+    the views draw), minus the rows that are not in the published number
+    (pooled_rows); False hands back every row in the log -- the download
     bundle wants everything (project lead, 2026-09-08: include everything).
 
     Scheduled runs (code/cron_run.sh on the exe.dev box) write their own dated
@@ -267,7 +268,24 @@ def load_runlog(runlog=RUNLOG, runs_dir=RUNS_DIR, panel_only=True):
                     continue
                 row["forecasts"] = _clean_forecasts(row.get("forecasts"))
                 rows.append(row)
-    return panel_rows(rows) if panel_only else rows
+    return pooled_rows(panel_rows(rows)) if panel_only else rows
+
+
+def pooled_rows(rows):
+    """Only the rows that enter a model's published number.
+
+    Since 2026-10-19 evening the combined set asks a sixth call per model
+    beside its five prompts -- the baseline prompt with the AI-forecast ban
+    and agent-box's URL guard against AIRO's own pages
+    (data/combined_conditions.json `unpooled_variants`; code/run_unified.py
+    set_unpooled). Its rows are stamped `pooled: false`: the Timeline draws
+    them as their own line (redlines.views.timeline.variant_medians), and
+    nothing else reads them -- not pool(), not latest_pooled(), not the
+    Policy-levers summary (redlines.conditional.load_conditional). A row
+    without the stamp is pooled, so every row before that date is unchanged.
+    The download bundle (load_runlog(panel_only=False)) keeps everything.
+    """
+    return [r for r in rows if r.get("pooled", True)]
 
 
 def panel_rows(rows):

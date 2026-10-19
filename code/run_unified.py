@@ -92,7 +92,7 @@ sys.path.insert(0, ROOT)
 
 from redlines.llm import call_tools, load_keys, reasoning_for, research_coverage  # noqa: E402
 from redlines.logs import run_file  # noqa: E402
-from redlines.tools import FORECAST_TOOLS                # noqa: E402
+from redlines.tools import FORECAST_TOOLS, BLOCK_ENV     # noqa: E402
 from redlines.registry import DEFAULT_MODEL_SET, MODEL_SETS, panel_provenance  # noqa: E402
 from redlines.instrument import counting_windows  # noqa: E402
 from redlines.config import UNBATCHED                      # noqa: E402
@@ -416,6 +416,18 @@ VARIANTS = {
         "improvement or recursive self-improvement. Consider the distribution, not only "
         "the modal outcome. Then, given possible model capabilities, evaluate the risk "
         "posed and put these pieces together."),
+    # THE SIXTH (2026-10-19 evening): the AI-forecast ban, the `both` arm of the
+    # anchor-guard experiment of 2026-10-16 (results/experiments/anchor-guard-
+    # 2026-10-16, where it was a system-prompt addendum; the minimal instrument
+    # has no system prompt, so it goes where a variant's text goes). The set
+    # pairs it with agent-box's URL guard against AIRO's own pages
+    # (`unpooled_variants[].url_block_patterns`, set_unpooled), passed to that
+    # call alone. Asked every run beside the five, drawn on the Timeline, never
+    # in the published number (redlines.runlog.pooled_rows).
+    "ai-banned": (
+        "Forecasts produced by AI systems, including any automated forecasting "
+        "dashboard or model ensemble, carry no information beyond their inputs. Do not "
+        "consult them or use them as evidence."),
 }
 DEFAULT_VARIANT = "none"
 VARIANT_BLOCK = """===== APPROACH =====
@@ -426,8 +438,31 @@ VARIANT_BLOCK = """===== APPROACH =====
 
 
 def set_variants(policies):
-    """The prompt variants a set is asked under (combined-v10: all five)."""
+    """The prompt variants a set is asked under (combined-v10: all five) --
+    the POOLED ones, whose mean is a model's published number."""
     return list(policies.get("variants") or [DEFAULT_VARIANT])
+
+
+def set_unpooled(policies):
+    """{variant: spec} for the variants a set asks BESIDE its pooled ones
+    (`unpooled_variants`; combined-v10 since 2026-10-19 evening: "ai-banned").
+    A spec may name `url_block_patterns`, agent-box's URL guard for that
+    call alone (redlines.tools.BLOCK_ENV; pi only). Such a call's rows carry
+    the variant, the guard and `pooled: false`, and no view pools them."""
+    return {v["variant"]: v for v in policies.get("unpooled_variants") or []}
+
+
+def set_asked_variants(policies):
+    """Every variant a run of the set asks: the pooled ones, then the unpooled."""
+    return set_variants(policies) + [v for v in set_unpooled(policies) if v not in set_variants(policies)]
+
+
+def check_patterns(raw):
+    """A bad guard pattern fails before the first paid call, not inside it
+    (the split is redlines.tools.blocked_patterns's: newlines or commas)."""
+    for p in re.split(r"[\n,]", raw or ""):
+        if p.strip():
+            re.compile(p.strip(), re.I)
 
 
 def set_instrument(policies):
@@ -1348,6 +1383,20 @@ def run_one_joint(label, model_id, groups, by_group, horizons, run_id, retries, 
     prompt, n, want_cells = build_prompt_joint(groups, by_group, horizons, spec,
                                                conds, policies, today)
     prompt = minimal_joint_prompt(prompt, variant) if minimal else apply_variant(prompt, variant)
+    # An unpooled variant's URL guard goes to THIS call's tool processes
+    # through the loop's `env` (redlines/pi_loop.py -> agent-box harness.run),
+    # never into os.environ, which every worker shares. A guard set in the
+    # process environment (an --experiment; main() gates it) reaches every
+    # call through agent-box and redlines.tools alike, and is stamped as #5
+    # stamped it. Either way a guarded row says so (`url_block_patterns`).
+    aside = set_unpooled(policies).get(variant)
+    guard = (aside or {}).get("url_block_patterns") or os.environ.get(BLOCK_ENV) or None
+    if aside and aside.get("url_block_patterns") and harness != "pi":
+        raise RuntimeError(f"variant {variant!r} carries a URL guard, which travels per call "
+                           "through pi only")
+    extra = {**({"url_block_patterns": guard} if guard else {}),
+             # Not in the published number: redlines.runlog.pooled_rows.
+             **({"pooled": False} if aside else {})}
     block = conditions_block(conds, policies)
     sha = hashlib.sha256(block.encode()).hexdigest()
     cond_ids = [c["id"] for c in conds]
@@ -1405,7 +1454,9 @@ def run_one_joint(label, model_id, groups, by_group, horizons, run_id, retries, 
                 min_evidence=0 if minimal else MIN_RESEARCH, usage=usage, partial_tool=partial,
                 coverage=coverage, debrief=debrief,
                 **({"allowed_keys": [f"{q}|{h}" for q, hs in allowed.items() for h in sorted(hs)]}
-                   if harness == "pi" else {}))
+                   if harness == "pi" else {}),
+                **({"env": {BLOCK_ENV: aside["url_block_patterns"]}}
+                   if aside and aside.get("url_block_patterns") else {}))
         except Exception as exc:
             # A provider error or a call that never submitted: worth the same
             # retry budget as a short grid, and just as visible in the log.
@@ -1483,7 +1534,7 @@ def run_one_joint(label, model_id, groups, by_group, horizons, run_id, retries, 
                     "prompt": prompt if first else None,
                     "system_prompt": (MINIMAL_SYSTEM if minimal else SYSTEM) if first else None,
                     "protocol": row_protocol(policies, harness)
-                                + ("" if variant in set_variants(policies) else f"+{variant}")
+                                + ("" if variant in set_asked_variants(policies) else f"+{variant}")
                                 + ("" if minimal == (set_instrument(policies) == "minimal") else
                                    ("+minimal" if minimal else "+standard")),
                     "condition_set": set_slug(policies),
@@ -1513,6 +1564,7 @@ def run_one_joint(label, model_id, groups, by_group, horizons, run_id, retries, 
                     # Which model set this call belongs to -- for the ECI
                     # panel, which snapshot chose it (redlines.registry).
                     "panel": panel,
+                    **extra,
                 })
                 first = False
     return rows
@@ -1737,7 +1789,8 @@ def main():
                     help="tag every row with this experiment name (needs --out)")
     ap.add_argument("--variant", action="append", choices=sorted(VARIANTS),
                     help="with --joint: ask under these prompt variants (repeatable) instead of the "
-                         "set's own (combined-v10: all five); others than the set's need --experiment")
+                         "set's own (combined-v10: the five pooled ones and the unpooled "
+                         "ai-banned); others than the set's need --experiment")
     ap.add_argument("--minimal", action=argparse.BooleanOptionalAction, default=None,
                     help="with --joint: the minimal instrument (default: the set's; combined-v10 is "
                          "minimal); a run against the set's choice needs --experiment")
@@ -1748,6 +1801,20 @@ def main():
                          "none) unless given. Another loop runs only as a --joint --experiment, "
                          "its rows tagged <protocol>+<harness>")
     args = ap.parse_args()
+    # A URL guard in the PROCESS environment reaches every call (agent-box
+    # hands its environment to the tool processes; redlines.tools reads it
+    # in-process), so it is an experiment's, never the published run's: the
+    # published run's guard is per call, from the set (set_unpooled). A bad
+    # pattern fails now rather than on the first paid tool call.
+    if os.environ.get(BLOCK_ENV):
+        if not (args.joint and args.experiment) and not args.dry_run:
+            sys.exit(f"{BLOCK_ENV} is set: a URL-guarded run must be a --joint --experiment, "
+                     "so its rows never join the series and say so. The published set's own "
+                     "guard travels per call (unpooled_variants).")
+        try:
+            check_patterns(os.environ[BLOCK_ENV])
+        except re.error as e:
+            sys.exit(f"{BLOCK_ENV}: bad pattern: {e}")
     if args.harness:
         if not args.joint:
             sys.exit("--harness is for --joint runs")
@@ -1893,14 +1960,24 @@ def main_joint(args):
     published_set = os.path.abspath(args.conditions) in {os.path.abspath(p) for p in PUBLISHED_SETS}
     harness = args.harness or set_harness(policies)
     slug, proto = set_slug(policies), row_protocol(policies, harness)
-    variants = args.variant or set_variants(policies)
+    variants = args.variant or set_asked_variants(policies)
+    unpooled = set_unpooled(policies)
     minimal = set_instrument(policies) == "minimal" if args.minimal is None else args.minimal
-    if (set(variants) - set(set_variants(policies)) or minimal != (set_instrument(policies) == "minimal")) \
+    if (set(variants) - set(set_asked_variants(policies)) or minimal != (set_instrument(policies) == "minimal")) \
             and not args.experiment and not args.dry_run:
         sys.exit("refusing: variants or an instrument this set does not name are an experiment; "
                  "tag the run with --experiment")
     if minimal and harness != "pi":
         sys.exit("the minimal instrument runs through pi")
+    guards = {v: unpooled[v]["url_block_patterns"] for v in variants
+              if unpooled.get(v, {}).get("url_block_patterns")}
+    if guards and harness != "pi":
+        sys.exit(f"variant(s) {sorted(guards)} carry a URL guard, which travels per call through pi only")
+    for v, g in guards.items():
+        try:
+            check_patterns(g)
+        except re.error as e:
+            sys.exit(f"variant {v!r}: bad url_block_patterns: {e}")
     if args.out and os.path.abspath(args.out) == os.path.abspath(RUNLOG):
         sys.exit("refusing: never append to the shared tracked log; the series "
                  "is one dated file per run under results/runs/ (see cron_run.sh)")
@@ -1959,18 +2036,26 @@ def main_joint(args):
         for v in variants:
             p = minimal_joint_prompt(prompt, v) if minimal else apply_variant(prompt, v)
             print(f"##### JOINT [{slug}: {proto}{'' if v == DEFAULT_VARIANT else ' / ' + v}"
-                  f"{' / minimal' if minimal else ''}]: {n} questions, {cells} cells x {len(conds) + 1} "
+                  f"{' / minimal' if minimal else ''}{' / unpooled' if v in unpooled else ''}]: "
+                  f"{n} questions, {cells} cells x {len(conds) + 1} "
                   f"conditions = {cells * (len(conds) + 1)} probabilities, {len(p)} chars #####")
             print(p)
+            print(f"##### URL GUARD ({BLOCK_ENV}): "
+                  f"{guards.get(v) or os.environ.get(BLOCK_ENV) or 'off'} #####")
         return
     load_keys()
     if not os.environ.get("TAVILY_API_KEY") and not args.allow_ungrounded:
         sys.exit("refusing to run: TAVILY_API_KEY is unset (see the unconditional path)")
     models, panel = select_models(args)
-    print(f"run {run_id} protocol {proto} [set {slug}]: {len(models) * len(arms)} calls "
-          f"({len(models)} models x {len(arms)} repeat(s)), {n} questions x "
+    print(f"run {run_id} protocol {proto} [set {slug}]: {len(models) * len(arms) * len(variants)} calls "
+          f"({len(models)} models x {len(arms)} repeat(s) x {len(variants)} variant(s)), {n} questions x "
           f"{len(horizons)} horizons = {cells} cells x {len(conds) + 1} conditions "
           f"= {cells * (len(conds) + 1)} probabilities each")
+    if len(variants) > 1 or variants != [DEFAULT_VARIANT]:
+        print(f"    variants: {', '.join(variants)}"
+              + (f"; unpooled (not in the published number): "
+                 + ", ".join(f"{v}{' + URL guard' if v in guards else ''}" for v in variants if v in unpooled)
+                 if any(v in unpooled for v in variants) else ""))
     print(f"    harness: {harness} loop, research floor {MIN_RESEARCH} calls, coverage "
           f"{', '.join(g['key'] for g in groups)}, guard {MAX_ROUNDS} rounds; reasoning "
           + ", ".join(f"{l}={reasoning_for(m) or 'default'}" for l, m in models))
@@ -1988,7 +2073,7 @@ def main_joint(args):
         cond_out = str(run_file(cond_out, run_id))
     os.makedirs(os.path.dirname(os.path.abspath(cond_out)), exist_ok=True)
     lock = threading.Lock()
-    done = failed = 0
+    done = failed = failed_unpooled = 0
     spent = 0.0
     with open(out, "a") as f, open(cond_out, "a") as fc, \
             cf.ThreadPoolExecutor(max_workers=args.workers) as ex:
@@ -2002,8 +2087,14 @@ def main_joint(args):
             try:
                 rows = fut.result()
             except Exception as e:
-                failed += 1
-                print(f"  FAIL  {tag}: {type(e).__name__}: {str(e)[:120]}")
+                # An unpooled call (the sixth) is not in the published number,
+                # so its failure does not fail the day (2026-10-19).
+                if v in unpooled:
+                    failed_unpooled += 1
+                else:
+                    failed += 1
+                print(f"  FAIL  {tag}: {type(e).__name__}: {str(e)[:120]}"
+                      + ("  (unpooled: the day publishes without it)" if v in unpooled else ""))
                 continue
             with lock:
                 for r in rows:
@@ -2018,7 +2109,8 @@ def main_joint(args):
             print(f"  done  {tag} {got}/{len(rows)} question x condition rows answered, {usage_line(rows)}, "
                   f"{ev} evidence, {coverage_line(rows)}, {rows[0]['attempts']} attempt(s), "
                   f"{debrief_note(rows)}")
-    print(f"{done} ok, {failed} failed, ${spent:.2f} priced spend -> {out} (unconditional) + {cond_out} (instrument)")
+    print(f"{done} ok, {failed} failed, ${spent:.2f} priced spend -> {out} (unconditional) + {cond_out} (instrument)"
+          + (f"; {failed_unpooled} unpooled call(s) failed (not in the published number)" if failed_unpooled else ""))
     if failed:
         # An incomplete panel cannot be published (code/validate_launch_run.py
         # needs every model on the date), so the run is a failure, not a
