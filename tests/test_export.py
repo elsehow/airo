@@ -74,6 +74,30 @@ class TestDownloads(unittest.TestCase):
         for col in export.COLUMNS + export.RATIONALE_COLUMNS:
             self.assertIn(col, readme)
 
+    def test_bundle_has_each_file_once(self):
+        # results/conditional_runs/ matched both the instrument-log loop and
+        # the "*_runs" pilot glob, so its files were written twice (zipfile
+        # warns "Duplicate name"). Make that warning an error here.
+        import warnings
+        import zipfile
+        members = export._bundle_members()
+        names = [n for n, _ in members]
+        paths = [p for _, p in members]
+        self.assertEqual(sorted(n for n in set(names) if names.count(n) > 1), [])
+        self.assertEqual(len(set(paths)), len(paths), "a source file is bundled twice")
+        self.assertTrue(any(n.startswith("raw/conditional_runs/") for n in names))
+        with tempfile.TemporaryDirectory() as tmp:
+            f_out, r_out, z_out = (Path(tmp) / n for n in ("f.csv", "r.csv", "b.zip"))
+            export.forecasts_csv(out=f_out)
+            export.rationales_csv(out=r_out)
+            with warnings.catch_warnings():
+                warnings.filterwarnings("error", message="Duplicate name", category=UserWarning)
+                k = export.bundle_zip(out=z_out, forecasts=f_out, rationales=r_out)
+            with zipfile.ZipFile(z_out) as z:
+                zipped = z.namelist()
+        self.assertEqual(len(zipped), len(set(zipped)))
+        self.assertEqual(len(zipped), k)
+
 
 if __name__ == "__main__":
     unittest.main()

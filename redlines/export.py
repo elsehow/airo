@@ -413,6 +413,8 @@ raw/forecast_runs_unified.jsonl  the same series before 2026-08-21, one file
 raw/conditional_runs*/*.jsonl the whole instruments, one file per run: every (call, question,
                               condition) row, same shape
 raw/*_runs/*.jsonl            the capability-condition pilots' own logs
+                              (other than raw/conditional_runs/, an
+                              instrument log listed above)
 raw/experiments/              pilots and smokes -- NOT the published series
 raw/legacy-forecasts/         the retired per-question protocol
                               (before 2026-08-14); see its README
@@ -441,10 +443,15 @@ def _bundle_members():
     for p in conditional_logs():
         for f in log_files(p):
             out.append((f"raw/{f.relative_to(RESULTS)}", f))
+    # "*_runs" also matches results/conditional_runs/, the shard directory of
+    # the LEAP policy instrument that conditional_logs() has just added; skip
+    # any file already in the bundle so each appears exactly once.
+    added = {f for _, f in out}
     for d in sorted(RESULTS.glob("*_runs")):
         if d.is_dir():
             for p in sorted(d.glob("*.jsonl")):
-                out.append((f"raw/{d.name}/{p.name}", p))
+                if p not in added:
+                    out.append((f"raw/{d.name}/{p.name}", p))
     exp = RESULTS / "experiments"
     if exp.is_dir():
         for p in sorted(exp.rglob("*")):
@@ -466,6 +473,10 @@ def _bundle_members():
         out.append((f"questions/sources/{p.name}", p))
     for p in sorted(DATA_DIR.glob("*_conditions.json")) + sorted(DATA_DIR.glob("epoch_capabilities_index_*.csv")):
         out.append((f"conditions/{p.name}", p))
+    names = [n for n, _ in out]
+    if len(set(names)) != len(names):
+        dup = sorted({n for n in names if names.count(n) > 1})
+        raise ValueError(f"bundle archive names collide: {dup}")
     return out
 
 
