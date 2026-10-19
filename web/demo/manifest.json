@@ -13,7 +13,8 @@
     "OBSERVATIONAL",
     "CAUSAL",
     "METHOD",
-    "RATIONALES"
+    "RATIONALES",
+    "PROVENANCE"
   ],
   "chunks": [
     "00-head.html",

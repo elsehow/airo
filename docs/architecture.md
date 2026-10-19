@@ -179,6 +179,66 @@ pattern to use anywhere a `set` gets turned into an ordered output — search
 writing this document; all three produced byte-identical output, matching
 each other and the tracked baseline checksums.
 
+## Provenance stamps
+
+Every `window.__NAME__` blob has a stamp saying what it was built from, in a
+blob of its own (`redlines/provenance.py`, since 2026-10-19):
+
+```js
+window.__PROVENANCE__ = {"format": 1, "blobs": {
+  "CAUSAL": {"basis": "inputs",
+             "stamp": "<sha256>",
+             "code":   {"version": "0.1.0", "sha256": "<sha256>", "modules": 17},
+             "inputs": {"sha256": "<sha256>", "files": 10}},
+  ...}}
+```
+
+`results/provenance.json` is the same document in full. There, `code.modules`
+and `inputs.files` are `{path: sha256}` maps instead of counts, so you can see
+which file a changed stamp came from without rebuilding.
+
+- **inputs**: every file the view's `build()` opened for reading. These are
+  found by tracing `open()` (`builtins.open` and `io.open`, which pathlib uses)
+  while the view runs. Added to them are the files the model registry reads
+  when it is imported (`registry._build_models`: the ECI snapshots and
+  `data/auto_models.json`), which a per-call trace cannot see. Each file
+  counts by the sha256 of its bytes. Paths are recorded relative to the repo,
+  or as `<FB_DATASETS_ROOT>/…`, `<FBSIM_ROOT>/…` and `<XRISK_CANARIES_ROOT>/…`
+  for the external checkouts, so a stamp does not depend on where a machine
+  keeps them.
+- **code**: the package version plus the sha256 of each module in the view's
+  *static* import closure. That is `redlines/views/<view>.py` and every
+  `redlines.*` / `fri_forecaster.*` module it imports, transitively,
+  including imports inside functions, found with `ast` rather than by
+  importing. The closure is conservative: editing any module a view imports,
+  even only a comment, moves that view's stamp (and so `index.html`).
+  Editing a module the view does not import leaves the stamp alone.
+- **stamp**: sha256 over the code and input digests.
+
+**Deliberately not a timestamp and not a git commit.** Either would make two
+builds of the same inputs differ, which would break the golden tests and any
+check that `build`/`assemble` leave the working tree unchanged. The stamp is
+a pure function of the bytes the build read. It is the same on every machine
+and under any `PYTHONHASHSEED`. A single-view `build --views causal` gives the
+same stamp as a full build: every `functools.lru_cache` in `redlines.*` is
+cleared before each traced build, so recorded reads do not depend on which
+views ran first. `tests/test_provenance.py` checks this by building views in a
+fresh interpreter with `open()` hooked before `redlines` is imported, and
+comparing the reads with the tracked entry.
+
+**Frozen blobs.** When Graph 3's or Graph 4's external inputs are absent and
+the tracked mirror is spliced in, the tracked provenance entry is carried
+through with it. The stamp describes the build that produced the mirror, not
+the machine that copied it. A frozen blob that has never been rebuilt since
+stamps existed (Graph 4 as of 2026-10-19, because `results/eval_full.json` is
+gitignored) has `"basis": "mirror"`. Its only input is the mirror file itself.
+The next rebuild from the real inputs replaces it with an `"inputs"` entry.
+
+`build` merges the entries for the views it ran into `results/provenance.json`
+and re-injects `window.__PROVENANCE__`. `assemble` builds the blob from fresh
+stamps. As with every other blob, the two must agree byte for byte. No JSX
+reads `window.__PROVENANCE__`. It is there for readers and tools.
+
 ## The registry: one model table, five old naming conventions
 
 Before `redlines/registry.py` existed, "which models are in the demo set"
@@ -422,11 +482,11 @@ series accrues; a publish failure is logged but never masks the run itself.
 Things that are known, decided-not-now, or waiting on a person — recorded
 here so they don't have to be rediscovered.
 
-- **Blob provenance stamps, deferred.** Adding a "built at / from commit X"
-  stamp to each `window.__NAME__` blob was considered and set aside: it
-  would change every blob's bytes, which fails every golden test the moment
-  it lands, and the paper draft's **~Sep 1** deadline meant no golden-byte
-  churn until after that date. Revisit after Sep 1.
+- **Blob provenance stamps** — done 2026-10-19 (deferred until after the
+  paper's ~Sep 1 deadline). The stamp is a content hash of the view's inputs
+  and code, not a "built at / from commit X" line, which would have broken
+  byte-reproducibility. It lives in its own `window.__PROVENANCE__` blob, so the
+  other blobs' bytes did not change. See "Provenance stamps" above.
 - **JS-helper duplication between `web/demo` and `web/timeline`** —
   resolved 2026-09-08 by folding the timeline page into `index.html`
   (`web/demo/19-live-timeline.jsx`); there is one atoms chunk now.

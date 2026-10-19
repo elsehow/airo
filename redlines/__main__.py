@@ -35,6 +35,12 @@ tests/test_assemble_golden.py and W4's gauntlet check.
     python3 -m redlines assemble                  # index.html
     python3 -m redlines assemble --pages demo      # the same, by name
 
+Both commands also stamp every blob they build (redlines.provenance): a
+content hash of the files its view read plus the code that read them, never a
+time or a commit, so a rebuild of the same inputs is byte-identical. `build`
+merges the stamps into results/provenance.json and the page's
+window.__PROVENANCE__ blob; `assemble` splices them in as that blob.
+
 `export-fb` is standalone: it is never run as part of build or assemble.
 
     python3 -m redlines export-fb                          # -> results/fb_export.json
@@ -49,6 +55,7 @@ import sys
 import traceback
 
 from .config import FB_DATASETS_ROOT, FBSIM_ROOT, REPO_ROOT
+from . import provenance
 from .hydrate import inject
 from .pages import hydrate_page
 
@@ -57,11 +64,25 @@ from .pages import hydrate_page
 # affects print order, but we keep it fixed for predictable output.
 VIEW_ORDER = ["g1", "g2", "g3", "g4", "observational", "causal", "databank", "timeline", "conditional", "capability", "axes", "method", "rationales", "csv"]
 
+# Provenance entries (redlines.provenance) for the blobs built so far in this
+# process, keyed by window.__NAME__ name. Every blob goes through _stamp(),
+# which runs the view's build() under an open() trace; `build` merges these
+# into results/provenance.json and the page's window.__PROVENANCE__ blob, and
+# `assemble` splices them in as that blob.
+_STAMPS = {}
+
+
+def _stamp(name, view, fn, *args, **kwargs):
+    """Run redlines.views.<view>'s build fn under trace; record its entry."""
+    blob, entry = provenance.stamped(f"redlines.views.{view}", fn, *args, **kwargs)
+    _STAMPS[name] = entry
+    return blob
+
 
 def _build_g1():
     from .views import graph1
 
-    blob = graph1.build()
+    blob = _stamp("GRAPH1", "graph1", graph1.build)
     path = inject("GRAPH1", blob, json_out="results/graph1_data.json")
     n = sum(len(q["series"]) for q in blob["questions"])
     print(f"g1: {len(blob['questions'])} questions, {n} model series, "
@@ -71,7 +92,7 @@ def _build_g1():
 def _build_g2():
     from .views import graph2
 
-    blob = graph2.build()
+    blob = _stamp("GRAPH2", "graph2", graph2.build)
     path = inject("GRAPH2", blob, json_out="results/graph2_data.json")
     sides = [s for d in blob["byHorizon"].values() for s in d["legs"].values()]
     n_causes = sum(len(s["causes"]) for s in sides)
@@ -110,7 +131,8 @@ def g3_blob():
     """(blob, how): rebuilt from FB_DATASETS_ROOT, or the tracked mirror."""
     if g3_inputs_present():
         from .views import graph3
-        return graph3.build(), "rebuilt"
+        return _stamp("GRAPH3", "graph3", graph3.build), "rebuilt"
+    _STAMPS["GRAPH3"] = provenance.frozen_entry("GRAPH3", "redlines.views.graph3", G3_MIRROR)
     return _mirror(G3_MIRROR), f"tracked mirror (no ForecastBench sets under {FB_DATASETS_ROOT})"
 
 
@@ -120,7 +142,9 @@ def g4_blob():
         from .views import graph4
         # code/make_demo_combined.py's shim always ran with --final for the
         # tracked mirror (results/graph4_combined.json has preliminary: false).
-        return graph4.build(G4_EVAL, G4_QUESTIONS, G4_PANDEMIC, final=True), "rebuilt"
+        return _stamp("GRAPH4", "graph4", graph4.build, G4_EVAL, G4_QUESTIONS, G4_PANDEMIC,
+                      final=True), "rebuilt"
+    _STAMPS["GRAPH4"] = provenance.frozen_entry("GRAPH4", "redlines.views.graph4", G4_MIRROR)
     missing = [str(p) for p in (G4_EVAL, G4_QUESTIONS, G4_PANDEMIC) if not p.exists()]
     return _mirror(G4_MIRROR), f"tracked mirror (missing {', '.join(missing)})"
 
@@ -150,7 +174,7 @@ def _build_g4():
 def _build_observational():
     from .views import observational
 
-    blob = observational.build()
+    blob = _stamp("OBSERVATIONAL", "observational", observational.build)
     path = inject("OBSERVATIONAL", blob, json_out="results/observational_data.json")
     print(f"observational: {blob['run']['models']} models, {blob['run']['responses']} responses "
           f"from {blob['source']['run']}, rho(ECI, skill) {blob['rho']:+.2f} -> {path.name}")
@@ -159,7 +183,7 @@ def _build_observational():
 def _build_causal():
     from .views import causal
 
-    blob = causal.build()
+    blob = _stamp("CAUSAL", "causal", causal.build)
     path = inject("CAUSAL", blob, json_out="results/causal_data.json")
     h = blob["headline"]
     print(f"causal: {h['n']} models, rho(ECI, pooled intervention skill) {h['rho']:+.2f} "
@@ -171,7 +195,7 @@ def _build_databank():
 
     # v1 ships bottom-line only; canaries are gated behind
     # make_demo_databank.py --canaries, off by default here too.
-    blob = databank.build(include_canaries=False)
+    blob = _stamp("DATABANK", "databank", databank.build, include_canaries=False)
     path = inject("DATABANK", blob, json_out="results/databank_data.json")
     bl_n = blob["counts"]["bottomLine"]
     print(f"databank: {bl_n} bottom-line row(s) -> {path.name}")
@@ -180,7 +204,7 @@ def _build_databank():
 def _build_timeline():
     from .views import timeline
 
-    blob = timeline.build()
+    blob = _stamp("TIMELINE", "timeline", timeline.build)
     path = inject("TIMELINE", blob, json_out="results/timeline_data.json")
     print(f"timeline: {len(blob['questions'])} questions, "
           f"{len(blob['snapshots'])} snapshot(s) -> {path.name}")
@@ -192,7 +216,8 @@ def _build_conditional():
     # REDLINES_CONDITIONAL_LOGS=a.jsonl:b.jsonl builds from other logs (a
     # smoke, an experiment file) without touching results/conditional_runs.jsonl.
     logs = os.environ.get("REDLINES_CONDITIONAL_LOGS")
-    blob = conditional.build(log_path=logs) if logs else conditional.build()
+    blob = (_stamp("CONDITIONAL", "conditional", conditional.build, log_path=logs) if logs
+            else _stamp("CONDITIONAL", "conditional", conditional.build))
     path = inject("CONDITIONAL", blob, json_out="results/conditional_data.json")
     print(f"conditional: {len(blob['questions'])} questions, "
           f"{len(blob['conditions'])} conditions, {blob['rows']} rows -> {path.name}")
@@ -200,7 +225,7 @@ def _build_conditional():
 
 def _build_axes():
     from .views import axes
-    blob = axes.build()
+    blob = _stamp("AXES", "axes", axes.build)
     path = inject("AXES", blob, json_out="results/axes_data.json")
     n = sum(len(a["questions"]) for a in blob["axes"])
     print(f"axes: {len(blob['axes'])} axis/axes, {n} question rows, day {blob['day']} -> {path}")
@@ -210,7 +235,7 @@ def _build_axes():
 def _build_capability():
     from .views import capability
 
-    blob = capability.build()
+    blob = _stamp("CAPABILITY", "capability", capability.build)
     path = inject("CAPABILITY", blob, json_out="results/capability_data.json")
     print(f"capability: {len(blob['variants'])} variant(s), "
           f"{sum(v['rows'] for v in blob['variants'])} rows, "
@@ -241,7 +266,7 @@ def _build_csv():
 def _build_method():
     from .views import method
 
-    blob = method.build()
+    blob = _stamp("METHOD", "method", method.build)
     path = inject("METHOD", blob, json_out="results/method_data.json")
     print(f"method: prompt as of {blob['today']} ({blob['nQuestions']} questions, {blob['cells']} cells x "
           f"{blob['k']} conditions, {blob['chars']} chars), panel of {len(blob['panel'].get('members', []))} -> {path.name}")
@@ -254,7 +279,7 @@ def _build_rationales():
     # show only calls dated the chart's latest reading.
     from .views import rationales
 
-    blob = rationales.build()
+    blob = _stamp("RATIONALES", "rationales", rationales.build)
     path = inject("RATIONALES", blob, json_out="results/rationales_data.json")
     print(f"rationales: {len(blob['calls'])} call(s) across {len(blob['questions'])} question(s) -> {path.name}")
 
@@ -275,6 +300,20 @@ BUILDERS = {
     "rationales": _build_rationales,
     "csv": _build_csv,
 }
+
+
+def _write_provenance():
+    """Merge this run's provenance entries into the tracked ones and write
+    both copies: results/provenance.json (full) and the page's
+    window.__PROVENANCE__ blob (summary). A view that failed keeps its old
+    entry, as it keeps its old blob."""
+    if not _STAMPS:
+        return
+    names = set(_page_manifest("demo")["blobs"])
+    entries = {k: v for k, v in {**provenance.load_tracked(), **_STAMPS}.items() if k in names}
+    provenance.write_mirror(entries)
+    path = inject(provenance.NAME, provenance.page_blob(entries))
+    print(f"provenance: {len(_STAMPS)} blob(s) stamped -> {provenance.MIRROR.name} + {path.name}")
 
 
 def _parse_views(spec):
@@ -304,6 +343,8 @@ def cmd_build(args):
             print(f"{v}: FAILED: {exc}", file=sys.stderr)
             traceback.print_exc()
             failed.append(v)
+
+    _write_provenance()
 
     if failed:
         print(f"redlines build: {len(failed)} view(s) failed: {', '.join(failed)}",
@@ -336,21 +377,25 @@ def _blobs_for_demo():
     from .views import (axes, capability, causal, conditional, databank, graph1, graph2,
                         method, observational, timeline, rationales)
 
-    return {
+    _STAMPS.clear()
+    blobs = {
         "GRAPH4": g4_blob()[0],
-        "TIMELINE": timeline.build(),
-        "GRAPH1": graph1.build(),
-        "GRAPH2": graph2.build(),
-        "DATABANK": databank.build(include_canaries=False),
+        "TIMELINE": _stamp("TIMELINE", "timeline", timeline.build),
+        "GRAPH1": _stamp("GRAPH1", "graph1", graph1.build),
+        "GRAPH2": _stamp("GRAPH2", "graph2", graph2.build),
+        "DATABANK": _stamp("DATABANK", "databank", databank.build, include_canaries=False),
         "GRAPH3": g3_blob()[0],
-        "CONDITIONAL": conditional.build(),
-        "CAPABILITY": capability.build(),
-        "AXES": axes.build(),
-        "OBSERVATIONAL": observational.build(),
-        "CAUSAL": causal.build(),
-        "METHOD": method.build(),
-        "RATIONALES": rationales.build(),
+        "CONDITIONAL": _stamp("CONDITIONAL", "conditional", conditional.build),
+        "CAPABILITY": _stamp("CAPABILITY", "capability", capability.build),
+        "AXES": _stamp("AXES", "axes", axes.build),
+        "OBSERVATIONAL": _stamp("OBSERVATIONAL", "observational", observational.build),
+        "CAUSAL": _stamp("CAUSAL", "causal", causal.build),
+        "METHOD": _stamp("METHOD", "method", method.build),
+        "RATIONALES": _stamp("RATIONALES", "rationales", rationales.build),
     }
+    # window.__PROVENANCE__: what each blob above was built from (redlines.provenance).
+    blobs[provenance.NAME] = provenance.page_blob({k: _STAMPS[k] for k in blobs})
+    return blobs
 
 
 PAGE_BLOB_BUILDERS = {
