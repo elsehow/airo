@@ -47,10 +47,32 @@ def main():
               # The debrief (2026-09-15) is asked after the forecasts are accepted
               # and cannot move them, so a missing or incomplete one is a warning
               # for the brief's author, never a reason to withhold the page.
-              'debrief_warnings': []}
+              'debrief_warnings': [],
+              # The unpooled sixth call (combined-v10 + "ai-banned", 2026-10-19):
+              # asked beside the five, never in the published number, so a
+              # missing, short or defective one (check_call) is a warning;
+              # the day is complete when the five are. Its rows must still
+              # say what they ran under (check).
+              'variant_warnings': []}
 
     def check(ok, kind, detail):
         if not ok:
+            report['errors'].append({'check': kind, 'detail': detail})
+
+    def check_call(ok, kind, detail, row, slug):
+        """A check on what a CALL returned (its grid, its numbers, its
+        rationale, its elicit). On an unpooled call (the sixth, `pooled:
+        false`) a failure is a variant warning, never a reason to withhold
+        the five; on a pooled call it is an error as before. What a row
+        must SAY about its run (protocol, prompt, windows, dates, the
+        unpooled stamp) stays an error on every row: that is the code, not
+        the model."""
+        if ok:
+            return
+        if row.get('pooled') is False:
+            report['variant_warnings'].append({'set': slug, 'variant': row.get('variant') or 'none',
+                                               'label': row['label'], 'problem': kind, 'detail': detail})
+        else:
             report['errors'].append({'check': kind, 'detail': detail})
 
     for slug in sets:
@@ -72,30 +94,57 @@ def main():
         prompt_sha = hashlib.sha256(prompt.encode()).hexdigest()
         # combined-v10: the minimal instrument under each of the set's prompt
         # variants -- one call per model per variant, each with its own prompt.
+        # The pooled variants make the grid; an unpooled one (the sixth) is
+        # optional per model: absent, or complete.
         variants = ru.set_variants(policies)
+        unpooled = ru.set_unpooled(policies)
+        asked = ru.set_asked_variants(policies)
         minimal = ru.set_instrument(policies) == 'minimal'
-        prompts = {v: (ru.minimal_joint_prompt(prompt, v) if minimal else ru.apply_variant(prompt, v)) for v in variants}
+        prompts = {v: (ru.minimal_joint_prompt(prompt, v) if minimal else ru.apply_variant(prompt, v)) for v in asked}
         shas = {v: hashlib.sha256(p.encode()).hexdigest() for v, p in prompts.items()}
         conditions = {None} | {c['id'] for c in conds}
         expected = {(label, v, q, c) for label in labels for v in variants for q in qs for c in conditions}
         keys = Counter((r['label'], r.get('variant') or 'none', r['question_id'], (r.get('condition') or {}).get('id'))
                        for r in rows)
-        check(set(keys) == expected and all(v == 1 for v in keys.values()), 'complete_unique_grid',
-              {'set': slug, 'expected_rows': len(expected), 'actual_rows': len(rows),
-               'missing': len(expected-set(keys)), 'extra': len(set(keys)-expected),
-               'duplicates': sum(v-1 for v in keys.values())})
+        pooled_keys = Counter({k: n for k, n in keys.items() if k[1] not in unpooled})
+        check(set(pooled_keys) == expected and all(v == 1 for v in pooled_keys.values()), 'complete_unique_grid',
+              {'set': slug, 'expected_rows': len(expected), 'actual_rows': sum(pooled_keys.values()),
+               'missing': len(expected-set(pooled_keys)), 'extra': len(set(pooled_keys)-expected),
+               'duplicates': sum(v-1 for v in pooled_keys.values())})
+        unpooled_calls = 0
+        for v in unpooled:
+            for label in labels:
+                grid = {k: n for k, n in keys.items() if k[0] == label and k[1] == v}
+                want = {(label, v, q, c) for q in qs for c in conditions}
+                if not grid:
+                    report['variant_warnings'].append({'set': slug, 'variant': v, 'label': label,
+                                                       'problem': 'no call'})
+                elif set(grid) != want or any(n != 1 for n in grid.values()):
+                    report['variant_warnings'].append({'set': slug, 'variant': v, 'label': label,
+                        'problem': 'incomplete grid', 'missing': len(want-set(grid)),
+                        'extra': len(set(grid)-want), 'duplicates': sum(n-1 for n in grid.values())})
+                else:
+                    unpooled_calls += 1
         calls, probabilities = defaultdict(list), {}
         for r in rows:
             q = qs.get(r['question_id'])
             if q is None:
                 continue
-            ident = [slug, r['label'], r.get('variant') or 'none', r['question_id'], (r.get('condition') or {}).get('id')]
+            v = r.get('variant') or 'none'
+            ident = [slug, r['label'], v, r['question_id'], (r.get('condition') or {}).get('id')]
             hs = {h for h in horizons if h in q['horizons']}
             fs = r.get('forecasts') or []
-            check(len(fs) == len(hs) and {f['horizon'] for f in fs} == hs,
-                  'complete_horizons', ident)
+            check_call(len(fs) == len(hs) and {f['horizon'] for f in fs} == hs,
+                       'complete_horizons', ident, r, slug)
             check(r.get('protocol') == policies['protocol'], 'protocol', ident)
-            check(r.get('prompt_sha256') == shas.get(r.get('variant') or 'none'), 'prompt_hash', ident)
+            check(r.get('prompt_sha256') == shas.get(v), 'prompt_hash', ident)
+            # The sixth's rows say what they ran under; the five's are unchanged.
+            if v in unpooled:
+                check(r.get('pooled') is False
+                      and r.get('url_block_patterns') == unpooled[v].get('url_block_patterns'),
+                      'unpooled_stamp', ident)
+            else:
+                check('pooled' not in r and 'url_block_patterns' not in r, 'pooled_row_unchanged', ident)
             check(r.get('counting_window') == counting_windows(q, horizons, args.date, spec),
                   'incident_window', ident)
             check(r.get('resolves_on') == {h: ru.resolves_on(h, args.date, spec) for h in horizons},
@@ -103,7 +152,7 @@ def main():
             for f in fs:
                 p = f.get('probability')
                 valid = isinstance(p, (int, float)) and not isinstance(p, bool) and math.isfinite(p) and 0 <= p <= 1
-                check(valid, 'bounded_probability', ident+[f.get('horizon'), p])
+                check_call(valid, 'bounded_probability', ident+[f.get('horizon'), p], r, slug)
                 if valid:
                     probabilities[tuple(ident[1:])+ (f['horizon'],)] = p
             calls[r['call_id']].append(r)
@@ -120,7 +169,7 @@ def main():
                 if not minimal:   # the minimal instrument has no research floor
                     check(len(evidence) >= ru.MIN_RESEARCH and all(r.get('grounded') for r in rs),
                           'grounding_floor', call_id)
-                check(bool(first.get('rationale')), 'rationale_present', call_id)
+                check_call(bool(first.get('rationale')), 'rationale_present', call_id, first, slug)
                 status = first.get('debrief_status') or {}
                 if not minimal and not (isinstance(first.get('debrief'), dict) and status.get('complete')):
                     report['debrief_warnings'].append({
@@ -129,8 +178,11 @@ def main():
                         'problems': status.get('problems') or (['no debrief recorded'] if not status else [])})
                 for elicit in ru.set_elicits(policies):
                     value = (first.get('elicited') or {}).get(elicit['key'])
-                    check(bool(ru.clean_elicit(value, elicit)), 'elicited_metadata', [call_id, elicit['key']])
-                call_report.append({'call_id': call_id, 'label': first['label'], 'rows': len(rs),
+                    check_call(bool(ru.clean_elicit(value, elicit)), 'elicited_metadata',
+                               [call_id, elicit['key']], first, slug)
+                call_report.append({'call_id': call_id, 'label': first['label'],
+                                    'variant': first.get('variant') or 'none',
+                                    'pooled': bool(first.get('pooled', True)), 'rows': len(rs),
                                     'evidence': len(evidence), 'usage': first.get('usage'),
                                     'submission': first.get('delivery')})
         rungs = [r['short'] for r in spec['rungs']]
@@ -141,7 +193,7 @@ def main():
                 report['coherence_warnings'].append({'set': slug, 'check': kind,
                     'left': left, 'right': right, 'values': [a, b], 'excess_pp': (a-b)*100})
 
-        for label, v in ((l, v) for l in labels for v in variants):
+        for label, v in ((l, v) for l in labels for v in asked):
             for c in conditions:
                 for q in qs:
                     hs = sorted([h for h in horizons if h in qs[q]['horizons']],
@@ -158,9 +210,13 @@ def main():
                             for rung in rungs:
                                 ordered((label,v,f'ladder:{cause}:{rung}',c,h),
                                         (label,v,f'ladder:ai:{rung}',c,h), 'subtype_within_ai')
+        # 4 x 6 = 24 calls under combined-v10 + the sixth; the unpooled ones
+        # count where they answered, and are listed as missing where not.
         report['instruments'][slug] = {'file_sha256': hashlib.sha256(raw).hexdigest(),
             'prompt_sha256': prompt_sha, 'rows': len(rows), 'probabilities': len(probabilities),
-            'expected_probabilities': cells * len(conditions) * len(labels) * len(variants), 'calls': call_report}
+            'expected_probabilities': cells * len(conditions) * (len(labels) * len(variants) + unpooled_calls),
+            'expected_calls': len(labels) * len(asked), 'pooled_calls': len(labels) * len(variants),
+            'unpooled_calls': unpooled_calls, 'calls': call_report}
     report['passed_integrity_checks'] = not report['errors']
     report['recorded_cost_usd'] = round(sum((c.get('usage') or {}).get('cost_usd',0)
         for s in report['instruments'].values() for c in s['calls']),6)
@@ -169,6 +225,7 @@ def main():
     print(json.dumps({'integrity_errors': len(report['errors']),
                       'coherence_warnings': len(report['coherence_warnings']),
                       'debrief_warnings': len(report['debrief_warnings']),
+                      'variant_warnings': len(report['variant_warnings']),
                       'recorded_cost_usd': report['recorded_cost_usd'], 'report': str(args.out)}))
     return int(bool(report['errors']))
 

@@ -12,6 +12,12 @@
   "critical",
   "two-step"
  ],
+ "unpooled_variants": [
+  {
+   "variant": "ai-banned",
+   "url_block_patterns": "forecastingresearch\\.org/pdf/airo,forecastingresearch\\.org/research/airo,airo\\.forecastingresearch\\.org"
+  }
+ ],
  "source": {
   "panel": "LEAP, for the policy conditions only; no human panel answers the capability conditions",
   "wave": "LEAP Wave 12 policies + frontier ECI 6 months from the run date (the model's own p10/p25/p50/p75/p90)",

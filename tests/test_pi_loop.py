@@ -90,6 +90,20 @@ class PiLoopTest(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             self.call(FakeRun({}))
 
+    def test_the_calls_env_reaches_pi_without_touching_the_process(self):
+        """The URL guard (redlines.tools.BLOCK_ENV) is per call: it goes to
+        agent-box's harness.run(env=...), beside PI_CODING_AGENT_DIR, and never
+        into os.environ, which the runner's workers share."""
+        from redlines.tools import BLOCK_ENV
+        run = FakeRun({"forecasts": [], "rationale": "r"})
+        self.call(run, env={BLOCK_ENV: "airo\\.example"})
+        self.assertEqual(run.kw["env"][BLOCK_ENV], "airo\\.example")
+        self.assertIn("PI_CODING_AGENT_DIR", run.kw["env"])
+        self.assertNotIn(BLOCK_ENV, os.environ)
+        run = FakeRun({"forecasts": [], "rationale": "r"})
+        self.call(run)
+        self.assertNotIn(BLOCK_ENV, run.kw["env"])                       # off unless the call says so
+
     def test_validator_runs_out_of_process(self):
         try:
             from fri_forecaster.tool_cli import validate

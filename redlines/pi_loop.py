@@ -47,11 +47,15 @@ def pi_model(model):
 def call_tools(model, prompt, tools, final_tool, *, max_iters=6, system=None,
                max_tokens=8000, temperature=0.0, complete=None, min_evidence=0,
                usage=None, partial_tool=None, coverage=None, debrief=None,
-               allowed_keys=None, run=None):
+               allowed_keys=None, env=None, run=None):
     """redlines.llm.call_tools's contract: -> (answer_args, evidence); fills
     `usage` and `debrief` in place, feeds `partial_tool["fn"]` every piece in
     order, raises if the model never submits. `allowed_keys` ("qid|horizon")
     are the cells the call asks for, which pi's tools check pieces against.
+    `env` is THIS call's environment for pi and its tool processes, over the
+    process's own (agent-box `harness.run(env=...)`): the URL guard
+    (redlines.tools.BLOCK_ENV) travels here, per call, never in os.environ,
+    because the runner's workers run calls side by side (2026-10-19).
     `max_tokens`, `temperature` and `complete` are the litellm path's and do
     nothing here; `run` replaces fri_forecaster.harness.run (tests)."""
     if run is None:
@@ -83,7 +87,8 @@ def call_tools(model, prompt, tools, final_tool, *, max_iters=6, system=None,
               research_tools=tuple(n for n in ("web_search", "read_page") if n in names),
               cells_tool=bool(partial_tool), thinking=thinking,
               timeout=int(os.environ.get("REDLINES_PI_TIMEOUT", DEFAULT_TIMEOUT)),
-              env={"PI_CODING_AGENT_DIR": os.environ.get("PI_CODING_AGENT_DIR") or os.path.join(base, "agent")},
+              env={"PI_CODING_AGENT_DIR": os.environ.get("PI_CODING_AGENT_DIR") or os.path.join(base, "agent"),
+                   **(env or {})},
               **loop)
     if usage is not None:
         u = res["usage"]

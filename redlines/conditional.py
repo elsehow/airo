@@ -90,6 +90,11 @@ PROTOCOL_LINEAGE = {
     # variant, the published number per model the mean of its five
     # (redlines.runlog.pool). The evidence: the prompt-variant experiments of
     # 2026-10-14..19, where the dropped guidance moved no headline forecast.
+    # The same evening a SIXTH call per model joined the run -- the baseline
+    # prompt with the AI-forecast ban and a URL guard against AIRO's own pages
+    # (code/make_combined_conditions.py, `unpooled_variants`) -- drawn on the
+    # Timeline and never pooled (redlines.runlog.pooled_rows). The five's rows
+    # and prompts did not change, so the tag did not move.
     "unified-joint-combined-v10": ("unified-joint-combined-v9", "unified-joint-combined-v8",
                                    "unified-joint-combined-v7", "unified-joint-combined-v6",
                                    "unified-joint-combined-v5", "unified-joint-combined-v4",
@@ -192,12 +197,16 @@ def newest_protocol(rows, line):
     return [r for r in rows if r.get("protocol") == proto], proto
 
 
-def load_conditional(path=CONDITIONAL_LOG, experiment=None, protocol=None):
+def load_conditional(path=CONDITIONAL_LOG, experiment=None, protocol=None, pooled_only=True):
     """Rows of one experiment and/or one protocol. Two protocols write here --
     separate calls (unified-batch-v2, one condition per call) and the joint
     instrument (unified-joint-v1, every condition in one call) -- and their
     unconditional arms are different elicitations, so a summary is always of
-    one protocol; pass protocol=None only to list what the log holds."""
+    one protocol; pass protocol=None only to list what the log holds.
+    `pooled_only` drops the rows that are not in the published number (the
+    sixth call since 2026-10-19 evening, stamped `pooled: false`;
+    redlines.runlog.pooled_rows), so the tabs' per-model means stay the
+    mean of the five prompts; False reads everything."""
     rows = []
     for one in _paths(path):
         with open(one) as f:
@@ -213,6 +222,8 @@ def load_conditional(path=CONDITIONAL_LOG, experiment=None, protocol=None):
                 if not isinstance(r.get("forecasts"), list):
                     continue
                 if is_superseded(r):       # redlines.superseded: replaced the same day
+                    continue
+                if pooled_only and not r.get("pooled", True):
                     continue
                 rows.append(r)
     return rows

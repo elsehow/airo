@@ -60,7 +60,7 @@ from ..questions import (horizon_sort_key, is_future, load_ladder,
 from ..rail import grouping as rail_grouping, panel_questions as rail_questions
 from ..registry import model_colors, published_panel
 from ..runlog import (answered_horizons, grounding, load_runlog, pool,
-                      rows_by_day, series_rows)
+                      pooled_rows, rows_by_day, series_rows)
 from ..runlog import instrument_info, complete_panel_rows, current_panel, elicitation_date, SERIES_START
 from ..conditional import USD_PER_DEATH, apply_or, ladder_rungs, level_or
 from ..config import REPO_ROOT
@@ -69,13 +69,17 @@ from ..instrument import CURRENT_INSTRUMENT
 from .graph1 import _loss_question, _loss_series
 
 # code/run_unified.py VARIANTS, verbatim (the runner is not importable from
-# the stdlib-only build); tests/test_timeline_variants.py keeps the two equal.
+# the stdlib-only build); tests/test_variants_v10.py keeps the two equal.
+# "ai-banned" (2026-10-19 evening) is the sixth, UNPOOLED call: its rows say
+# `pooled: false` and carry the URL guard (`url_block_patterns`) the call ran
+# under; the line is drawn, the number is not in the mean.
 VARIANT_TEXT = {
     "none": None,
     "independent": "Try to make your own forecasts. Do not take into account external surveys assessing extinction or catastrophic risk, or other probabilities given by prominent figures. The goal is to reach your own independent conclusion.",
     "recent": "If you search external information, focus on information that arrived within the past year, and weight more heavily sources that are more up to date about recent developments.",
     "critical": "Evaluate existing information critically. If you take into account forecasts by specific people or surveyed groups, consider their recent and historical forecasting accuracy, as well as the information available to the forecasters when they made their forecasts.",
     "two-step": "Proceed in two steps. First, make the best predictions you can about model capability progress over the relevant time frame, via human generated improvement or recursive self-improvement. Consider the distribution, not only the modal outcome. Then, given possible model capabilities, evaluate the risk posed and put these pieces together.",
+    "ai-banned": "Forecasts produced by AI systems, including any automated forecasting dashboard or model ensemble, carry no information beyond their inputs. Do not consult them or use them as evidence.",
 }
 import json
 
@@ -144,9 +148,10 @@ def noise_floor(by_day, days):
 
 def variant_medians(rows, days):
     """{(date, question_id): {variant: {horizon: panel median, in %}}} for dates
-    asked under more than one prompt variant (combined-v10: five), else {}.
-    The pooled point per model is the mean of its variants (runlog.pool);
-    these are the per-variant panel medians the Timeline draws beside it."""
+    asked under more than one prompt variant (combined-v10: five, and the
+    unpooled sixth), else {}. The pooled point per model is the mean of its
+    pooled variants (runlog.pool); these are the per-variant panel medians
+    the Timeline draws beside it, the unpooled ones included."""
     by = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
     for r in rows:
         v = r.get("variant") or "none"
@@ -157,6 +162,18 @@ def variant_medians(rows, days):
         if len(per) > 1:
             out[key] = {v: {h: round(statistics.median(ps), 3) for h, ps in hs.items()} for v, hs in per.items()}
     return out
+
+
+def variant_info(rows):
+    """{variant: {"pooled": bool, "guard": patterns or None}} as the rows
+    say: an unpooled variant's rows carry `pooled: false` and the URL guard
+    its call ran under (the newest row's, should it ever change)."""
+    info = {}
+    for r in sorted(rows, key=lambda r: r["elicited_at"]):
+        v = r.get("variant") or "none"
+        info[v] = {"pooled": bool(r.get("pooled", True)),
+                   "guard": r.get("url_block_patterns") or None}
+    return info
 
 
 def _prob_row(q, rail, by_day, days, horizons, var_meds=None):
@@ -324,6 +341,11 @@ def build():
                    and r.get("question_id") in legacy_probability_ids
                    and elicitation_date(r) >= SERIES_START]
     current_series_rows = [r for r in current_rows_all if elicitation_date(r) >= SERIES_START]
+    # The unpooled rows (the sixth call, `pooled: false`) are drawn as their
+    # own variant line and enter nothing else: not the pooled point, not the
+    # median, not the CI, not the day's completeness (runlog.pooled_rows).
+    aside_rows = [r for r in current_series_rows if not r.get("pooled", True)]
+    current_series_rows = pooled_rows(current_series_rows)
     rows = current_series_rows + legacy_rows
     batches = rows_by_day(rows)
     newest = max(batches, default=None)
@@ -384,7 +406,12 @@ def build():
             "panel": sorted({(r.get("panel") or {}).get("set") or "frontier5" for r in drows}),
         })
 
-    var_meds = variant_medians(rows, days)
+    # The variant lines: the pooled rows' prompts and, on the same days, the
+    # unpooled sixth's. A day the five did not complete draws no line at all.
+    drawn = {elicitation_date(r) for r in rows}
+    aside_rows = [r for r in aside_rows if elicitation_date(r) in drawn]
+    var_meds = variant_medians(rows + aside_rows, days)
+    var_info = variant_info(rows + aside_rows)
     # Cross-cutting questions as themselves; each incident cause as ONE
     # expected-loss row (since 2026-08-27, matching Graph 1 and the
     # Policy-levers tab), emitted at its first rung and never again.
@@ -450,7 +477,11 @@ def build():
         "usdPerDeath": USD_PER_DEATH,
         "marks": _reference_marks(),
         # The prompt variants a date may carry (combined-v10), for the lines'
-        # labels and their hover text.
-        **({"variants": [{"id": v, "text": t} for v, t in VARIANT_TEXT.items()]}
+        # labels and their hover text: the instruction, whether the variant is
+        # in the published number, and the URL guard its calls ran under.
+        **({"variants": [{"id": v, "text": t,
+                          "pooled": var_info.get(v, {}).get("pooled", True),
+                          "guard": var_info.get(v, {}).get("guard")}
+                         for v, t in VARIANT_TEXT.items()]}
            if var_meds else {}),
     }

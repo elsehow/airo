@@ -20,7 +20,8 @@ except ImportError:
 @unittest.skipIf(ff_tools is None, "fri_forecaster not installed")
 class ToolsParity(unittest.TestCase):
     def test_same_functions(self):
-        for name in ("search_body", "web_search", "read_page"):
+        # The URL guard (2026-10-16, agent-box's `url-guard`) is part of the stack.
+        for name in ("search_body", "web_search", "read_page", "blocked_patterns", "is_blocked"):
             self.assertEqual(inspect.getsource(getattr(airo_tools, name)),
                              inspect.getsource(getattr(ff_tools, name)), name)
 
