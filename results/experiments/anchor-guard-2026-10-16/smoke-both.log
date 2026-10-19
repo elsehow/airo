@@ -1,0 +1,13 @@
+Epoch ECI snapshot: 2026-10-16; frontier Claude Opus 5.5 166.8 (2026-09-22)
+WARN: the index ranks GPT-6.1 Sol, Gemini 4 Argon above the panel's cut but the registry cannot run them (no row in redlines/registry.py, and redlines.autoreg could not add one -- its log line says why); skipped, the next runnable model took the seat
+    elicits eci_forecast ['p10', 'p25', 'p50', 'p75', 'p90'] for 2027-04-16 (run date + 6 months)
+    panel eci_topk: top 4 by ECI, snapshot 2026-10-16 (0 days old): Opus 5.5 166.82, GPT-6 Astra 166.41, Fable 5.1 164.65, Sonnet 5.5 164.45
+run 2026-10-16T2308Z protocol unified-joint-combined-v9 [set combined]: 1 calls (1 models x 1 repeat(s)), 41 questions x 6 horizons = 246 cells x 14 conditions = 3444 probabilities each
+    harness: pi loop, research floor 10 calls, coverage ai, bio, cyber, misalign, crosscutting, guard 40 rounds; reasoning Opus 5.5=max
+    conditions: unconditional, sq, p1, p2a, p2b, p3a, p3b, p4, p5, eci_p10, eci_p25, eci_p50, eci_p75, eci_p90  [experiment: anchor-guard-both]
+      policy      8 conditions -- POLICY CONDITIONS
+      capability  5 conditions -- CAPABILITY CONDITIONS
+    unconditional slice -> results/experiments/anchor-guard-2026-10-16/smoke-both.jsonl
+    whole instrument     -> results/experiments/anchor-guard-2026-10-16/smoke-both-conditional.jsonl
+  done  joint#1:Opus 5.5                 574/574 question x condition rows answered, 26 turns, 0k in / 217.8k out, $6.96, 30 evidence, coverage cyber:5 ai:4 misalign:3 bio:3 crosscutting:5, 1 attempt(s), debrief INCOMPLETE (1 problem(s) after 1 attempt(s))
+1 ok, 0 failed, $6.96 priced spend -> results/experiments/anchor-guard-2026-10-16/smoke-both.jsonl (unconditional) + results/experiments/anchor-guard-2026-10-16/smoke-both-conditional.jsonl (instrument)
