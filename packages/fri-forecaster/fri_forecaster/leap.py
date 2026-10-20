@@ -17,7 +17,9 @@ Two shard modes, both per member:
            sees its own earlier cells in the conversation and can condition
            later answers on them. shard "a".
 
-build    combine members: per-cell mean across members.
+build    combine members: per-cell mean across members. The members are the
+         panel's top 4 by ECI (`python -m redlines.registry` on AIRO's box; the
+         same rule as the ForecastBench round), passed as --model / --member.
 
 Cells are the survey rows: key question_id (a row already is one
 dimension/date/percentile cell). Values carry the group's unit; probability
@@ -130,35 +132,6 @@ def build_session_prompt(groups, due):
     return "\n".join(lines)
 
 
-def harness_retry(**kwargs):
-    """harness.run, retrying transient API errors (pi exits 0 on stopReason=error).
-    The account occasionally 400s 'out of extra usage' on bursts; a failed call
-    yields zero cells, which we detect and retry with backoff."""
-    import time
-    last_err = None
-    for i in range(4):
-        res = harness.run(**kwargs)
-        try:
-            with open(os.path.join(res["workdir"], "events.jsonl")) as f:
-                for line in f:
-                    try:
-                        e = json.loads(line)
-                    except ValueError:
-                        continue
-                    m = e.get("message") or {}
-                    if m.get("stopReason") == "error":
-                        last_err = (m.get("errorMessage") or "")[:200]
-        except OSError:
-            pass
-        if res["cells"] or "out of extra usage" not in (last_err or ""):
-            res["api_error"] = last_err
-            return res
-        print(f"    transient API error ({last_err}); retry {i + 1}/3 after {20 * (i + 1)}s")
-        time.sleep(20 * (i + 1))
-    res["api_error"] = last_err
-    return res
-
-
 def slug(s):
     return "".join(c if c.isalnum() or c in "-._" else "_" for c in s)
 
@@ -209,7 +182,7 @@ def complete(r):
 
 def forecast_group_session(gid, g, mdir, args, research, groups):
     """Run the whole survey in one session (already ran? -- only unfinished reruns)."""
-    res = harness_retry(model=args.model, system="",
+    res = harness.run(model=args.model, system="",
                       prompt=build_session_prompt(groups, args.due),
                       workdir=os.path.join(mdir, "calls", "session"),
                       cell_schema=CELL_SCHEMA, key_fields=KEY_FIELDS,
@@ -218,7 +191,7 @@ def forecast_group_session(gid, g, mdir, args, research, groups):
                       research_tools=harness.RESEARCH_TOOLS if research else (),
                       min_research=args.min_research * len(groups) if research else 0,
                       max_turns=args.max_turns or None,
-                      thinking=args.thinking, pi=args.pi, timeout=args.timeout)
+                      thinking=args.thinking, pi=args.pi, timeout=args.timeout, retries=3)
     got = {}
     for qid, cell in (res["cells"] or {}).items():
         v = cell.get("value")
@@ -230,9 +203,6 @@ def forecast_group_session(gid, g, mdir, args, research, groups):
 def cmd_run(args):
     harness.pi_argv(args.pi)             # no pi: fail here, not mid-run
     load_keys()
-    # harness.run points anthropic models at a clean HOME so pi can't pick up
-    # Claude-Code OAuth credentials (which shadow the API key and bill the
-    # wrong account) and fails loudly if OAuth is used anyway.
     root = os.path.abspath(args.root)
     os.makedirs(root, exist_ok=True)
     snapshot = load_questions(root)
@@ -293,7 +263,7 @@ def cmd_run(args):
                 continue
         else:
             base = {DEPENDS_ON[gid]: frozen[DEPENDS_ON[gid]]} if gid in DEPENDS_ON and DEPENDS_ON[gid] in frozen else None
-            res = harness_retry(model=args.model, system="",
+            res = harness.run(model=args.model, system="",
                               prompt=build_group_prompt(g, args.due, base),
                               workdir=os.path.join(mdir, "calls", gid[:12]),
                               cell_schema=CELL_SCHEMA, key_fields=KEY_FIELDS,
@@ -301,7 +271,7 @@ def cmd_run(args):
                               tool_descriptions=TOOL_DESCRIPTIONS,
                               research_tools=harness.RESEARCH_TOOLS if research else (),
                               min_research=args.min_research if research else 0,
-                              thinking=args.thinking, pi=args.pi, timeout=args.timeout)
+                              thinking=args.thinking, pi=args.pi, timeout=args.timeout, retries=3)
             got = {qid: float(c["value"]) for qid, c in (res["cells"] or {}).items()
                    if isinstance(c.get("value"), (int, float)) and not isinstance(c.get("value"), bool)}
         want = group_cells(g)

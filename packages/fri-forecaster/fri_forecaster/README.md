@@ -142,3 +142,4 @@ scripts/fb_round.sh 2026-10-25                       # the real round
 | `keys.py`          | API keys from the environment or an env file                      |
 | `forecastbench.py` | the ForecastBench driver: members (`run`) and sets (`build`)      |
 | `names.py`         | the name registry: conditions, members, fingerprints              |
+| `leap.py`          | a LEAP survey from the data warehouse, per member, and its mean ensemble (docs/leap-w13.md) |
